@@ -1,0 +1,5155 @@
+
+//	Kleene.jjt
+//
+//	The Kleene Programming Language
+
+//   Copyright 2006-2012 SAP AG
+
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
+//   Author: ken.beesley@sap.com (Kenneth R. Beesley)
+
+//	Main source file for the Kleene Programming language.  
+
+/* A JavaCC/JJTree file that defines the tokenizer, the syntactic
+parser, and the building of Abstract Syntax Trees (ASTs).  This
+Kleene.jjt file is compiled by 'jjtree' to create the Kleene.jj
+file, which in turn is compiled by javacc to generate a set of
+.java files, including Kleene.java, which are compiled (together
+with other handwritten .java files) to create the executable
+Kleene.class.
+*/
+
+// JavaCC/JJTree options
+
+options {
+
+//############ integer-valued options
+
+// LOOKAHEAD = 1 ;               // default is 1; not a good idea to increase it
+// CHOICE_AMBIGUITY_CHECK = 2 ;  // default is 2
+// OTHER_AMBIGUITY_CHECK = 1 ;   // default is 1
+
+//############ boolean-valued options
+
+// STATIC=true ;   // default is true
+STATIC = false ;   // allows multiple parsers to be allocated, e.g. to
+       	           //   read scripts from multiple files, perhaps in different
+		   		   //   encodings
+            
+
+// default is true, which causes all methods and class variables to be 
+// generated as 'static'; then you need to ReInit() the single static 
+// parser or Tokenizer to reinitialize to read from a different thread;
+// STATIC=false allows multiple instances of the parser to be created, 
+// e.g. to read simultaneously from different threads, or just to 
+// create a new instance to read from each source
+
+//DEBUG_PARSER = true ;        	// default is false
+//DEBUG_LOOKAHEAD = true ;     	// default is false
+//DEBUG_TOKEN_MANAGER = true ; 	// default is false
+// setting DEBUT_TOKEN_MANAGER=true causes the token manager to generate 
+//   a trace of its actions, which can be useful during debugging
+
+// ERROR_REPORTING = true ;      // default is true
+
+USER_TOKEN_MANAGER = false ;  // the default is false
+// default is false, which causes the token manager class KleeneTokenManager.java
+// to be generated automatically from the tokenizer productions
+// specified below (SKIP, TOKEN, MORE and SPECIAL_TOKEN productions).
+// If you set USER_TOKEN_MANAGER = true
+// (for experts only) then an _interface_ named TokenManager.java
+// will be generated, and the expert user has to write (by hand) a token manager
+// that implements this interface.  This is really only for experts.
+
+JAVA_UNICODE_ESCAPE = true ;    // default is false
+
+// if USER_TOKEN_MANAGER = false (the default value)
+//   then if JAVA_UNICODE_ESCAPE = false
+//              causes generation of SimpleCharStream.java
+// 
+//        else with JAVA_UNICODE_ESCAPE = true  
+//   causes generation of JavaCharStream.java (which performs the
+//   additional trick of intercepting the six-char sequence \ u HHHH 
+//   and outputting the single Unicode char to the tokenizer; 
+//   i.e. JavaCharStream builds into your new language the Java convention for
+//   representing a Unicode 16-bit char as a 6-char sequence \ u HHHH
+
+// UNICODE_INPUT = false ;       // obsolete; default is false
+// With newer Java versions, use Readers
+
+// IGNORE_CASE = false ;         // default is false
+
+// USER_CHAR_STREAM = false ;    // default is false; 
+// if set to true (for experts only) then an _interface_ named 
+// CharStream.java will be generated, and the expert user has to 
+// write a char stream manager that implements this interface.
+
+// BUILD_PARSER = true ;         // default is true
+// BUILD_TOKEN_MANAGER = true ;  // default is true
+// TOKEN_MANAGER_USES_PARSER = false ;
+// SANITY_CHECK = true ;         // default is true
+// FORCE_LA_CHECK = false ;      // default is false
+// COMMON_TOKEN_ACTION = false ;
+// if set to true, every call to the token manager's method
+// 'getNextToken' will cause a call to a user-defined method
+// 'CommonTokenAction' after the token has been scanned in by the token
+// manager.  This method must be defined in the TOKEN_MGR_DECLS section
+// void CommonTokenAction(Token t)
+
+// CACHE_TOKENS = false ;       // default is false
+// KEEP_LINE_COLUMN = true ;    // default is true
+
+//############# string valued options
+
+// OUTPUT_DIRECTORY = "../obj" ;  // controls where output files are generated
+
+//############# JavaCC options
+
+MULTI = true ;
+// when generating ASTs, use multiple node types, by default ASTfoo for
+// a production named foo, unless NODE_DEFAULT_VOID=false (see below)
+
+VISITOR = true ;
+// automatically generate _interface_ KleeneVisitor.java with an empty
+// method for each node type used in the grammar; any Visitor class
+// will need to be written to implement this interface
+
+// NODE_DEFAULT_VOID = false ;  // default is false
+// false value causes an ASTfoo node to be created automatically for
+// void foo(): {} {}
+// the default ASTfoo creation can be blocked manually by typing //void
+// void foo() #void: {}{}
+// or you can specify that a node of a different type be generated,
+// e.g.
+// void foo() #bar: {}{}
+
+NODE_DEFAULT_VOID = true ;  // default is false
+// true value causes each production to be declared (by default) as
+// #void, e.g. as if you wrote manually
+//  void foo() #void:{}{}  
+// thus preventing an ASTfoo node from being created by default.
+// With NODE_DEFAULT_VOID = true setting, all AST nodes have to 
+// be created manually (I've come to like this mode, which is used below)
+
+// NODE_EXTENDS = "Foo" ;
+// extend definition of Node.java with code from the designated file???
+
+// generate Java code for 1.5 (rather than the default 1.4)
+// Java 1.6 added no new language features, so 
+// JDK_VERSION="1.6" is not needed or supported
+JDK_VERSION="1.5" ;
+
+}  // end of options{}
+
+PARSER_BEGIN(Kleene)
+
+import java.util.Iterator ;
+import java.io.PipedReader ;
+import java.io.PipedWriter ;
+import java.io.FileInputStream ;
+import java.io.InputStreamReader ; 
+import java.io.FileNotFoundException ;
+import javax.swing.JFrame ;
+
+public class Kleene {
+
+	// just one KleeneGUI is used during a Kleene session
+    static KleeneGUI gui = null ;
+
+    // just one Environment used throughout in one Kleene session
+	static Environment env = new Environment() ;
+
+	// allocate a single InterpData (reused--passed around the interpreter)
+	static InterpData interpData = new InterpData() ;
+	// The object is initialized for processing OUTSIDE of a GUI
+	// 		interpData.reset() 
+	// or inside a GUI
+	//      interpData.resetForGUI(KleeneGUI g) as necessary.
+
+    // allocate a single InterpreterKleeneVisitor
+	// (reused for interpreting each statement)
+	static InterpreterKleeneVisitor interp = 
+               new InterpreterKleeneVisitor(env) ;
+
+	static boolean astRequested = false ;
+
+
+    public static void main(String[] args) {
+		String userKleeneDir = System.getProperty("user.home") + "/.kleene" ;
+
+		// Allocate the first, "global" frame/symtab
+        env.allocateGlobalFrame() ;
+
+		// Here load ~/.kleene/global/predefined.kl into the global symtab.
+		// This file defines some variables, e.g. $e and $eps, and
+		// wraps the built-in functions to look like user-defined
+		// functions.  
+		try {
+			//              path                     , encoding,  inGUI
+			runScript(userKleeneDir + "/global/predefined.kl", "UTF-8", false) ;
+		} catch (Exception e) {
+			e.printStackTrace() ;
+		}
+
+		// allocate the "program" frame/symtab, as a daughter of the global 
+		//    frame/symtab
+        env.allocateFrame() ;  
+		// from now on, any new definitions will go into the current symtab,
+		// potentially overriding/shadowing definitions in the global frame
+
+		// the interpreter needs to remember that the current frame is
+		// the "main" frame, reflected in the graphic symtab window (distinguish
+		// this frame from temporary frames allocated to execute function calls,
+		// and temporary frames allocated for stand-alone function blocks)
+		interp.setMainFrame() ;  // this frame used in the GUI symtab
+
+		// now process all flags and scripts in the command-line; the command line
+		// will determine whether a GUI should be launched
+        boolean launchGUI = handleCommandLineArgs(args, env) ;
+
+		// If there are no scripts indicated on the command line, then the
+		// reasonable assumption is that the user just wants to launch
+		// the GUI, so handleCommandLineArgs() will return true
+
+		// If there is at least one script on the command line, then
+		// the initial assumption is that the user just wants Kleene to run
+		// the indicated script and then exit.  But that can be
+		// overridden by putting -gui in the command line along with
+		// the script names.
+
+		// Launch the GUI for Interactive Processing of One Statement at a Time
+
+        if (launchGUI) {
+
+			// Input to the parser will come from the Swing GUI,
+			//   which runs in the Event thread.  So to communicate
+			//   text back to the parser, use a PipedWriter (in
+			//   the GUI) and a connected PipedReader here
+
+			final PipedReader preader = new PipedReader() ;
+			PipedWriter pwrtr = null ;
+			try {
+				pwrtr = new PipedWriter(preader) ;
+			} catch (java.io.IOException ioexc) {
+				System.err.println("Exception opening PipedWriter in Kleene.java") ;
+				System.exit(4) ;
+			}
+
+			final PipedWriter pwriter = pwrtr ;
+
+			// launch the GUI
+			javax.swing.SwingUtilities.invokeLater(new Runnable() {
+				public void run() {
+					createAndShowKleeneGUI(env, pwriter) ;
+				}
+			}) ;
+
+			// allocate a parser to read statements from the preader
+			Kleene parser = 
+					   new Kleene(new KleeneTokenManager
+									(new JavaCharStream (preader))) ;
+
+			// REPL
+			// here we have a loop to read statements coming from the GUI's pwriter
+			// in to the preader; parse and interpret them one at a time;
+			// and evaluate them with a Visitor
+
+			// reset the jjtree (building ASTs)
+			jjtree.reset() ;  // there may have been previous scripts executed
+
+			// N.B. use of .resetForGUI() here, not just interpData.reset(), which
+			// is used when scripts are being interpreted
+			interpData.resetForGUI(gui) ;
+
+			// REPL loop in the GUI
+
+			for ( ;; jjtree.reset() ) {  // N.B. resetting the jjtree
+				try {
+					// parser.stmt() returns int
+					switch (parser.stmt()) {
+						default:
+						case 1:  // successful syntactic _parse_ of a statement returns 1
+							if (astRequested)		// for debugging
+								((SimpleNode)jjtree.rootNode()).dump(">>") ;
+
+							// Prepare for interpretation; resetForGUI() interpData
+							interpData.resetForGUI(gui) ;
+							// use interpData.reset() when executing commandline 
+							// scripts.  With 
+							// .resetForGUI(), the interpData carries
+							// information that a GUI is active, and so when
+							// assignments are made, SymtabIconButtons are
+							// displayed in the GUI symtab window
+							
+							// At this point, the _parse_ was successful, but semantic
+							// exceptions can occur during interpretation
+
+							// Try to accept/interpret the AST
+							try {
+								jjtree.rootNode().jjtAccept(interp, interpData) ;
+							} catch (Exception exc) {
+
+								// exc instanceof UndefinedIdException
+								// exc instanceof FuncCallException
+								// exc instanceof FstPropertyException
+
+								// Exception during interpretation
+								String excmsg = "Exception thrown during interpretation in the GUI: "
+									+ exc.getMessage() ;
+								exc.printStackTrace() ;
+
+								final String msg = excmsg ;
+
+								// Display the exception message to the GUI history window
+								javax.swing.SwingUtilities.invokeLater(new Runnable() {
+									public void run() {
+										gui.appendToHistory("// " + msg) ;
+									}
+								}) ;
+							}
+							// a 'quit' statement sets a field in interpData
+							if (interpData.getQuitSession()) {
+								System.exit(1) ;
+							}
+							break ;
+						case 0:    	// right curly brace after a function definition
+									// or after a skip to re-align; a stand-alone
+									// semicolon is now parsed/interpreted as an
+									// empty_statement()
+							//interpData.resetForGUI(gui) ;
+							break ;
+						case -1:    // when EOF is found (when 'source <filename>')
+							break ;
+					}
+				//} catch (FstPropertyException pe) {
+					// thrown when an Fst used in an operation fails
+					// the requirements for properties, e.g. isAcceptor.
+					// This is much like arithmetic division by zero.
+					// In the interactive GUI, at least, I want to 
+					// catch these problems and recover.
+				} catch (Exception e) {
+					e.printStackTrace() ;
+					System.exit(1) ;
+				}
+			}  // end of for() REPL loop for reading stmts
+
+        }  // End of if (launchGUI) block
+
+    }  // end of main()
+
+	// provide more helpful error messages to interactive users
+	// (i.e. when using the GUI)
+	void appendGuiError(String msg) {
+		if (gui != null) {
+			gui.appendToHistory("Error: " + msg) ;
+		}
+		System.out.println(msg) ; 
+	}
+
+    private static boolean handleCommandLineArgs(String[] args, Environment env) {
+
+		String encoding = "" ;  // empty string = operating system default
+
+		// two flags used to tell whether to launch the GUI
+		boolean scriptExecuted = false ; 
+		// refers to scripts listed on the command line
+		boolean guiRequested = false ;
+
+		String usage = "Usage: java Kleene [script ...]" ;
+		String flags = "Flags: -gui, -ast, -encoding <encodingname>" ;
+
+		String arg = "" ;
+
+        for ( int i = 0; i < args.length; i++ ) {
+			arg = args[i] ;
+
+			if (arg.equals("-gui"))
+				guiRequested = true ;
+			else if (arg.equals("-ast"))
+				astRequested = true ;
+			else if (arg.equals("-encoding")) {
+				if (++i < args.length)
+					encoding = args[i] ;
+				else {
+					System.err.println("Error: -encoding flag must be followed by encoding name") ;
+					System.err.println(usage) ;
+					System.err.println(flags) ;
+					System.err.flush() ;
+					System.exit(0) ;
+				}
+			}
+			else if ( arg.equals("-utf8") || arg.equals("-UTF8") || 
+						  arg.equals("-utf-8") || arg.equals("-UTF-8") 
+					)
+				encoding = "UTF-8" ;
+			else if ( arg.equals("-utf16") || arg.equals("-UTF16") || 
+						  arg.equals("-utf-16") || arg.equals("-UTF-16") 
+					)
+				encoding = "UTF-16" ;
+			else if (arg.startsWith("-")) {
+				System.err.println("Error:  unknown flag: " + arg) ;
+				System.err.println(usage) ;
+				System.err.flush() ;
+				System.exit(0) ;
+			}
+			else {
+				// this should be the name/path of a startup script to execute
+				
+				String enc ;
+				if (encoding.equals("")) {
+					enc = "Operating System Default" ;
+				} else {
+					enc = encoding ;
+				}
+
+				try {
+					//       path, encoding, inGUI
+					runScript(arg, encoding, false) ;
+					scriptExecuted = true ;
+				} catch (Exception e) {
+					e.printStackTrace() ;
+				}
+			}
+		}
+		// end of loop through command-line args
+
+		if (guiRequested || !scriptExecuted) {
+			return true ;
+		} else {
+			return false ;
+		}
+    }    
+
+	// was runCommandLineScript
+    public static void runScript(String s, String enc, boolean inGUI) {
+        Kleene parser = null ;
+
+		System.out.println("runScript called for file: " + s) ;
+
+		// create a new instance of the Kleene parser, to read the file in the
+		// indicated encoding
+
+		String encoding ;
+
+        try {
+			if ( enc.equals("") || enc.equals("default") || enc.equals("-") ) {
+				// Operating System's default encoding
+				encoding = System.getProperty("file.encoding") ;
+			} else {
+				encoding = enc ;
+			}
+
+			// What if encoding is UTF-8?  Will this constructor handle an optional BOM?
+			// Apparently not, so spell it out tediously.
+			//parser = new Kleene(new FileInputStream(s), encoding) ;
+
+			if (encoding.equals("UTF-8")) {
+				parser = 
+                  new Kleene(new KleeneTokenManager(
+                                  new JavaCharStream(
+                                      new InputStreamReader(
+									  		// two args to Input Stream Reader
+											// wrap FileInputStream with
+											// UTF8BOMStripperInputStream
+                                           new UTF8BOMStripperInputStream(new
+										   FileInputStream(s)), 
+										   "UTF-8"
+									  )
+                                   )
+                                 )
+                             ) ;
+			} else {
+				parser = 
+                  new Kleene(new KleeneTokenManager(
+                                  new JavaCharStream(
+                                      new InputStreamReader(
+									  		// two args to Input Stream Reader
+                                           new FileInputStream(s), 
+										   encoding
+									  )
+                                   )
+                                 )
+                             ) ;
+			} 
+
+            // FileInputStream provides a stream of raw bytes from the file.
+            // The InputStreamReader interprets that stream of bytes as utf-8 and
+            // converts them to Unicode chars, providing a stream of Unicode chars.
+            // The JavaCharStream provides buffering between the InputStreamReader
+            // and the KleeneTokenManager, and it also intercepts 6-char sequences of
+            // the form \ u HHHH and converts them to a single Unicode char before 
+            // passing them to the TokenManager.  The TokenManager takes a stream of
+            // Unicode chars and divides them into tokens.  The Kleene parser calls
+            // the KleeneTokenManager whenever it needs the next token.
+            // Keep in mind that the tokenizer operates separately from the parser and
+            // is usually several steps ahead of the parser.
+
+        } catch (FileNotFoundException fnfe) {
+			// this is a hard exception
+			if (inGUI) {
+				// throw a RuntimeException
+				fnfe.printStackTrace() ;
+				throw new ScriptRuntimeException("File not found: " + s + ".") ;
+			} else {
+				fnfe.printStackTrace() ;
+            	System.out.println("File not found: " + s + ".  Exiting.") ;
+	    		System.out.flush() ;
+            	System.exit(0) ;
+			}
+        }  catch (Exception e) {
+			// this is a hard exception
+			if (inGUI) {
+				// throw a RuntimeException
+				e.printStackTrace() ;
+				throw new ScriptRuntimeException("Exception while running a script.") ;
+			} else {
+				e.printStackTrace() ;
+            	System.out.println("Exception while running a script.  Exiting.") ;
+	    		System.out.flush() ;
+            	System.exit(0) ;
+			}
+        }
+
+		jjtree.reset() ;
+
+		// Here we are running a REPL loop for a script
+
+		for ( ;; jjtree.reset() ) {  // N.B. jjtree resetting
+			try {
+				// parser.stmt() returns int
+				switch (parser.stmt()) {
+					default:
+					case 1:    // successful syntactic _parse_ returns 1
+						if (astRequested)		// for debugging
+							((SimpleNode)jjtree.rootNode()).dump(">>") ;
+
+						if (inGUI) {
+							interpData.resetForGUI(gui) ;
+						} else {
+							interpData.reset() ;
+						}
+						// use .reset() for executing scripts outside the GUI.
+						// With .resetForGUI(), the interpData carries
+						// information that a GUI is active, and so when
+						// assignments are made, SymtabIconButtons are
+						// displayed in the GUI, and lines of the script are
+						// (currently) displayed in the history window as if
+						// re-typed by the user.
+							
+						// Recall that the _parse_ was successful, but semantic
+						// exceptions can occur during interpretation
+						try {
+							jjtree.rootNode().jjtAccept(interp, interpData) ;
+						} catch (Exception exc) {
+
+							// exc instanceof UndefinedIdException
+							// exc instanceof FuncCallException
+							// exc instanceof FstPropertyException
+
+							// Exception during interpretation
+							String excmsg = "Exception thrown during interpretation in runScript: "
+									+ exc.getMessage() ;
+							exc.printStackTrace() ;
+
+							if (inGUI) {
+								final String msg = excmsg ;
+								javax.swing.SwingUtilities.invokeLater(new Runnable() {
+									public void run() {
+										gui.appendToHistory("// " + msg) ;
+									}
+								}) ;
+							} else {
+								System.out.println(excmsg) ;
+							}
+
+						}
+						if (interpData.getQuitSession()) {
+							// a 'quit' or 'exit' stmt was found, but
+							// here we're just quitting one script (perhaps of
+							// many), so just return to quit this script
+							return ;
+						}
+						break ;
+					case 0: 	// right curly brace after a function definition
+								// or after a skip to re-align; a stand-alone
+								// semicolon is now parsed/interpreted as an
+								// empty_statement()
+						break ;
+					case -1:    // when EOF is found
+						// here we're just in a commandline script,
+						// perhaps one of many
+					    return ;
+				}
+			//} catch (FstPropertyException pe) {
+				// thrown when an Fst used in an operation fails
+				// the requirements for properties, e.g. isAcceptor.
+				// This is much like arithmetic division by zero.
+				// In the interactive GUI, at least, I want to 
+				// catch these problems and recover.
+			} catch (Exception e) {
+				if (inGUI) {
+					interpData.resetForGUI(gui) ;
+				} else {
+					interpData.reset() ;
+				}
+				e.printStackTrace() ;
+			}
+		}  // end of for() loop for reading stmts in a script
+    }
+    
+
+    // for thread safety, createAndShowGUI() should be
+    // invoked from the event-dispatching thread (via
+    // .invokeLater() in main()
+    private static void createAndShowKleeneGUI(Environment env, PipedWriter pwriter) {
+		JFrame.setDefaultLookAndFeelDecorated(true) ;
+
+		// Create and set up the window
+		gui = new KleeneGUI(env, pwriter) ;
+		gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) ;
+
+		// Display the window
+		gui.setVisible(true) ;
+
+		gui.getInputField().selectAll() ;
+		gui.getInputField().requestFocus() ;
+		// .requestFocusInWindow()
+
+        SplashWindow splash = new SplashWindow("Kleene version " +
+		KleeneGuiConstants.VERSION_NUMBER + 
+		" " +
+		"Copyright \u00A9 " + KleeneGuiConstants.COPYRIGHT_YEAR_RANGE 
+		+ " Business Objects Americas (SAP Labs). " + 
+		"All rights reserved.", 
+		"images/splash/artpremier.jpg", gui, 4000) ;
+    }
+
+    boolean parsing_rrprod_def = false ;
+
+	// used in semantic LOOKAHEAD for the expression() production
+	boolean mustBeRegexp() {
+		int i ;
+		// skip over any LPAREN tokens 
+		// (which can appear as groupers only in regexp() and numexp())
+		for (i = 1; getToken(i).kind == LPAREN; i++) {}
+		Token t = getToken(i) ;
+		if (	t.kind == CHAR
+			||	t.kind == ANY
+			||  t.kind == ANY_ANY
+			||	t.kind == ESCAPE_CHAR
+			||	t.kind == ESCAPE_HEX_PYTHON
+			||	t.kind == ESCAPE_HEX_PERL
+			|| 	t.kind == NET_ID						// $foo
+			|| 	t.kind == LEFT_DOUBLE_QUOTE			// start of double-quoted string
+			||	t.kind == LSQUARE					// start of [abc]
+			|| 	t.kind == LSQUARE_CIRCUMFLEX			// start of [^abc]
+			||	t.kind == MULTICHAR_SYMBOL			// '[Noun]'
+			||	t.kind == WORD_BOUNDARY				// #, used in contexts
+			||	t.kind == LONGEST_DIRECTIVE			// longest{ } -> left _ right
+			||	t.kind == SHORTEST_DIRECTIVE			// shortest{ } -> left _ right
+			||	t.kind == LANGLE 					// start of a weight <0.3>
+			||	t.kind == TILDE_OP					// regular negation/complement 
+			||	t.kind == TILDE_OP_ASCII
+			||	t.kind == EPSILON
+			|| 	t.kind == EPSILON_ASCII
+			||	t.kind == NET_FUNC_ID_BEFORE_ARGLIST	// keep this here
+
+			// built-in functions followed by some kind of arg list
+			|| (
+					(	t.kind == NET_REVERSE_FUNC_ID
+					||	t.kind == NET_INVERT_FUNC_ID
+					||	t.kind == NET_INVERT_DEST_FUNC_ID
+					||	t.kind == NET_OPTIMIZE_FUNC_ID
+					||	t.kind == NET_OPTIMIZE_DEST_FUNC_ID
+					||	t.kind == NET_RMEPSILON_FUNC_ID
+					||	t.kind == NET_RMEPSILON_DEST_FUNC_ID
+					||	t.kind == NET_DETERMINIZE_FUNC_ID
+					||	t.kind == NET_DETERMINIZE_DEST_FUNC_ID
+					||	t.kind == NET_MINIMIZE_FUNC_ID
+					||	t.kind == NET_MINIMIZE_DEST_FUNC_ID
+					||	t.kind == NET_SYNCHRONIZE_FUNC_ID
+					||	t.kind == NET_SYNCHRONIZE_DEST_FUNC_ID
+
+					||	t.kind == NET_CASE_FUNC_ID
+					||	t.kind == NET_DIAC_FUNC_ID
+
+					||	t.kind == NET_SHORTESTPATH_FUNC_ID
+					||	t.kind == NET_INPUTPROJ_DEST_FUNC_ID
+					||	t.kind == NET_INPUTPROJ_FUNC_ID
+					||	t.kind == NET_OUTPUTPROJ_DEST_FUNC_ID
+					||	t.kind == NET_OUTPUTPROJ_FUNC_ID
+					||	t.kind == NET_CLOSE_SIGMA_FUNC_ID
+					||	t.kind == NET_CLOSE_SIGMA_DEST_FUNC_ID
+					||	t.kind == NET_COPY_FUNC_ID
+					|| 	t.kind == NET_RM_WEIGHT_DEST_FUNC_ID
+					|| 	t.kind == NET_RM_WEIGHT_FUNC_ID
+					||	t.kind == NET_SUBST_SYMBOL_DEST_FUNC_ID
+					||	t.kind == NET_SUBST_SYMBOL_FUNC_ID
+					||	t.kind == NET_READ_XML_FUNC_ID
+					||	t.kind == NET_TO_STRING_FUNC_ID
+					||	t.kind == NET_IMPLODE_FUNC_ID
+					||	t.kind == NET_EXPLODE_FUNC_ID
+
+					||	t.kind == NET_HEAD_FUNC_ID
+					||	t.kind == NET_GETLAST_FUNC_ID
+					||	t.kind == NET_GET_FUNC_ID
+
+					||	t.kind == NET_POP_DEST_FUNC_ID
+					||	t.kind == NET_REMOVELAST_DEST_FUNC_ID
+					||	t.kind == NET_REMOVE_DEST_FUNC_ID
+					
+					||	t.kind == NET_GET_NET_FUNC_ID
+					||	t.kind == NET_SUB_FUNC_ID
+					||	t.kind == NET_EMBED_RTN_SUBNETS_FUNC_ID
+					||	t.kind == NET_EXPAND_RTN_FUNC_ID
+					||	t.kind == NET_START_FUNC_ID
+					)
+				&& getToken(i+1).kind == LPAREN
+			   )
+			) {
+			return true ;
+		} else if (i > 1) {
+			// there was at least one preceding LPAREN (only regexp and
+			//	numexp have parens for grouping)
+			if (	
+				// outside of grouping parens, NET_FUNC_FUNC_LAMBDA
+				// might be net_func_func_exp() or 
+				// (if followed by an arg_list)
+				// start of net_func_exp() or
+				// (if followed by a second arg_list)
+				// start of regexp(); inside grouping parens, must be start of regexp()
+					t.kind == NET_FUNC_FUNC_LAMBDA
+
+				// outside of grouping parens, might be net_func_exp() or 
+				// (if followed by an arg_list)
+				// start of regexp(); inside grouping parens, must be start of regexp()
+				||	t.kind == NET_FUNC_FUNC_ID_BEFORE_ARGLIST
+				||	t.kind == NET_FUNC_LAMBDA
+			   ) {
+				return true ;
+			} else {
+				return false ;
+			}
+		} else {
+			return false ;
+		}
+	}
+		
+	boolean mustBeNumexp() {
+		int i ;
+		// look past left parens to first significant token
+		for (i = 1; getToken(i).kind == LPAREN; i++) {}
+
+		Token t = getToken(i) ;
+		if (	
+			 	t.kind == NUM_ID
+			||	t.kind == HEX_INT_LITERAL
+			||	t.kind == DEC_FLOAT_LITERAL
+			||	t.kind == DEC_INT_LITERAL
+			||	t.kind == EXCLAMATION_MARK_OP
+			||	t.kind == PLUS_SIGN_OP
+			||	t.kind == MINUS_SIGN_OP
+			||	t.kind == NUM_FUNC_ID_BEFORE_ARGLIST
+
+			|| (
+					// built-in functions followed by some kind of arg list
+					(	t.kind == LNG_PATHCOUNT_FUNC_ID
+					||	t.kind == LNG_STATECOUNT_FUNC_ID
+					||	t.kind == LNG_ARCCOUNT_FUNC_ID
+					||	t.kind == LNG_ARITY_FUNC_ID
+					||	t.kind == LNG_IS_RTN_FUNC_ID
+					||	t.kind == LNG_IS_CYCLIC_FUNC_ID
+//					||	t.kind == LNG_EQUIVALENT_FUNC_ID
+					||	t.kind == NUM_ABS_FUNC_ID
+					||	t.kind == DBL_CEIL_FUNC_ID
+					||	t.kind == DBL_FLOOR_FUNC_ID
+					||	t.kind == LNG_ROUND_FUNC_ID
+					||	t.kind == DBL_RINT_FUNC_ID
+					||	t.kind == DBL_DOUBLE_FUNC_ID
+					||	t.kind == LNG_LONG_FUNC_ID
+					||	t.kind == LNG_SIZE_FUNC_ID
+					||	t.kind == LNG_IS_EMPTY_FUNC_ID
+
+					||	t.kind == NUM_HEAD_FUNC_ID
+					||	t.kind == NUM_GETLAST_FUNC_ID
+					||	t.kind == NUM_GET_FUNC_ID
+
+					||	t.kind == NUM_POP_DEST_FUNC_ID
+					||	t.kind == NUM_REMOVELAST_DEST_FUNC_ID
+					||	t.kind == NUM_REMOVE_DEST_FUNC_ID
+					) 
+
+				&& getToken(i+1).kind == LPAREN
+			   )
+			) {
+			return true ;
+		} else if (i > 1) {
+			// there was at least one preceding LPAREN (only regexp and
+			//	numexp have parents for grouping)
+			if (	
+				// outside of grouping parens, NUM_FUNC_FUNC_LAMBDA
+				// might be num_func_func_exp() or 
+				// (if followed by an arg_list)
+				// start of num_func_exp() or
+				// (if followed by a second arg_list)
+				// start of numexp(); inside grouping parens, must be start of regexp()
+					t.kind == NUM_FUNC_FUNC_LAMBDA
+
+				// outside of grouping parens, might be net_func_exp() or 
+				// (if followed by an arg_list)
+				// start of regexp(); inside grouping parens, must be start of regexp()
+				||	t.kind == NUM_FUNC_FUNC_ID_BEFORE_ARGLIST
+				||	t.kind == NUM_FUNC_LAMBDA
+			   ) {
+				return true ;
+			} else {
+				return false ;
+			}
+		} else {
+			return false ;
+		}
+	}
+
+	boolean mustBeNetListExp() {
+		Token t = getToken(1) ;
+		if (	t.kind == NET_LIST_ID
+			||	t.kind == NET_LIST_LIT_PREFIX
+			||  t.kind == NET_LIST_FUNC_ID_BEFORE_ARGLIST
+
+			// built-in functions followed by some kind of arg list
+			|| (
+					(   t.kind == NET_LIST_GET_SLICE_FUNC_ID
+					||	t.kind == NET_LIST_PUSH_DEST_FUNC_ID
+					||	t.kind == NET_LIST_ADD_DEST_FUNC_ID
+					||	t.kind == NET_LIST_ADDAT_DEST_FUNC_ID
+					||	t.kind == NET_LIST_SET_DEST_FUNC_ID
+					||	t.kind == NET_LIST_TAIL_FUNC_ID
+					||	t.kind == NET_LIST_COPY_FUNC_ID
+					||	t.kind == NET_LIST_GET_SIGMA_FUNC_ID
+					)
+				&& getToken(2).kind == LPAREN
+			   )
+			) {
+			return true ;
+		} else {
+			return false ;
+		}
+	}
+
+	boolean mustBeNumListExp() {
+		Token t = getToken(1) ;
+		if (	t.kind == NUM_LIST_ID
+			||	t.kind == NUM_LIST_LIT_PREFIX
+			||  t.kind == NUM_LIST_FUNC_ID_BEFORE_ARGLIST
+
+			// built-in functions followed by some kind of arg list
+			|| (
+					(   t.kind == NUM_LIST_GET_SLICE_FUNC_ID
+					||	t.kind == NUM_LIST_PUSH_DEST_FUNC_ID
+					||	t.kind == NUM_LIST_ADD_DEST_FUNC_ID
+					||	t.kind == NUM_LIST_ADDAT_DEST_FUNC_ID
+					||	t.kind == NUM_LIST_SET_DEST_FUNC_ID
+					||	t.kind == NUM_LIST_TAIL_FUNC_ID
+					||	t.kind == NUM_LIST_COPY_FUNC_ID
+					||	t.kind == NUM_LIST_GET_SIGMA_FUNC_ID
+					)
+				&& getToken(2).kind == LPAREN
+			   )
+			) {
+			return true ;
+		} else {
+			return false ;
+		}
+	}
+
+		
+    // ****************************************************************
+    // the generated parser code, derived from the syntactic productions below, 
+    //   is inserted here in the .jj output file
+    // ****************************************************************
+}
+
+PARSER_END(Kleene)
+
+
+
+//############## Productions ##############################
+
+//############# Tokenizer Productions #####################
+
+TOKEN_MGR_DECLS : {
+	// void CommonTokenAction(Token t) {} 
+	// can be defined here; it is
+	// called only if option COMMON_TOKEN_ACTION=true ;
+
+    // The following are used in tokenizer to switch back to 
+	// DEFAULT state after a parenthesized expression, 
+	// e.g. a param list, is tokenized
+    boolean in_parenthesized = false ;
+    int paren_count = 0;
+
+	// The following is for handling C-style delimited comments
+	int commentNestingDepth ;
+	int stateBeforeDelimitedComment ;
+}
+
+// do NOT include IN_DOUBLE_QUOTES, IN_SQUARE_BRACKETS, IN_DELIMITED_COMMENT
+<DEFAULT, NON_INITIAL>
+SKIP: {
+   	" "
+|  	"\t"
+|  	"\r"
+|  	"\n"
+|  	"\f"
+
+// comment up to EOL or EOF 
+// N.B. optional \r, \r\n or \n at the end, in case the final comment
+// in the file has no EOL sequence to terminate it
+|  	< "//" ( ~[ "\n" , "\r" ] )* >  // comment to EOL
+
+// delimited comment
+|	< "/*" > { commentNestingDepth = 1; 
+				stateBeforeDelimitedComment = curLexState ;
+				SwitchTo(IN_DELIMITED_COMMENT) ;
+			 }
+}
+
+// special lexical state for skipping a delimited comment
+< IN_DELIMITED_COMMENT >
+SKIP: {
+	// find another /* and go down a depth
+	"/*" { commentNestingDepth += 1 ; }
+
+   // find */ and shift back to previous state
+|   "*/"	{
+	   		commentNestingDepth -= 1 ;
+			if (commentNestingDepth == 0) {
+				SwitchTo(stateBeforeDelimitedComment) ;
+			}
+  		}  		
+|
+   // or just match and skip any character
+   < ~[] >
+}
+
+<IN_DOUBLE_QUOTES>
+TOKEN: {
+	// when already in IN_DOUBLE_QUOTES mode, and you see a double quote, then
+	//   change mode to NON_INITIAL
+   < RIGHT_DOUBLE_QUOTE: "\"" > : NON_INITIAL
+
+   // inside double quote, a literal double quote must be written backslash-doublequote
+|  < DOUBLE_QUOTED_ESCAPE_CHAR: "\\" ( "\""		// literalized double quote inside a
+												//		double-quoted 
+
+										// Java-like backslash special chars,
+										// not literalization; see values set
+										// below in the action
+									  | "n"		// newline
+									  | "t"		// tab
+									  | "b"		// backspace
+									  | "r"		// carriage return
+									  | "f"		// formfeed
+
+									  // | ~[]	// this line would allow "\z" to be equiv to "z"
+									  // commenting out the line makes "\z" two chars long
+
+				                      ) > { String stg = image.substring(1) ;
+									  		if (stg.equals("n")) {
+												matchedToken.image = "\n" ;		//  \u000A
+											} else if (stg.equals("t")) {
+												matchedToken.image = "\t" ;		//  \u0009
+											} else if (stg.equals("b")) {
+												matchedToken.image = "\b" ;		//  \u0008
+											} else if (stg.equals("r")) {
+												matchedToken.image = "\r" ;		//  \u000D
+											} else if (stg.equals("f")) {
+												matchedToken.image = "\f" ;		//  \u000C
+											} else {
+												matchedToken.image = image.substring(1) ; 
+											}
+									  }
+
+	// otherwise, any character can appear between double quotes, except a newline
+	//    or carriage-return
+|  	< DOUBLE_QUOTED_CHAR: ~["\n", "\r"] >
+
+|	< BAD_TOKEN1: "\n" > : DEFAULT
+|	< BAD_TOKEN2: "\r" > : DEFAULT
+}
+
+<IN_SQUARE_BRACKETS>
+TOKEN: {
+   < RSQUARE: "]" > : NON_INITIAL
+|  < SQUARE_BRACKET_ESCAPE_CHAR: "\\" ( "]" 
+                                      | "-"
+									  | "'"
+				                      | "\\"
+
+										// KRB:  allow these in square brackets?
+										// Java-like backslash special chars,
+										// not literalization; see values set
+										// below in the action
+									  | "n"		// newline
+									  | "t"		// tab
+									  | "b"		// backspace
+									  | "r"		// carriage return
+									  | "f"		// formfeed
+
+				                      ) > { String st = image.substring(1) ;
+									  		if (st.equals("n")) {
+												matchedToken.image = "\n" ;		//  \u000A
+											} else if (st.equals("t")) {
+												matchedToken.image = "\t" ;		//  \u0009
+											} else if (st.equals("b")) {
+												matchedToken.image = "\b" ;		//  \u0008
+											} else if (st.equals("r")) {
+												matchedToken.image = "\r" ;		//  \u000D
+											} else if (st.equals("f")) {
+												matchedToken.image = "\f" ;		//  \u000C
+											} else {
+												matchedToken.image = image.substring(1) ; 
+											}
+									  }
+|  < SQUARE_BRACKET_HYPHEN: "-" >    // delimit char range, or literal
+|  < SQUARE_BRACKET_CHAR: ~["\n", "\r", "'"] >
+}
+
+<IN_SQUARE_BRACKETS>
+MORE: {
+	< "'">: IN_SQUARE_BRACKET_MULTICHAR_NAME
+}
+
+< IN_SQUARE_BRACKET_MULTICHAR_NAME >
+TOKEN : {
+	// a single quote signals the end of the multichar symbol
+	< SQUARE_BRACKET_MULTICHAR_SYMBOL: "'" > 
+	{ 
+	  image.deleteCharAt(0) ;
+	  image.deleteCharAt(image.length() - 1) ;
+
+	  // Finally, use the 'image' (a StringBuffer)
+	  //  to set the image field (String) of the
+	  //  current matchedToken
+	  matchedToken.image = image.toString() ;
+
+	  // this effectively requires that a multichar-symbol 
+	  // name be at least two characters long
+	  if (image.length() < 2) {
+		  SwitchTo(BAD_TOKENIZATION) ;
+	  } else {
+		  SwitchTo(IN_SQUARE_BRACKETS) ;
+	  }
+	}
+}
+
+// literalized single quote inside a MULTICHAR_SYMBOL name,
+// ordered to give it priority over single characters
+
+// a StringBuffer called 'image' is maintained as characters
+// are accumulated for the next token
+
+< IN_SQUARE_BRACKET_MULTICHAR_NAME >
+MORE : {
+	"\\'" 
+	{ // delete the literalizing backslash, leaving the literal
+	  //   single quote
+	   image.deleteCharAt(image.length() - 2) ;
+	}
+}
+
+< IN_SQUARE_BRACKET_MULTICHAR_NAME >
+MORE : {
+	< ~["\n", "\r", "'"] >
+}
+
+// DEFAULT state is the "initial" state
+// typically find keywords in this state
+< DEFAULT >
+TOKEN: {
+    // if ( boolean test) {  }
+    // when closing paren is found, need to switch back to DEFAULT
+    < IF_RW: "if" >
+    {  in_parenthesized = true ;
+	   paren_count = 0 ;
+	   SwitchTo(NON_INITIAL) ;
+	}
+|   < ELSIF_RW: "elsif" >
+    {  in_parenthesized = true ;
+	   paren_count = 0 ;
+	   SwitchTo(NON_INITIAL) ;
+	}
+|   < ELSE_RW: "else" >  // do NOT change to NON_INITIAL after "else"
+    // leave in DEFAULT state
+
+|   < WHILE_RW: "while" >
+    {  in_parenthesized = true ;
+	   paren_count = 0 ;
+	   SwitchTo(NON_INITIAL) ;
+	}
+|   < UNTIL_RW: "until" >
+    {  in_parenthesized = true ;
+	   paren_count = 0 ;
+	   SwitchTo(NON_INITIAL) ;
+	}
+
+|	< SAP_RTN_CONVENTIONS_RW:		"SapRtnConventions" >
+
+|	< DELETE_ALL_RW:      	"delete" ( <WHITESPACE> )+ "all" > : NON_INITIAL
+//|	< DELETE_SELECTED_RW: 	"delete" ( <WHITESPACE> )+ "selected" > : NON_INITIAL
+|   < DELETE_RW:          	"delete" > : NON_INITIAL
+
+|	< OPTIMIZE_RW:			"optimize" > : NON_INITIAL
+|	< OPTIMIZE2_RW:			"optimize!" > : NON_INITIAL
+
+|	< GARBAGE_COLLECT_RW:	"gc" > : NON_INITIAL
+|	< MEMORY_REPORT_RW:		"memory" > : NON_INITIAL
+|	< FSTS_REPORT_RW:		"fsts" > : NON_INITIAL
+|	< SYMTAB_REPORT_RW:		"symtab" > : NON_INITIAL
+|	< GSYMTAB_REPORT_RW:	"gsymtab" > : NON_INITIAL
+
+|	< EXTERNAL_RW1:		"external" > : NON_INITIAL
+|	< EXTERNAL_RW2:		"extern"   > : NON_INITIAL
+
+|	< EXPORT_RW:		"export"   > : NON_INITIAL
+
+|	< RMEPSILON2_RW:	"rmEpsilon!" > : NON_INITIAL
+|	< RMEPSILON_RW:		"rmEpsilon" > : NON_INITIAL
+
+|	< DETERMINIZE2_RW:	"determinize!" > : NON_INITIAL
+|	< DETERMINIZE_RW:	"determinize" > : NON_INITIAL
+
+|	< MINIMIZE2_RW:		"minimize!" > : NON_INITIAL
+|	< MINIMIZE_RW:		"minimize" > : NON_INITIAL
+
+|	< SYNCHRONIZE2_RW:	"synchronize!" > : NON_INITIAL
+|	< SYNCHRONIZE_RW:	"synchronize" > : NON_INITIAL
+
+|   < DRAW_RW: "draw" > : NON_INITIAL
+|   < SIGMA_RW: "sigma" > : NON_INITIAL
+|   < TEST_RW: "test" > : NON_INITIAL
+|   < TESTTOKENSTEXTFILE_RW: "testTokensTextFile" > : NON_INITIAL
+|   < TESTTOKENSXMLFILE_RW:      "testTokensXMLFile" >      : NON_INITIAL
+|	< EXCEPTION_RW: "exception" > : NON_INITIAL
+|	< PRINT_RW: "print" > : NON_INITIAL
+|	< PRINTLN_RW: "println" > : NON_INITIAL
+|	< SYS_PRINT_RW: "sysPrint" > : NON_INITIAL
+|	< SYS_PRINTLN_RW: "sysPrintln" > : NON_INITIAL
+|   < INFO_RW: "info" > : NON_INITIAL
+|	< WRITEXML_RW: "writeXML" > : NON_INITIAL
+|	< WRITEDOT_RW: "writeDOT" > : NON_INITIAL
+
+// source myfile ;
+// source myfile, yourfile, hisfile, herfile ;
+//   could be paths
+//   need to switch into a lexical mode that recognizes one or
+//   more strings, separated by whitespace and/or commas;
+//	allow full regular expressions, with a semantic restriction
+//  that each one encodes a single string??
+|   < SOURCE_RW: "source" > : NON_INITIAL
+
+    // foreach ($n in $@list) { }
+|   < FOREACH_RW: "foreach">
+		{
+			in_parenthesized = true ;
+			paren_count = 0 ;
+			SwitchTo(ITERATOR_STATE) ;
+		}
+
+|   < RETURN_RW: "return"> : NON_INITIAL
+|   < BREAK_RW: "break" >
+|   < CONTINUE_RW: "continue" >
+|   < QUIT_RW1: "quit">
+|   < QUIT_RW2: "exit">
+
+|   < RCURLY_BLOCK: "}" >  // stay in same state???
+}
+
+< ITERATOR_STATE >
+SKIP: {
+	" "
+|	"\t"
+}
+
+< ITERATOR_STATE >
+TOKEN: {
+
+    < ITERATOR_NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	                                           | <DECIMAL_DIGIT> 
+											   | "_"
+											   )* > 
+|   < ITERATOR_NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	                                           | <DECIMAL_DIGIT> 
+											   | "_"
+											   )* > 
+|	< ITERATOR_IN: "in" > : NON_INITIAL 
+}
+
+// tokenizing multichar-symbol names MULTICHAR
+	// allow multi-char symbols to contain anything (BMP?) except
+	// straight single-quote, newline or carriage return
+	// (see also UNMATCHED_SINGLE_QUOTE token below, used to
+	// catch unmatched single quotes as in
+	// $foo = 'abc' d e 'fg ;   
+	// If a literal single quote is needed, use literalized \'
+
+< NON_INITIAL >     // start of a multichar-symbol name
+MORE: {
+	"'" : IN_MULTICHAR_NAME
+}
+
+// terminating single quote for MULTICHAR_SYMBOL name (all
+// characters previously matched by MORE productions are
+// saved and become part of the MULTICHAR_SYMBOL token
+
+< IN_MULTICHAR_NAME >
+TOKEN : {
+	// a single quote marks the end of the MULTICHAR_SYMBOL
+	< MULTICHAR_SYMBOL: "'" > 
+	{ 
+	  image.deleteCharAt(0) ;
+	  image.deleteCharAt(image.length() - 1) ;
+
+	  // Finally, use the 'image' (a StringBuffer)
+	  //  to set the image field (String) of the
+	  //  current matchedToken
+	  matchedToken.image = image.toString() ;
+
+	  // The following effectively requires that a multichar-symbol 
+	  // name be at least two characters long
+	  if (image.length() < 2) {
+		  SwitchTo(BAD_TOKENIZATION) ;
+	  } else {
+		  SwitchTo(NON_INITIAL) ;
+	  }
+	}
+|	< BAD_TOKEN3: "\n" > : DEFAULT
+|	< BAD_TOKEN4: "\r" > : DEFAULT
+}
+
+// literalized single quote inside a MULTICHAR_SYMBOL name,
+// ordered to give it priority over single characters
+
+// a StringBuffer called 'image' is maintained as characters
+// are accumulated for the next token
+
+< IN_MULTICHAR_NAME >
+MORE : {
+	"\\'" 
+	{ // delete the literalizing backslash, leaving the literal
+	  //   single quote
+	   image.deleteCharAt(image.length() - 2) ;
+	}
+}
+
+< IN_MULTICHAR_NAME >
+MORE : {
+	< ~["\n", "\r", "'"] >
+}
+
+< BAD_TOKENIZATION >
+TOKEN: {
+	< BAD_TOKEN0: ~[] > : DEFAULT
+}
+
+< NON_INITIAL >
+TOKEN: {
+
+	// old MULTICHAR_SYMBOL, did not allow literalized single quote inside
+
+    //< MULTICHAR_SYMBOL: "'" ~["'", "\n", "\r"] ( ~["'", "\n", "\r"] )+ "'" > 
+	// requires 2 or more
+    //{
+	//    image.deleteCharAt(0) ;
+	//    image.deleteCharAt(image.length() - 1) ;
+	//    matchedToken.image = image.toString() ;
+	//}
+//|   
+	< RIGHT_RULE_ARROW: "\u2192">    // Unicode RIGHTWARDS ARROW
+|   < RIGHT_RULE_ARROW_ASCII: "->" >
+
+|   < RIGHT_RULE_ARROW_OPT: "\u2192" (<WHITESPACE>)* "?" >
+|   < RIGHT_RULE_ARROW_ASCII_OPT: "->" (<WHITESPACE>)* "?" >
+
+|   < RESTRICTION_ARROW: "\u21D2">   // Unicode RIGHTWARDS DOUBLE ARROW
+|   < RESTRICTION_ARROW_ASCII: "=>">
+
+|   < LEFT_RULE_ARROW: "\u2190">     // Unicode LEFTWARDS ARROW
+|   < LEFT_RULE_ARROW_ASCII: "<-">
+
+|   < LEFT_RULE_ARROW_OPT: "\u2190" (<WHITESPACE>)* "?" >    
+|   < LEFT_RULE_ARROW_ASCII_OPT: "<-" (<WHITESPACE>)* "?" >
+
+// Possible use to signal upper vs. lower matching of contexts?
+//  \u2191 is UPWARDS ARROW
+//  \u2193 is DOWNWARDS ARROW
+
+|   < LEFT_DOUBLE_QUOTE: "\"">   : IN_DOUBLE_QUOTES
+
+|   < LSQUARE: "[" >             : IN_SQUARE_BRACKETS
+|   < LSQUARE_CIRCUMFLEX: "[^" > : IN_SQUARE_BRACKETS
+
+// directives used in rules--must be followed by curly brace
+// N.B. you can't concatenatate anything with a curly-braced expression
+// (unlike parenthesized or square-bracketed expressions);
+// angle brackets not good here--needed to delimit weights
+
+// LONGEST_DIRECTIVE and SHORTEST_DIRECTIVE can appear at the start
+// of a regular expression
+
+|   < LONGEST_DIRECTIVE: "longest" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < SHORTEST_DIRECTIVE: "shortest" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+
+// UPPER_DIRECTIVE and LOWER_DIRECTIVE can appear only before a rule context
+
+|   < UPPER_DIRECTIVE: "{" (<WHITESPACE>)* "upper" (<WHITESPACE>)* "}" >
+        {  
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < LOWER_DIRECTIVE: "{" (<WHITESPACE>)* "lower" (<WHITESPACE>)* "}" >
+        {  
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < WHERE_MATCHED_DIRECTIVE: "where_matched" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < WHERE_MIXED_DIRECTIVE: "where_mixed" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < ELEMENT_OF_OP: "\u2208" >
+|   < ELEMENT_OF_OP_ASCII: "_E_" >
+
+|   < LANGLE: "<" >
+|   < RANGLE: ">" >
+
+// at end of block, in DEFAULT state, } is RCURLY_BLOCK
+|   < RCURLY: "}" >
+
+|   < QUESTION_MARK: "?">
+
+// prefix regexp operator for complement/negation of a regular language
+|   < TILDE_OP: "\u223C" >
+|   < TILDE_OP_ASCII: "~" >
+
+// infix regexp operator
+|   < COMPOSITION_OP: "\u2218" >       // Unicode RING OPERATOR
+|   < COMPOSITION_OP_ASCII: "_o_" >
+
+// infix regexp operator
+// CROSSPRODUCT_OP using special Unicode char?
+|   < CROSSPRODUCT_OP: ":" >
+// U+2A2F is VECTOR or CROSS PRODUCT   _x_ would be the ASCII version
+
+// context operator in rules
+|   < UNDERSCORE_OP: "_" >
+
+// try to use just plain # to
+// mark word boundary in rules and restriction expressions (=>)
+// The trick is to
+// match # that is not part of a name like #num or #numFunc()
+|	< WORD_BOUNDARY: "#" (" " | ";" | "|" | "_" ) >
+		{
+			input_stream.backup(1) ;
+			// give it a special internal multichar image
+			// N.B. cannot be __@#@, which would exclude the symbols from
+			//	the promotion of OTHER
+			matchedToken.image = "KLEENE**@#@" ;
+			// temporary value, changed to **@#@ in the interpreter
+		}
+
+// infix regexp operator, union
+|   < VERTICAL_BAR_OP: "|" >
+
+// infix regexp operator, intersection
+|   < AMPERSAND: "&" >
+
+|   < HEX_INT_LITERAL: ( "0x" | "0X" ) ( <HEX_DIGIT> )+ >
+        {
+            matchedToken.image = image.substring(2) ;
+        }
+|   < DEC_FLOAT_LITERAL: ( ( <DECIMAL_DIGIT> )+ "." ( <DECIMAL_DIGIT> )* 
+                         | "." ( <DECIMAL_DIGIT> )+
+			 )
+    >
+|   < DEC_INT_LITERAL: ( <DECIMAL_DIGIT> )+ >
+|   < BOOLEAN_OR_OP: "||" >
+|   < BOOLEAN_AND_OP: "&&" >
+
+// prefix num/boolean operator
+|   < EXCLAMATION_MARK_OP: "!" >    // boolean not
+
+|   < BOOLEAN_LESS_EQUAL_OP: "<=" >
+|   < BOOLEAN_GREATER_EQUAL_OP: ">=" >
+|   < BOOLEAN_EQUAL_OP: "==" >
+|   < BOOLEAN_NOT_EQUAL_OP: "!=" >
+|   < PLUS_SIGN_OP: "+" >  // not something like KLEENE_PLUS_OP (need addition as well)
+|   < MINUS_SIGN_OP: "-" >
+|   < ASTERISK_OP: "*" >   // not something like KLEENE_STAR_OP (need multiplication as well)
+|   < SLASH_OP: "/" >
+|   < PERCENT_OP: "%" >
+//|   < DOUBLE_ASTERISK: "**" >
+|   < EPSILON: "\u03F5" > // GREEK LUNATE EPSILON SYMBOL
+       // for use only in mathematical formulas, never in Greek text
+	   // use in Kleene for empty string
+|   < EPSILON_ASCII: "_e_" >
+}
+
+// iterator state is for:   foreach ($n in $@list) { ... }
+< DEFAULT, NON_INITIAL, ITERATOR_STATE >
+TOKEN: {
+	< LPAREN: "(" >
+        {
+            if (in_parenthesized) {
+	            paren_count += 1 ;
+	        }
+			// for arg list after lambda(args) { stmts }
+			if (curLexState == DEFAULT) {
+				SwitchTo(NON_INITIAL) ;
+			}
+        }
+
+|   < COMMA_OP: "," >
+		{
+			if (curLexState == DEFAULT) {
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+		// COMMA_OP handled this way to deal with case of
+		// $@&map($&($a){ return $a $a ;}, $@list)
+		// where the block of the lambda function ends in
+		// DEFAULT mode, but need to switch to NON_INITIAL
+		// to handle any further arguments
+}
+
+// recognize these tokens either in the DEFAULT (initial) or
+// the NON_INITIAL state
+< DEFAULT, NON_INITIAL >
+TOKEN: {
+
+
+    // $net
+    < NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	                                           | <DECIMAL_DIGIT> 
+											   | "_"
+											   )* > : NON_INITIAL
+
+    // $&union
+    // could be DEFAULT or NON_INITIAL
+
+    // if DEFAULT, could be a function assignment like
+    // $&union = $&foo ;
+    // which is easy, or
+    // $&union = $&lambda($a, $b) { return $a | $b   ; } ;
+    // DEF       NON_INIT         DEF      NON_INIT  DEF
+    //           count-parens
+    // which has a tricky switch back to DEFAULT
+
+    // or it could be a func_declaration like
+    // $&union   ($a, $b)   = { return $a | $b    ; } ;
+    // DEF       NON_INIT   DEF        NON_INIT   DEF
+    //           count-parens
+
+// built-in functions, with names starting __, not used directly by users;
+// these built-in functions are "wrapped" in ~/.kleene/global/predefined.kl
+
+// N.B.  if adding a function to this list, also examine mustBeRegex()
+//		and the expression() production
+
+|   < NET_REVERSE_FUNC_ID:    <NET_PREFIX> <AMPERSAND> "__reverse" >
+
+|   < NET_INVERT_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__invert!" >
+|   < NET_INVERT_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__invert" >
+
+|   < NET_OPTIMIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__optimize!" >
+|   < NET_OPTIMIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__optimize" >
+
+|   < NET_RMEPSILON_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__rmEpsilon!" >
+|   < NET_RMEPSILON_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__rmEpsilon" >
+
+|   < NET_DETERMINIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__determinize!" >
+|   < NET_DETERMINIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__determinize" >
+
+|   < NET_MINIMIZE_DEST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__minimize!" >
+|   < NET_MINIMIZE_FUNC_ID:     	<NET_PREFIX> <AMPERSAND> "__minimize" >
+
+|   < NET_SYNCHRONIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__synchronize!" >
+|   < NET_SYNCHRONIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__synchronize" >
+
+|	< NET_CASE_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__case" >
+|	< NET_DIAC_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__diac" >
+
+|	< NET_SHORTESTPATH_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__shortestPath" >
+
+|   < NET_INPUTPROJ_DEST_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__inputproj!" >
+|   < NET_INPUTPROJ_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__inputproj" >
+
+|   < NET_OUTPUTPROJ_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__outputproj!" >
+|   < NET_OUTPUTPROJ_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__outputproj" >
+
+|	< NET_CLOSE_SIGMA_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__closeSigma!" >
+|	< NET_CLOSE_SIGMA_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__closeSigma" >
+
+|   < NET_COPY_FUNC_ID:       <NET_PREFIX> <AMPERSAND> "__copy" >
+
+|	< NET_RM_WEIGHT_DEST_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__rmWeight!" >
+|	< NET_RM_WEIGHT_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__rmWeight" >
+|	< NET_SUBST_SYMBOL_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__substSymbol!" >
+|	< NET_SUBST_SYMBOL_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__substSymbol" >
+
+| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <AMPERSAND> "__readXML" >
+
+|	< NET_TO_STRING_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__toString" >
+|   < NET_IMPLODE_FUNC_ID:    <NET_PREFIX> <AMPERSAND> "__implode" >
+|	< NET_EXPLODE_FUNC_ID:	  <NET_PREFIX> <AMPERSAND> "__explode" >
+
+// functions for retrieving individual networks from network lists 
+|	< NET_GET_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__get" >
+|	< NET_GETLAST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__getLast" >
+|	< NET_HEAD_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__head" >
+
+|	< NET_POP_DEST_FUNC_ID:			<NET_PREFIX> <AMPERSAND> "__pop!" >
+|	< NET_REMOVE_DEST_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__remove!">
+|	< NET_REMOVELAST_DEST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__removeLast!" >
+
+// functions for retrieving individual numbers from num lists 
+|	< NUM_HEAD_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__head" >
+|	< NUM_GETLAST_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__getLast" >
+|	< NUM_GET_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__get" >
+
+|	< NUM_POP_DEST_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__pop!" >
+|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__removeLast!" >
+|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__remove!" >
+
+// wired-in, need to match following "(" to avoid having longer match 
+// override it.  The getNet function returns a network given a
+// network that encodes the name of the network
+|	< NET_GET_NET_FUNC_ID: <NET_PREFIX> <AMPERSAND> "getNet" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+// wired-in, need to match following "(" to avoid having longer match 
+// override it.  sub creates a "reference" to a subnetwork, used in
+// RTNs
+|	< NET_SUB_FUNC_ID: <NET_PREFIX> <AMPERSAND> "sub" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_PREFIX> <AMPERSAND> "__pathCount">
+|   < LNG_STATECOUNT_FUNC_ID: <NUM_PREFIX> <AMPERSAND> "__stateCount">
+|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_PREFIX> <AMPERSAND> "__arcCount">
+
+|   < LNG_ARITY_FUNC_ID:      <NUM_PREFIX> <AMPERSAND> "__arity">
+
+// boolean
+|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__isRtn">
+|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__isCyclic">
+
+//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__equivalent">
+
+|	< NUM_ABS_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__abs">
+|   < DBL_CEIL_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__ceil">
+|	< DBL_FLOOR_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__floor">
+|	< LNG_ROUND_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__round">
+|	< DBL_RINT_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__rint">
+|	< DBL_DOUBLE_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__double">
+|	< LNG_LONG_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__long">
+//|	< LNG_NET_COUNT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__netCount">
+//|	< LNG_NUM_COUNT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__numCount">
+
+// wired-in, need to match following "(" to avoid having longer match override it
+|	< LNG_SIZE_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "size" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "isEmpty" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|   < NET_START_FUNC_ID:      <NET_PREFIX> <AMPERSAND> "start"  (<WHITESPACE>)*
+"(">
+	{
+		input_stream.backup(1) ;
+		SwitchTo(NON_INITIAL) ;
+	}
+    // for $&start($>foo) 
+
+	// need to order VOID_FUNC_LAMBDA before VOID_FUNC_ID_BEFORE_ARGLIST and VOID-FUNC_ID_NO_ARGLIST
+
+	// VOID_FUNC_LAMBDA used to have an optional "lambda" part, but that caused ambiguity
+	// in cases like $v = a & (a) ;  where '& (' was being taken as the VOID_FUNC_LAMBDA
+	// token.
+	// Revisit this later, e.g. by requiring some prefix on the & to indicate that
+	// no value is returned from a "void" function.
+
+|   < VOID_FUNC_LAMBDA: <AMPERSAND> "lambda" (<WHITESPACE>)* "(" >
+        {
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+		// in a void_func_definition, the tokenizer starts in DEFAULT (initial) state,
+		// then needs to switch to NON_INITIAL to tokenize the (params),
+		// then (the tricky part) it needs to switch back to DEFAULT to
+		// tokenize the block
+
+		//  a void function call (a kind of stand-alone statement) should also work with this plan
+		//  &myfunc (params) ;
+		//  The $myfunc will be first in the line, so the tokenizer will be in the DEFAULT state;
+		//  then it will shift into NON_INITIAL for the params, and then back to DEFAULT for
+		//  the semicolon.
+
+		// &foo(params) { ...
+
+    // the tricky switch back to DEFAULT state for the block
+    // requires counting to find a matching closing right paren
+|   < VOID_FUNC_ID_BEFORE_ARGLIST :          
+                     <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )?
+													 (<WHITESPACE>)* "(" > 
+        {  
+	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
+			// fix the image (a StringBuffer)
+	    	image.deleteCharAt(image.length() - 1) ;
+			// set the matchedToken.image (a String)
+	    	matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < VOID_FUNC_ID_NO_ARGLIST:          
+                     <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )? > : NON_INITIAL
+
+// VOID_FUNC_FUNC_LAMBDA used to allow an optional "lambda", but this caused an ambiguity
+// with #n = 1 && (2) ;  where '&& (' was being interpreted as the VOID_FUNC_FUNC_LAMBDA
+// token.  See also '& (' the VOID_FUNC_LAMBDA.  I have put the "lambda" back in.  Review
+// all this again someday, perhaps using some punctuation symbol as a prefix on the &.
+
+|   < VOID_FUNC_FUNC_LAMBDA: 
+        <AMPERSAND> <AMPERSAND> "lambda" (<WHITESPACE>)* "(" >
+        {
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+|   < VOID_FUNC_FUNC_ID_BEFORE_ARGLIST :          
+        <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    	input_stream.backup(1) ;   // lop off the "("
+
+	    	image.deleteCharAt(image.length() - 1) ;
+	    	matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < VOID_FUNC_FUNC_ID_NO_ARGLIST:          
+        <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )? > : NON_INITIAL
+
+
+    // need to order this before NET_FUNC_ID_BEFORE_ARGLIST and NET_FUNC_ID_NO_ARGLIST
+|   < NET_FUNC_LAMBDA: <NET_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+// pseudo-function-- need to match the left paren so that it isn't overriden by a longer
+// match below with NET_FUNC_ID_BEFORE_ARGLIST
+
+|	< NET_EMBED_RTN_SUBNETS_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "embedRtnSubnets"
+(<WHITESPACE>)* "(">
+        {
+	     	input_stream.backup(1) ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+|	< NET_EXPAND_RTN_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "expandRtn"
+(<WHITESPACE>)* "(">
+        {
+	     	input_stream.backup(1) ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+
+		// in a net_func_definition, the tokenizer starts in DEFAULT (initial) state,
+		// then needs to switch to NON_INITIAL to tokenize the (params),
+		// then (the tricky part) it needs to switch back to DEFAULT to
+		// tokenize the block
+
+		// $&foo(params) { ...
+
+    // the tricky switch back to DEFAULT state for the block
+    // requires counting to find a matching closing right paren
+|   < NET_FUNC_ID_BEFORE_ARGLIST :          
+        <NET_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )?
+													 (<WHITESPACE>)* "(" > 
+        {  
+	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
+
+	    	image.deleteCharAt(image.length() - 1) ;
+	    	matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NET_FUNC_ID_NO_ARGLIST:          
+        <NET_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )? > : NON_INITIAL
+	// the $&lambda token will start the counting of parens
+
+    // could be DEFAULT OR NON_INITIAL
+    // if DEFAULT could be either
+    // 
+    // net func func assignment
+    // $&&addsuff = $&&foo ;
+    // $&&addsuff = $&&lambda(paramlist) {     return exp ;         } ;
+    // DEF          NON_INIT             DEF   NON_INIT   DEF
+    //              count-parens
+    // or syntactic variant, net func func definition
+    // $&&addsuff(paramlist)   = {    }   ;
+    // DEF       NON_INIT      DEF
+    //           count-parens
+
+// need to order this one before NET_FUNC_FUNC_ID_BEFORE_ARGLIST and NET_FUNC_FUNC_ID_NO_ARGLIST
+|   < NET_FUNC_FUNC_LAMBDA: 
+        <NET_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+	     input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+|   < NET_FUNC_FUNC_ID_BEFORE_ARGLIST:          
+        <NET_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NET_FUNC_FUNC_ID_NO_ARGLIST:          
+        <NET_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )? > : NON_INITIAL
+
+|   < RRPROD_ID: <NET_PREFIX> <RANGLE> <UNICODE_ID_LETTER> 
+        ( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* > : NON_INITIAL
+
+|   < NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> 
+        ( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* > : NON_INITIAL
+
+// need to order this before NUM_FUNC_ID_BEFORE_ARGLIST and NUM_FUNC_ID_NO_ARGLIST
+|   < NUM_FUNC_LAMBDA:  <NUM_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(">
+        {
+		 input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+|   < NUM_FUNC_ID_BEFORE_ARGLIST:
+        <NUM_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT>
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NUM_FUNC_ID_NO_ARGLIST:
+        <NUM_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT>
+		| "_"
+		)* 
+		( "!" )?
+		> : NON_INITIAL
+
+|   < NUM_FUNC_FUNC_LAMBDA: 
+        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(">
+        {
+		 input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_FUNC_FUNC_ID_BEFORE_ARGLIST:
+        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+		<DECIMAL_DIGIT> | "_")* (<WHITESPACE>)* "(">
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NUM_FUNC_FUNC_ID_NO_ARGLIST:
+        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+		<DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NET_LIST_ID: <NET_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NET_LIST_LIT_PREFIX: <NET_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
+        { input_stream.backup(1) ; }
+
+|   < NET_LIST_FUNC_LAMBDA:
+        <NET_PREFIX> <LIST_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NET_LIST_FUNC_FUNC_LAMBDA:
+        <NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_LIST_FUNC_FUNC_LAMBDA:
+        <NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+// built-in, need to match ( so that longer match for 
+// NET_LIST_FUNC_ID_BEFORE_ARGLIST
+// does not override it); wired in (not __getSlice) because it has a variable
+// number of arguments (so I can't wrap it in .kleene/global/predefined.kl)
+
+|	< NET_LIST_GET_SLICE_FUNC_ID:	
+	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> "getSlice" (<WHITESPACE>)* "(">
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_GET_SLICE_FUNC_ID:	
+	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> "getSlice" (<WHITESPACE>)* "(">
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_PUSH_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__push!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__push!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_ADD_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__add!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__add!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_ADDAT_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__addAt!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__addAt!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_SET_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__set!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__set!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+
+|	< NET_LIST_TAIL_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__tail" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__tail" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_COPY_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__copy" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_COPY_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__copy" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_GET_SIGMA_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__getSigma" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+"__getSigma" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|   < NET_LIST_FUNC_ID_BEFORE_ARGLIST: 
+		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NET_LIST_FUNC_ID_NO_ARGLIST: 
+		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
+		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NET_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
+		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
+		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
+		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NUM_LIST_ID: <NUM_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NUM_LIST_LIT_PREFIX: <NUM_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
+        { input_stream.backup(1) ; }
+
+|   < NUM_LIST_FUNC_LAMBDA:
+        <NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+        {
+			input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_LIST_FUNC_ID_BEFORE_ARGLIST: 
+		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_")* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NUM_LIST_FUNC_ID_NO_ARGLIST: 
+		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_")*
+		( "!" )? > : NON_INITIAL
+
+
+// KRB:  added 20 Jan 2009   
+// N.B. the notation backslash-uHHHH is already handled in the front-end
+
+// here handle backslash-UHHHHHHHH
+//      and    backslash-u{H...}
+
+|   < ESCAPE_HEX_PYTHON: "\\U"  ( <HEX_DIGIT> ){8} > 
+	// discard the initial backslash and U
+    {   matchedToken.image = image.substring(2) ; }
+
+|   < ESCAPE_HEX_PERL:   "\\U{" ( <HEX_DIGIT> )+  "}" >
+	// discard the initial backslash, U and left curly,
+	//   and discard the final curly
+      {   image.deleteCharAt( image.length() - 1 ) ;
+		  matchedToken.image = image.substring(3) ; 
+	  }
+// literalized symbols (otherwise special)
+|   < ESCAPE_CHAR: "\\" ( "$"
+                        | "#"
+						| "&"
+						| "["
+						| "]"
+						| "("
+						| ")"
+						| "*"
+						| "+"
+						| "?"
+						| "{"
+						| "}"
+						| "~"
+						| "-"
+                        | ";"
+                        | ","
+						| "."
+						| "0"      // literal digits
+						| "1"
+						| "2"
+						| "3"
+						| "4"
+						| "5"
+						| "6"
+						| "7"
+						| "8"
+						| "9"
+						| "\u03F5"  // GREEK LUNATE EPSILON SYMBOL
+						| " "       // literal SPACE
+						| "\\"       // literal backslash itself
+
+						// Java set of five special escape chars (not
+						// literalization; see values set in action below)
+						| "n"		// newline
+						| "t"		// tab
+						| "b"		// backspace
+						| "r"		// carriage return
+						| "f"		// formfeed
+
+						| ~[]       // Perl-like redundant literalization of anything, 
+									// i.e. \m is the same same as m.
+						// Without this line, \m is handled in a Python-like way,
+						// as a literal backslash followed by m.  
+						// The Java approach would be to make \m illegal.
+
+						) 
+    > { String str = image.substring(1) ;
+		// set values for Java-like special escape chars
+		if (str.equals("n")) {
+			matchedToken.image = "\n" ;		// \u000A
+		} else if (str.equals("t")) {
+			matchedToken.image = "\t" ;		// \u0009
+		} else if (str.equals("b")) {
+			matchedToken.image = "\b" ;		// \u0008
+		} else if (str.equals("r")) {
+			matchedToken.image = "\r" ;		// \u000D
+		} else if (str.equals("f")) {
+			matchedToken.image = "\f" ; 	// \u000C	
+		} else {
+			// literalization
+			matchedToken.image = image.substring(1) ; 
+		}
+	}
+
+// LCURLY needs to be found in DEFAULT (for block) or NON_INITIAL state
+|   < LCURLY: "{" >
+
+// see LPAREN under < DEFAULT, NON_INITIAL, ITERATOR_STATE >
+
+|   < RPAREN: ")" >
+        {
+	        if (in_parenthesized) {
+	            paren_count -= 1 ;
+	            if (paren_count == 0) {
+		            in_parenthesized = false ;
+		            SwitchTo(DEFAULT) ;
+		        }
+            }
+        }
+
+
+// EQUAL_SIGN needs to be found in DEFAULT state
+// (after param_list in a function definition) 
+// or in the NON_INITIAL state
+|   < EQUAL_SIGN: "=" >
+//|   < COLON_EQUAL_SIGN: ":=" >
+
+|   < ANY_ANY: "." ( <WHITESPACE> )* ":" ( <WHITESPACE> )* "." > 
+// why does ANY need to be recognized either in DEFAULT or
+// NON_INITIAL state?  
+|   < ANY: "." >
+
+// could encounter SEMICOLON in DEFAULT or NON_INITIAL state
+|   < SEMICOLON: ";" > : DEFAULT
+
+// unmatched single quotes (not caught above as delimiting a multichar
+//    symbol like '+Noun' or '[NOUN]' are caught here so that they
+//	  cause parsing to fail.  A literalized single quote, \', should
+//	  still work.
+//|   < UNMATCHED_SINGLE_QUOTE: "'">
+
+|   < CHAR: ~[] >
+}
+
+
+
+// "Private Regular Expressions" are used only as helpers in matching
+// other tokens:  marked with initial #
+<*>
+TOKEN: {
+    < #NET_PREFIX:  "$" >
+|   < #NUM_PREFIX:  "#" >
+//|   < #FUNC_PREFIX: "&" >  // indicate <AMPERSAND> instead
+|   < #LIST_PREFIX:  "@" >
+
+|   < #WHITESPACE:        ( " " | "\t" | "\n" )+ >
+|   < #DECIMAL_DIGIT:     [ "0"-"9" ] >
+|   < #HEX_DIGIT:         [ "0"-"9", "a"-"f", "A"-"F" ] >
+
+//|   < #UNICODE_ID_LETTER: [ "A"-"Z", "a"-"z" ] >
+// KRB:  Fill out UNICODE_ID_LETTER with
+// all Unicode chars that are formally designated as letter AND
+// can validly appear in Kleene IDs
+
+|  < #UNICODE_ID_LETTER: [
+"\u0041" - "\u005A" , 	// Latin
+                        // underscore is 5F
+"\u0061" - "\u007A" ,
+"\u00AA" ,
+"\u00B5" ,
+"\u00BA" ,
+"\u00C0" - "\u00D6" ,
+"\u00D8" - "\u00F6" ,
+//"\u00F8" - "\u02C1" ,
+//"\u02C6" - "\u02D1" ,
+//"\u02E0" - "\u02E4" ,
+//"\u02EC" ,
+//"\u02EE" ,
+"\u0370" - "\u0374" ,  // Greek
+"\u0376" - "\u0377" ,
+"\u037A" - "\u037D" ,
+"\u0386" ,
+"\u0388" - "\u038A" ,
+"\u038C" ,
+"\u038E" - "\u03A1" ,
+"\u03A3" - "\u03F5" ,
+"\u03F7" - "\u03FF" ,
+"\u0400" - "\u0481" ,  // Cyrillic
+"\u048A" - "\u0523" 
+// ,
+//"\u0531" - "\u0556" ,  // Armenian
+//"\u0559" ,
+//"\u0561" - "\u0587" ,
+//"\u05D0" - "\u05EA" ,
+//"\u05F0" - "\u05F2" ,
+//"\u0621" - "\u064A" ,
+//"\u066E" - "\u066F" ,
+//"\u0671" - "\u06D3" ,
+//"\u06D5" ,
+//"\u06E5" - "\u06E6" ,
+//"\u06EE" - "\u06EF" ,
+//"\u06FA" - "\u06FC" ,
+//"\u06FF" ,
+//"\u0710" ,
+//"\u0712" - "\u072F" ,
+//"\u074D" - "\u07A5" ,
+//"\u07B1" ,
+//"\u07CA" - "\u07EA" ,
+//"\u07F4" - "\u07F5" ,
+//"\u07FA" ,
+//"\u0904" - "\u0939" ,
+//"\u093D" ,
+//"\u0950" ,
+//"\u0958" - "\u0961" ,
+//"\u0971" - "\u0972" ,
+//"\u097B" - "\u097F" ,
+//"\u0985" - "\u098C" ,
+//"\u098F" - "\u0990" ,
+//"\u0993" - "\u09A8" ,
+//"\u09AA" - "\u09B0" 
+] >
+
+}
+
+
+// Emergency catch-all for tokenization
+// make sure that any file will tokenize without throwing a
+// TokenMgrError
+// (getting a ParseError instead)
+<*>
+TOKEN:
+{ 
+  < UNEXPECTED_CHAR: ~[] >
+}
+
+
+//############ Syntactic Productions #####################
+
+
+// A Kleene program consists of one or more statements,
+// terminated by <EOF>, a pseudo-token provided by the
+// TokenManager (I think)
+
+
+// this program method not used? rather statements are always
+//		read in a REPL
+ASTprogram program() #program:
+{}
+{
+  ( statement() )+ <EOF> { return jjtThis ; }
+}
+
+// stmt() called for interactive loop
+int stmt() throws Exception: {}
+{
+	// N.B. this order seems to be necessary, at least statement() being last,
+	// to allow stand-alone semicolons to be parsed/treated as empty statements
+    try {
+		(   <EOF>          { return -1 ; }       // end of file
+		// |   <SEMICOLON>    { return  0 ; }       // now empty_statement
+		|   <RCURLY>       { return  0 ; }
+		|	<RCURLY_BLOCK> { return  0 ; }
+			// recover after botched function definition, which
+			// does not end in a semicolon
+        |   statement()  { return 1 ;  }  // successful parse of a statement
+		|	stand_alone_block() { return 1 ; }  // successful parse of a block of
+												//    statements
+		)
+    } catch (Exception exc) {
+        // N.B. Exception here is from Parsing, not from interpetation
+        System.err.println("Exception caught while parsing stmt()") ;
+		exc.printStackTrace() ;
+
+        // current token is just before the one that caused
+		// the parser to choke
+		Token t = getToken(1) ;
+		String excmsg = "Parsing problem found at token: \"" 
+	       	        + t.image 
+			+ "\" on Line: " 
+			+ t.beginLine 
+			+ " Column: " 
+			+ t.beginColumn ;
+
+		if (gui != null) {
+	   		final String msg = excmsg ;
+	    	javax.swing.SwingUtilities.invokeLater(new Runnable() {
+				public void run() {
+		    		gui.appendToHistory("// " + msg) ;
+				}
+	    	}) ;
+		}
+		// for debugging
+		System.err.println(excmsg) ;
+
+		String className = exc.getClass().getName() ;
+		System.err.println("Class of Exception is: " + className) ;
+	
+		// error recovery  error-recovery here
+    	if (  exc instanceof ParseException 
+	   	   || exc instanceof ArithmeticException
+	  	   || exc instanceof NumberFormatException
+	  	   ) {
+	   		System.err.println("Loop through tokens to realign the parser.") ;
+	   		for (;;) {
+	       		switch (getNextToken().kind) {
+	           		// case EOF:  return -1 ;
+		   			case EOF: return 0 ;
+		   			case SEMICOLON: return 0 ;
+					case BAD_TOKEN0: return 0 ;
+					case BAD_TOKEN1: return 0 ;
+					case BAD_TOKEN2: return 0 ;
+					case BAD_TOKEN3: return 0 ;
+					case BAD_TOKEN4: return 0 ;
+					// basically handle as an empty statement
+	      		}
+       		}
+    	} else {
+	    	// it was another kind of Exception not handled here
+	    	throw exc ;
+		}
+    }
+}
+
+// a Kleene program consists of one or more statements
+
+void statement(): {}
+{
+    net_assignment()
+|   rrprod_definition()
+|   num_assignment()
+
+//  &myvoidfunc =   needs lookahead of two tokens to
+//		distinguish it from a void_func_call
+|	LOOKAHEAD(2)
+	void_func_assignment()
+
+//  a void_func_call is a kind of statement
+//  &myfunc(args) ;
+|   LOOKAHEAD(void_func_call())
+	void_func_call()    
+
+//  &myfunc(params) { ... }
+|	void_func_definition()
+
+| 	LOOKAHEAD(2)
+    void_func_func_assignment()
+|	void_func_func_definition()
+
+// syntactic variants
+// $&union = $&foo ;
+// $&union = $&lambda($a, $b) { return $a | $b ; }
+// N.B. LOOKAHEAD(2) makes sure the next tokens are a net_func_id and an equal sign
+//    before commiting the parser to a net_func_assignment()
+
+|   LOOKAHEAD(2) 
+    net_func_assignment()
+|   net_func_definition()
+
+|   LOOKAHEAD(2) 
+    num_func_assignment()
+|   num_func_definition()
+
+|   LOOKAHEAD(2) 
+    net_func_func_assignment()
+|   net_func_func_definition()
+
+|   LOOKAHEAD(2) 
+    num_func_func_assignment()
+|   num_func_func_definition()
+
+|	LOOKAHEAD(2)
+	net_list_func_assignment()
+|	net_list_func_definition()
+
+|	LOOKAHEAD(2)
+	num_list_func_assignment()
+|	num_list_func_definition()
+
+|   net_list_assignment()
+|   num_list_assignment()
+
+// only inside a function block
+|   return_statement()
+
+// only inside loop block?
+|   break_statement()
+|   continue_statement()
+
+|   if_statement()
+|   while_statement()
+|   until_statement()
+|   quit_statement()
+
+// iteration loop
+|	LOOKAHEAD(3)
+	foreach_net_iteration_statement()
+|	foreach_num_iteration_statement()
+
+// misc and meta-commands
+
+// global variables controlling optimization
+
+|   delete_statement()
+|	optimize_statement()
+| 	delete_all_statement()
+|	garbage_collect_statement()
+|	memory_report_statement()
+|	fsts_report_statement()
+|	symtab_report_statement()
+|	gsymtab_report_statement()
+//|	delete_selected_statement()
+
+|	rmEpsilon_statement()
+|	determinize_statement()
+|	minimize_statement()
+|	synchronize_statement()
+
+|   draw_statement()
+|	sigma_statement()
+|   test_statement()
+|   testTokensTextFile_statement()
+|	testTokensXMLFile_statement()
+|	sys_print_statement()
+|	sys_println_statement()
+|	print_statement()
+|	println_statement()
+|	exception_statement()
+|   info_statement()
+|	writexml_statement()
+|	writedot_statement()
+|   source_statement()   // run a Kleene source file
+
+|	sap_rtn_conventions_statement()
+
+|	empty_statement()
+}
+
+void sap_rtn_conventions_statement() #sap_rtn_conventions_statement : {}
+{
+	<SAP_RTN_CONVENTIONS_RW> <SEMICOLON>
+}
+
+void empty_statement() #empty_statement : {}
+{
+	<SEMICOLON>
+|	<BAD_TOKEN0>
+|	<BAD_TOKEN1>
+|	<BAD_TOKEN2>
+|	<BAD_TOKEN3>
+|	<BAD_TOKEN4>
+}
+
+void quit_statement() #quit_statement : {}
+{
+    ( <QUIT_RW1> | <QUIT_RW2> ) 
+}
+
+// the external_statement can appear only at the beginning of
+// a stand_alone_block or a func_block (syntactically constrained)
+void external_statement() #external_statement : {}
+{
+	( <EXTERNAL_RW1> | <EXTERNAL_RW2> )
+	( param() | rrprod_id() ) 
+	             ( ( <COMMA_OP> )? ( param() | rrprod_id() ) )* 
+	<SEMICOLON>
+}
+
+void export_statement() #export_statement : {}
+{
+	<EXPORT_RW>
+	( param() | rrprod_id() ) 
+	             ( ( <COMMA_OP> )? ( param() | rrprod_id() ) )* 
+	<SEMICOLON>
+}
+
+// stand_alone_block() is used for stand-alone blocks,
+//  a kind of statement, but don't include in statement()
+// N.B. when a stand_alone_block is interpreted, it is
+// interpreted inside a new Frame (like a func_block, but
+// unlike if_else_block and loop_block.
+// N.B. a stand_alone_block can include other embedded
+//  stand_alone_blocks
+// N.B. an external_statement can appear only at the start of
+//   a stand_alone_block or a func_block
+// N.B. an export_statement can occur only inside a
+// stand_alone_block, after any external_statements
+void stand_alone_block() #stand_alone_block : {}
+{
+    <LCURLY>
+		// allow zero or more external_statements (also RTN
+		// conventions statements) at the beginning
+		( 	LOOKAHEAD(1)
+			(	external_statement()
+			|	sap_rtn_conventions_statement() 
+			)
+		)*
+		// followed by any number of statements, stand_alone_blocks
+		//		or export statements
+		( statement() 
+		| stand_alone_block() 
+		| export_statement() 
+		)* 
+	<RCURLY_BLOCK>
+}
+
+// if_else_block() used for if-else statements
+// loop_block() for while, until
+// these blocks are not interpreted inside a new Frame
+
+// func_block() used for function blocks
+// stand_alone_block, a kind of statement group
+// these blocks _are_ interpreted inside a new Frame
+
+void if_else_block() #if_else_block : {}
+{
+    <LCURLY> ( statement() | stand_alone_block() )* <RCURLY_BLOCK>
+}
+
+void loop_block() #loop_block : {}
+{
+    <LCURLY> ( statement() | stand_alone_block() )* <RCURLY_BLOCK>
+}
+
+void func_block() #func_block : {}
+{
+    <LCURLY> 
+		( external_statement() )*
+		( statement() | stand_alone_block() )* 
+	<RCURLY_BLOCK>
+}
+
+void net_assignment() #net_assignment: {}
+{
+    net_id() <EQUAL_SIGN> regexp() <SEMICOLON>
+}
+
+void net_id() #net_id : {}
+{
+    <NET_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void iterator_net_id() #iterator_net_id : {}
+{
+    <ITERATOR_NET_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void iterator_num_id() #iterator_num_id : {}
+{
+    <ITERATOR_NUM_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void rrprod_definition() #rrprod_definition : {}
+{
+    { parsing_rrprod_def = true ; }
+    rrprod_id() <EQUAL_SIGN> rrProdRHS() <SEMICOLON>
+    { parsing_rrprod_def = false ; }
+}
+
+void rrProdRHS() #rrProdRHS : {}
+{
+	regexp()
+}
+
+void rrprod_id() #rrprod_id : {}
+{
+    <RRPROD_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void num_assignment() #num_assignment: {}
+{
+  num_id() <EQUAL_SIGN> numexp() <SEMICOLON>
+}
+
+void num_id() #num_id: {}
+{
+  <NUM_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void void_func_assignment() #void_func_assignment : {}
+{
+	// &foo = &bar ;
+	// &foo = &lambda(){} ;
+    void_func_id() <EQUAL_SIGN> void_func_exp() <SEMICOLON>
+}
+
+void void_func_definition() #void_func_definition : {}
+{
+	// &foo(params) { } 
+	// allow just single statement instead of block?
+    void_func_id() param_list() func_block()
+}
+
+// N.B. any XXX_func_assignment needs to terminate with a SEMICOLON
+// example:    $&foo = $&bar ;
+void net_func_assignment() #net_func_assignment : {}
+{
+	// $&foo = $&bar ;
+	// $&foo = $&lambda(){} ;
+    net_func_id() <EQUAL_SIGN> net_func_exp() <SEMICOLON>
+}
+
+// Kleene function definitions are now more like function definitions
+// in C and Java (no equal sign; no final semicolon)
+void net_func_definition() #net_func_definition : {}
+{
+	// $&foo(params) { } 
+	// allow just single statement instead of block?
+    net_func_id() param_list() func_block()
+}
+
+void net_list_func_assignment() #net_list_func_assignment : {}
+{
+	// $@&foo = $@&bar ;
+	// $@&foo = $@&lambda(){} ;
+    net_list_func_id() <EQUAL_SIGN> net_list_func_exp() <SEMICOLON>
+}
+
+void net_list_func_definition() #net_list_func_definition : {}
+{
+	// $@&foo(params) { } 
+	// allow just single statement instead of block?
+    net_list_func_id() param_list() func_block()
+}
+
+void num_list_func_assignment() #num_list_func_assignment : {}
+{
+	// #@&foo = #@&bar ;
+	// #@&foo = #@&lambda(){} ;
+    num_list_func_id() <EQUAL_SIGN> num_list_func_exp() <SEMICOLON>
+}
+
+void num_list_func_definition() #num_list_func_definition : {}
+{
+	// #@&foo(params) { } 
+	// allow just single statement instead of block?
+    num_list_func_id() param_list() func_block()
+}
+
+void num_func_assignment() #num_func_assignment : {}
+{
+	// #&foo = #&bar ;
+	// #&foo = #&lambda(){} ;
+    num_func_id() <EQUAL_SIGN> num_func_exp() <SEMICOLON>
+}
+
+// a syntactic variant of num_func_assignment(), with the params
+// on the LHS of the equal-sign, and no lambda
+void num_func_definition() #num_func_definition : {}
+{
+	// #&foo(params) = { } ;
+	// allow just single statement instead of block?
+    num_func_id() param_list() func_block()
+}
+
+void void_func_func_id() #void_func_func_id : {}
+{
+    ( <VOID_FUNC_FUNC_ID_BEFORE_ARGLIST> | <VOID_FUNC_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void void_func_func_assignment() #void_func_func_assignment : {}
+{
+    void_func_func_id() <EQUAL_SIGN> void_func_func_exp() <SEMICOLON>
+}
+
+void void_func_func_definition() #void_func_func_definition : {}
+{
+	// allow just a single statement instead of block?
+    void_func_func_id() param_list() func_block()
+}
+
+void net_func_func_id() #net_func_func_id : {}
+{
+    ( <NET_FUNC_FUNC_ID_BEFORE_ARGLIST> | <NET_FUNC_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void net_func_func_assignment() #net_func_func_assignment : {}
+{
+    net_func_func_id() <EQUAL_SIGN> net_func_func_exp() <SEMICOLON>
+}
+
+void net_func_func_definition() #net_func_func_definition : {}
+{
+	// allow just a single statement instead of block?
+    net_func_func_id() param_list() func_block()
+}
+
+
+void num_func_func_assignment() #num_func_func_assignment : {}
+{
+    num_func_func_id() <EQUAL_SIGN> num_func_func_exp() <SEMICOLON>
+}
+
+void num_func_func_definition() #num_func_func_definition : {}
+{
+	// allow just a single statement instead of block?
+    num_func_func_id() param_list() func_block()
+}
+
+void num_func_func_id() #num_func_func_id : {}
+{
+    ( <NUM_FUNC_FUNC_ID_BEFORE_ARGLIST> | <NUM_FUNC_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void net_list_assignment() #net_list_assignment : {}
+{
+    net_list_id() <EQUAL_SIGN> net_list_exp() <SEMICOLON>
+}
+
+void num_list_assignment() #num_list_assignment : {}
+{
+    num_list_id() <EQUAL_SIGN> num_list_exp() <SEMICOLON>
+}
+
+void if_statement() #if_statement : {}
+{
+    if_part()   ( LOOKAHEAD(1) elsif_part() )*  ( LOOKAHEAD(1) else_part() )?
+}
+
+void boolean_test() #boolean_test: {}
+{
+    <LPAREN> numexp() <RPAREN>
+}
+
+void if_part() #if_part : {}
+{
+    <IF_RW> boolean_test() ( if_else_block() | statement() )
+	// statement() does not include stand_alone_block()
+	// if_else_block() can contain stand_alone_block()s
+}
+
+void elsif_part() #elsif_part : {}
+{
+    <ELSIF_RW> boolean_test() ( if_else_block() | statement() )
+	// statement() does not include stand_alone_block()
+	// if_else_block() can contain stand_alone_block()s
+}
+
+void else_part() #else_part : {}
+{
+    <ELSE_RW> ( if_else_block() | statement() )
+	// statement() does not include stand_alone_block()
+	// if_else_block() can contain stand_alone_block()s
+}
+
+void while_statement() #while_statement : {}
+{
+    <WHILE_RW> boolean_test() ( loop_block() | statement() )
+	// statement() does not include stand_alone_block()
+	// loop_block() can contain stand_alone_block()s
+}
+
+void until_statement() #until_statement : {}
+{
+    <UNTIL_RW> boolean_test() ( loop_block() | statement() )
+	// statement() does not include stand_alone_block()
+	// loop_block() can contain stand_alone_block()s
+}
+
+void return_statement() #return_statement:
+{}
+{
+    <RETURN_RW> ( LOOKAHEAD({ getToken(1).kind != SEMICOLON }) expression() )? <SEMICOLON>
+}
+
+
+void break_statement() #break_statement: {}
+{
+    <BREAK_RW> <SEMICOLON>
+}
+
+void continue_statement() #continue_statement: {}
+{
+    <CONTINUE_RW> <SEMICOLON>
+}
+
+void foreach_net_iteration_statement() #foreach_net_iteration_statement: {}
+{
+	<FOREACH_RW> <LPAREN> iterator_net_id() <ITERATOR_IN> net_list_exp() 
+	<RPAREN> 
+	( loop_block() | statement() ) 
+}
+
+void foreach_num_iteration_statement() #foreach_num_iteration_statement: {}
+{
+	<FOREACH_RW> <LPAREN> iterator_num_id() <ITERATOR_IN> num_list_exp() 
+	<RPAREN> 
+	( loop_block() | statement() ) 
+}
+
+// Housekeeping and meta-commands
+
+void delete_statement() #delete_statement: {}
+{
+	<DELETE_RW>  ( param() | rrprod_id() ) 
+	             ( ( <COMMA_OP> )? ( param() | rrprod_id() ) )* 
+				 <SEMICOLON>
+}
+
+void optimize_statement() #optimize_statement: {}
+{
+	( <OPTIMIZE_RW> | <OPTIMIZE2_RW> ) 
+	net_id() ( ( <COMMA_OP> )? net_id() )* 
+	<SEMICOLON>
+}
+
+void garbage_collect_statement() #garbage_collect_statement: {}
+{
+	<GARBAGE_COLLECT_RW> <SEMICOLON>
+}
+void memory_report_statement() #memory_report_statement: {}
+{
+	<MEMORY_REPORT_RW> <SEMICOLON>
+}
+void fsts_report_statement() #fsts_report_statement: {}
+{
+	<FSTS_REPORT_RW> <SEMICOLON>
+}
+void symtab_report_statement() #symtab_report_statement: {}
+{
+	<SYMTAB_REPORT_RW> <SEMICOLON>
+}
+void gsymtab_report_statement() #gsymtab_report_statement: {}
+{
+	<GSYMTAB_REPORT_RW> <SEMICOLON>
+}
+
+
+void delete_all_statement() #delete_all_statement: {}
+{
+	<DELETE_ALL_RW> <SEMICOLON>
+}
+
+//void delete_selected_statement() #delete_selected_statement: {}
+//{
+//	<DELETE_SELECTED_RW> <SEMICOLON>
+//}
+
+// for remove in place:   rmEpsilon $foo ;
+//                        rmEpsilon $foo $bar ... ;
+//                        rmEpsilon $foo, $bar ... ;
+//                     or rmEpsilon! $foo ... ;
+void rmEpsilon_statement() #rmEpsilon_statement: {}
+{
+	( <RMEPSILON_RW> | <RMEPSILON2_RW> )
+	net_id() ( (<COMMA_OP>)? net_id() )* <SEMICOLON>
+}
+
+// for determinize in place
+// determinize in place
+// determinize $foo $bar ... ;
+// determinize $foo, $bar, ... ;
+void determinize_statement() #determinize_statement: {}
+{
+	( <DETERMINIZE_RW> | <DETERMINIZE2_RW> )
+	net_id() ( (<COMMA_OP>)? net_id() )* <SEMICOLON>
+}
+
+// for minimize in place
+// minimize in place
+// minimize $foo $bar ... ;
+// minimize $foo, $bar ... ;
+// also minimize! 
+void minimize_statement() #minimize_statement: {}
+{
+	( <MINIMIZE_RW> | <MINIMIZE2_RW> )
+	net_id() ( (<COMMA_OP>)? net_id() )* <SEMICOLON>
+}
+
+void synchronize_statement() #synchronize_statement: {}
+{
+	( <SYNCHRONIZE_RW> | <SYNCHRONIZE2_RW> )
+	net_id() ( (<COMMA_OP>)? net_id() )* <SEMICOLON>
+}
+
+void draw_statement() #draw_statement: {}
+{
+	<DRAW_RW> regexp() <SEMICOLON>
+}
+
+void sigma_statement() #sigma_statement: {}
+{
+	<SIGMA_RW> regexp() <SEMICOLON>
+}
+
+void test_statement() #test_statement: {}
+{
+	// the first arg denotes the Fst to test,
+	// the second optional argument should denote a single-string language,
+	// and that string is used as a title for the test window
+	// test $foo, "$foo" ;  // typical
+	<TEST_RW> regexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
+}
+
+void sys_print_statement() #sys_print_statement: {}
+{
+	<SYS_PRINT_RW> regexp() ( <COMMA_OP> regexp() ) ? <SEMICOLON>
+	// 1st arg FST to list, 2nd arg separator
+}
+
+void sys_println_statement() #sys_println_statement: {}
+{
+	<SYS_PRINTLN_RW> regexp() <SEMICOLON>
+}
+
+void exception_statement() #exception_statement: {}
+{
+	<EXCEPTION_RW> regexp() <SEMICOLON>
+	// the argument should denote a language of one string,
+	// the exception message
+}
+
+void print_statement() #print_statement: {}
+{
+	<PRINT_RW> regexp() ( <COMMA_OP> regexp() ) ? <SEMICOLON>
+	// 1st arg FST to list, 2nd arg separator
+}
+
+void println_statement() #println_statement: {}
+{
+	<PRINTLN_RW> regexp() <SEMICOLON>
+}
+
+void testTokensTextFile_statement() #testTokensTextFile_statement: {}
+{
+	<TESTTOKENSTEXTFILE_RW> 	regexp()  	// the Fst to test
+	     					<COMMA_OP>
+
+							regexp()  	// path of the input file
+							<COMMA_OP>
+							regexp()	// encoding of the input file
+							<COMMA_OP>
+
+							regexp()	// path of the output file
+							<COMMA_OP>
+							regexp()	// encoding of the output file
+							<COMMA_OP>
+							
+							// names of elements in the XML output
+
+							regexp()	// name of the root element
+							<COMMA_OP>
+							regexp()	// name of the token element
+							<COMMA_OP>
+							regexp()	// name of the input element
+							<COMMA_OP>
+							regexp()	// name of the outputs element
+							<COMMA_OP>
+							regexp()	// name of the output element
+							<COMMA_OP>
+							regexp()	// name of the weight attr (in the output elmt)
+
+							<SEMICOLON>
+
+}
+
+void testTokensXMLFile_statement() #testTokensXMLFile_statement: {}
+{
+	<TESTTOKENSXMLFILE_RW>    	regexp()  	// the Fst to test
+	     					<COMMA_OP>
+
+							regexp()  	// path of the input file
+							<COMMA_OP>
+
+							regexp()	// name of element holding input
+										//   strings, by default "input"
+										// i.e.   <input></input>
+							<COMMA_OP>
+
+							regexp()	// path of the output file
+							<COMMA_OP>
+							regexp()	// encoding of the output file
+							<COMMA_OP>
+							
+							// names of elements in the XML output
+
+							regexp()	// name of the root element
+							<COMMA_OP>
+							regexp()	// name of the token element
+							<COMMA_OP>
+							regexp()	// name of the input element
+							<COMMA_OP>
+							regexp()	// name of the outputs element
+							<COMMA_OP>
+							regexp()	// name of the output element
+							<COMMA_OP>
+							regexp()	// name of the weight attr (in the output elmt)
+
+							<SEMICOLON>
+
+}
+
+
+void info_statement() #info_statement: {}
+{
+	// args are  
+	//   1.  The expression (e.g. regexp or numexp) 
+	//   2.  (opt) the filename to write to
+	//   3.  (opt) the encoding
+	<INFO_RW> expression() 
+	          ( <COMMA_OP> regexp() 
+			      ( <COMMA_OP> regexp() )?
+			  )? <SEMICOLON>
+}
+
+void writexml_statement() #writexml_statement: {}
+{
+	// regexp, filepath, encoding
+	<WRITEXML_RW> regexp() ( <COMMA_OP> regexp() ( <COMMA_OP> regexp() )?)? <SEMICOLON>
+}
+
+void writedot_statement() #writedot_statement: {}
+{
+	// regexp, filepath, encoding
+	<WRITEDOT_RW> regexp() ( <COMMA_OP> regexp() ( <COMMA_OP> regexp() )?)? <SEMICOLON>
+}
+
+void source_statement() #source_statement: {}
+{
+	// source regexp() ;
+	// single regexp() arg represents a filepath, to be read in the default encoding of the operating system
+	// 
+	// source regexp(), regexp() ;  // filepath and encoding
+	// source regexp(), regexp(), regexp(), regexp() ...  // pairs of (filepath, encoding)
+	<SOURCE_RW> regexp() ( ( <COMMA_OP> ) regexp() ( <COMMA_OP> regexp() <COMMA_OP> regexp() )* )? <SEMICOLON>
+	// syntactic regexp(), but with a semantic restriction
+	// to encode a single string (being a file path)
+}
+
+// ###################### numexp ###################################
+
+// always create an ASTnumexp() node, useful in cases like arg_list
+// where the items can be of different types
+
+// only used for lookahead, in places where the expression could be either
+// a numexp() or a regexp()
+// is this bogus??? see exp()
+// I think you just have to look ahead for whole regexp() and
+// numexp() before looking
+// for possible simpler prefixes
+void numexp_lookahead(): {}
+{
+    ( <LPAREN> )* (   <DEC_INT_LITERAL> 
+                  |   <HEX_INT_LITERAL> 
+		          |   <DEC_FLOAT_LITERAL>
+		          |   <EXCLAMATION_MARK_OP> 
+		          |   <PLUS_SIGN_OP> 
+		          |   <MINUS_SIGN_OP>
+		          |   <NUM_ID>
+		          |   <NUM_FUNC_ID_BEFORE_ARGLIST>
+		          |   <NUM_FUNC_ID_NO_ARGLIST>
+		          |   <NUM_FUNC_FUNC_ID_BEFORE_ARGLIST>
+		          |   <NUM_FUNC_FUNC_ID_NO_ARGLIST>
+		          |   <NUM_FUNC_LAMBDA>
+		          |   <NUM_FUNC_FUNC_LAMBDA> 
+		          )
+}
+
+void numexp() #numexp: {}
+{
+  boolean_or_exp()
+}
+
+void boolean_or_exp(): {}
+{
+  // create a left-branching binary AST
+  boolean_and_exp() ( <BOOLEAN_OR_OP> boolean_and_exp() #boolean_or_exp(2) )*
+
+  // alternative:  treat as n-ary operation, create a flat tree
+  //( boolean_and_exp() ( <BOOLEAN_OR_OP> boolean_and_exp() )* ) #boolean_or_exp(>1)
+}
+
+void boolean_and_exp(): {}
+{
+  // create a left-branching binary AST
+  boolean_not_exp() ( <BOOLEAN_AND_OP> boolean_not_exp() #boolean_and_exp(2) )*
+}
+
+void boolean_not_exp():
+{ boolean b = false ; }
+{
+  // an even number of ! prefixes just cancel out, right here in the syntax
+  ( <EXCLAMATION_MARK_OP> { b = !b ;} )* compare_exp() #boolean_not_exp(b)
+}
+
+// just binary??
+void compare_exp(): {}
+{
+  // longer lookahead to distinguish weight <0.5> from greater-than 0.5>0.3
+  addsub_exp() ( LOOKAHEAD( <LANGLE> 
+                          | <BOOLEAN_LESS_EQUAL_OP> 
+						  | <BOOLEAN_GREATER_EQUAL_OP>
+						  | <BOOLEAN_EQUAL_OP>
+						  | <BOOLEAN_NOT_EQUAL_OP> 
+						  | (<RANGLE> addsub_exp())
+						  ) 
+                              ( <LANGLE>                   addsub_exp() #less_than_exp(2)
+                              | <BOOLEAN_LESS_EQUAL_OP>    addsub_exp() #less_than_or_equal_exp(2)
+                              | <BOOLEAN_GREATER_EQUAL_OP> addsub_exp() #greater_or_equal_exp(2)
+							  | <BOOLEAN_EQUAL_OP>		   addsub_exp() #equal_exp(2)
+	                          | <BOOLEAN_NOT_EQUAL_OP>     addsub_exp() #not_equal_exp(2)
+			                  | <RANGLE>                   addsub_exp() #greater_than_exp(2)
+							  )
+               )?
+}
+
+void addsub_exp(): {}
+{
+  // create a left-branching tree
+
+  multdiv_exp() ( LOOKAHEAD(1) ( <PLUS_SIGN_OP>  multdiv_exp() #addition_exp(2)
+                               | <MINUS_SIGN_OP> multdiv_exp() #subtraction_exp(2)
+                               )
+                )*
+}
+
+void multdiv_exp(): {}
+{
+  // create a left-branching tree
+  unary_prefix_exp() ( LOOKAHEAD(1) ( <ASTERISK_OP> unary_prefix_exp() #mult_exp(2) 
+                                    | <SLASH_OP>    unary_prefix_exp() #div_exp(2)
+                                    | <PERCENT_OP>  unary_prefix_exp() #mod_exp(2)
+                                    )
+                     )*
+}
+
+void unary_prefix_exp(): {}
+{
+  // right-branching
+  <MINUS_SIGN_OP>      unary_prefix_exp() #unary_minus_exp()
+
+  // prefix plus sign(s) null operator(s)
+| ( LOOKAHEAD(1) <PLUS_SIGN_OP> )+  unary_prefix_exp() 
+
+//| power_exp()
+| primary_numexp()
+}
+
+// double asterisk caused problems with regexp Kleene star
+//void power_exp(): {}
+//{
+  // right branching
+//  primary_numexp() ( LOOKAHEAD(1) <DOUBLE_ASTERISK> power_exp() #power_exp(2) )*
+//}
+
+void primary_numexp(): {}
+{
+  	dec_int_literal()    //   1
+| 	hex_int_literal()
+| 	dec_float_literal()  //   .5   0.5
+| 	num_id()             //   #foo
+| 	num_func_call()      //   #&func(args)
+//| 	num_list_ref()        //   #@list[1] 
+
+| 	<LPAREN> numexp() <RPAREN>
+
+| 	lng_pathcount_func_call()		// __pathCount()
+| 	lng_statecount_func_call()		// __stateCount()
+| 	lng_arccount_func_call()		// __arcCount()
+
+| 	lng_arity_func_call()         	// __arity()
+|	lng_is_rtn_func_call()			// __isRtn()
+|	lng_is_cyclic_func_call()			// __isCyclic()
+
+//|	lng_equivalent_func_call()		// __equivalent
+
+| 	num_abs_func_call()
+| 	dbl_ceil_func_call()
+| 	dbl_floor_func_call()
+| 	lng_round_func_call()
+| 	lng_long_func_call()
+|	lng_size_func_call()
+|	lng_is_empty_func_call()
+| 	dbl_double_func_call()
+| 	dbl_rint_func_call()
+
+// functions for getting an individual number from a list of
+// numbers
+
+|	num_head_func_call()
+|	num_getlast_func_call()
+|	num_get_func_call()
+
+|	num_pop_dest_func_call()
+|	num_removelast_dest_func_call()		// #&__removeLast!(#@list)
+|	num_remove_dest_func_call()			// #&__remove!(#@list, #index)
+
+}
+
+void num_func_call() #num_func_call : {}
+{
+    num_func_exp() arg_list()    
+}
+
+//********************** num_func_exp() ****************
+
+void num_func_exp() #num_func_exp : {}
+{
+    num_func_id()          // #&add
+|   num_func_lambda_exp()  // #&lambda(){}
+|   num_func_func_call()
+}
+
+void num_func_id() #num_func_id : {}
+{
+    ( <NUM_FUNC_ID_BEFORE_ARGLIST> | <NUM_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void num_func_lambda_exp() #num_func_lambda_exp : {}
+{
+    <NUM_FUNC_LAMBDA> param_list() func_block()
+}
+
+void num_func_func_call() #num_func_func_call : {}
+{
+    num_func_func_exp() arg_list()
+}
+
+//***************** num_func_func_exp() *****************
+
+void num_func_func_exp() #num_func_func_exp : {}
+{
+    num_func_func_id()
+|   num_func_func_lambda_exp()
+// and don't try to go any deeper
+}
+
+void num_func_func_lambda_exp() #num_func_func_lambda_exp : {}
+{
+    <NUM_FUNC_FUNC_LAMBDA> param_list() func_block()
+}
+
+
+void dec_int_literal() #dec_int_literal : {}
+{
+ // N.B. 'token' is set to the last-matched Token
+ // token.image is the image (a String of chars matched)
+  <DEC_INT_LITERAL> { jjtThis.setImage(token.image) ;
+                      //jjtThis.setLongValue(Integer.parseInt(token.image)) ; 
+                      jjtThis.setLongValue(Long.parseLong(token.image)) ; 
+                    }
+}
+
+void hex_int_literal() #hex_int_literal : {}
+{
+  <HEX_INT_LITERAL> {  jjtThis.setImage("0x" + token.image) ;
+                       //jjtThis.setLongValue(Integer.parseInt(token.image, 16)) ; 
+                       jjtThis.setLongValue(Long.parseLong(token.image, 16)) ; 
+                    }
+}
+
+void dec_float_literal() #dec_float_literal : {}
+{
+ // N.B. 'token' is set to the last-matched Token
+ // token.image is the image (a String of chars matched)
+  <DEC_FLOAT_LITERAL> { jjtThis.setImage(token.image) ;
+                        jjtThis.setDoubleValue(Double.parseDouble(token.image)) ; 
+                      }
+}
+
+// ######################### regexp ##############################
+
+// always create an ASTnumexp() node, useful in cases like arg_list
+// where the items can be of different types
+
+void regexp() #regexp:
+{}
+{
+  composed_exp() 
+}
+
+// n-ary operation; build a flat tree for composition
+void composed_exp(): {}
+{
+  ( rule_like_exp() ( (<COMPOSITION_OP> | <COMPOSITION_OP_ASCII>) rule_like_exp() )* ) #composed_exp(>1)
+}
+
+void rule_like_exp(): 
+{ int rule_sections = 0 ; }
+{
+   
+unioned_exp() 
+    { rule_sections = 0 ; }
+
+    (  
+	   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+	   		unioned_exp() #rule_lhs(2) 
+           	{ rule_sections = 1 ; }
+
+           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   		( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_oblig(rule_sections)
+	|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_ASCII_OPT> )
+	     	unioned_exp() #rule_lhs(2) 
+           	{ rule_sections = 1 ; }
+
+           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   		( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_opt(rule_sections)
+	|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			(
+				// Catch a parsing problem found by Paola
+				// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+				LOOKAHEAD ( {mustBeNumexp()} )
+				{ appendGuiError("Tokenization/parse problem: " +
+					"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+					"as either < -1> or <(-1)>") ;
+				}
+				//numexp()
+			|
+				// should be followed by one of these "lower" expressions
+				( longest_exp() 
+            	| shortest_exp()
+				| unioned_exp() 
+				) #rule_lhs(2)
+           		{ rule_sections = 1 ; }
+
+           		( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   			( where_clause() { rule_sections += 1 ; } )* #rule_left_arrow_oblig(rule_sections)
+			)
+	|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_ASCII_OPT> ) 
+			( longest_exp()
+	        | shortest_exp()
+			| unioned_exp() 
+			) #rule_lhs(2) 
+           	{ rule_sections = 1 ; }
+
+           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   		( where_clause() { rule_sections += 1 ; } )* #rule_left_arrow_opt(rule_sections)
+
+    |  ( <RESTRICTION_ARROW> | <RESTRICTION_ARROW_ASCII> ) restriction_rhs()
+		#restriction_exp(2)
+    )?
+|
+    
+( longest_exp() | shortest_exp() )
+        { rule_sections = 0 ; }
+    (  
+	   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) unioned_exp() #rule_lhs(2) 
+           { rule_sections = 1 ; }
+           ( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   ( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_oblig(rule_sections)
+
+	|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_ASCII_OPT> )
+	           unioned_exp() #rule_lhs(2) 
+           { rule_sections = 1 ; }
+           ( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
+	   ( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_opt(rule_sections)
+    )?
+}
+
+void longest_exp() #longest_exp : {}
+{
+    <LONGEST_DIRECTIVE> unioned_exp()
+}
+
+void shortest_exp() #shortest_exp : {}
+{
+    <SHORTEST_DIRECTIVE> unioned_exp()
+}
+
+// RHS of rules that compile into transducers
+void rule_rhs() #rule_rhs: {}
+{
+    context() ( <BOOLEAN_OR_OP> context() )*
+}
+
+// RHS of restriction => expressions
+void restriction_rhs() #restriction_rhs: {}
+{
+	restriction_context() ( <BOOLEAN_OR_OP> restriction_context() )*
+}
+
+// contexts for rules (compile into transducers)
+void context() #context : {}
+{
+	// context() with left-context may or may not have an overt right
+	// context(); contexts can be marked upper or lower, or be unmarked
+	// default contexts (upper for -> rules, lower for <- rules)
+    context_part() #left_context(1) <UNDERSCORE_OP> 
+	                         ( LOOKAHEAD(1) context_part() #right_context(1) )?
+
+|   // there must be an underscore, and then an optional right context
+	<UNDERSCORE_OP>  ( LOOKAHEAD(1) context_part() #right_context(1) )?
+}
+
+void restriction_context() #restriction_context : {}
+{
+	// restriction_context() with left-context may or may not have an overt right
+	// restriction_context (no possibility of upper vs. lower, as in rules)
+    unioned_exp() #left_restriction_context(1) <UNDERSCORE_OP> 
+	                         ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
+
+|   // there must be an underscore, and then an optional right context
+	<UNDERSCORE_OP>  ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
+}
+
+// three possibilities for rules:
+//  	default_context(), will be upper side for -> rules, lower side for <- rules
+//		upper_context()    overtly marked upper { 
+void context_part() : {}
+{
+    default_context()
+|   upper_context()
+|   lower_context()
+}
+
+// a "default" context is default upper in a right-arrow rule, 
+// and default lower in a left-arrow rule
+void default_context() #default_context : {}
+{
+    unioned_exp()
+}
+
+void upper_context() #upper_context : {}
+{
+    <UPPER_DIRECTIVE> unioned_exp()
+
+}
+
+void lower_context() #lower_context : {}
+{
+    <LOWER_DIRECTIVE> unioned_exp()
+
+}
+
+void where_clause(): {}
+{
+    where_matched_clause()
+|   where_mixed_clause()
+}
+
+void where_matched_clause() #where_matched_clause : {}
+{
+    <WHERE_MATCHED_DIRECTIVE> <LCURLY> elmt_of_net_list_exp() (
+	<COMMA_OP> elmt_of_net_list_exp() )* <RCURLY>
+}
+
+void where_mixed_clause() #where_matched_clause : {}
+{
+    <WHERE_MIXED_DIRECTIVE>   <LCURLY> elmt_of_net_list_exp() (
+	<COMMA_OP> elmt_of_net_list_exp() )* <RCURLY>
+}
+
+void elmt_of_net_list_exp() #elmt_of_net_list_exp : {}
+{
+    net_id() ( <ELEMENT_OF_OP> | <ELEMENT_OF_OP_ASCII> ) net_list_exp()
+}
+
+// associative:  make a flat tree
+void unioned_exp(): {}
+{
+    // n-ary operation, build a flat AST
+    ( intersected_exp() ( LOOKAHEAD(1) <VERTICAL_BAR_OP> intersected_exp() )* ) #unioned_exp(>1)
+}
+
+void intersected_exp(): {}
+{
+	// n-ary operation, build a flat tree
+   ( difference_exp() ( LOOKAHEAD(1) <AMPERSAND> difference_exp() )* ) #intersected_exp(>1)
+}
+
+// not associative, so build left-branching tree
+void difference_exp(): {}
+{
+  concatenation_exp() 
+     ( LOOKAHEAD(1) <MINUS_SIGN_OP> concatenation_exp() #difference_exp(2) )*
+}
+
+// there is no overt operator for concatenation
+void concatenation_exp(): {}
+{
+	// n-ary operation, build a flat tree
+  ( complement_exp() ( LOOKAHEAD(1) complement_exp() )* ) #concatenation_exp(>1)
+}
+
+// prefix operator
+// even numbers of tildes cancel out, e.g.  ~~a
+void complement_exp():
+{ boolean b = false ; }
+{
+  // any even number of tildes cancels out, right in the syntax
+  ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* iterated_exp() #complement_exp(b)
+}
+
+// postfix operators, make a left-branching tree
+// don't allow a** etc???
+
+void iterated_exp(): {}
+{
+  crossproduct_or_weight_exp() (  LOOKAHEAD(1) ( <ASTERISK_OP>    #kleene_star(1)
+                                               |  <PLUS_SIGN_OP>  #kleene_plus(1)
+                                               |  <QUESTION_MARK> #optional(1)
+		                   	                   |  iteration_exp() #iterated_exp(2)
+                                               )
+		                       )*
+}
+
+// e.g.  {2} or {2,4} or { 2, } or (I've thought about this)
+// {,4}, which is equivalent to {0,4}
+void iteration_exp(): {}
+{
+  <LCURLY> ( numexp() ( <COMMA_OP> ( numexp()  <RCURLY>  #iteration_low_high(2)
+                                   | <RCURLY>            #iteration_low(1)
+                                   )
+                      | <RCURLY>                         #iteration_exact(1)
+                      )
+           | <COMMA_OP> numexp() <RCURLY>                #iteration_high(1)
+           )
+}
+
+void crossproduct_or_weight_exp(): {}
+{
+	crossproduct_exp()
+|   weight_exp()
+}
+
+// don't allow weights to participate in crossproduct_exp,
+// disallow a:<0.2> even syntactically (weights attach to a PATH,
+// not a projection of a path
+void weight_exp() #weight_exp: {}
+{
+    <LANGLE>  weight_value_exp()  <RANGLE>
+}
+
+void weight_value_exp(): {}
+{
+	numexp()
+//  LOOKAHEAD(numexp_lookahead()) numexp()
+//| regexp()
+}
+
+void crossproduct_exp(): {}
+{
+    ( primary_regexp() ( LOOKAHEAD(1) <CROSSPRODUCT_OP> primary_regexp())? ) #crossproduct_exp(>1)
+}
+
+//******************** primary regexp *********************************
+
+void primary_regexp():
+{}
+{
+	
+  lit_char()
+| multichar_symbol()
+| net_id()
+
+// $>Foo can appear only in rrprod_definition
+| LOOKAHEAD({ getToken(1).kind == RRPROD_ID && parsing_rrprod_def == true })
+  rrprod_id()
+
+| any()                       // "dot" (.) match any char
+| any_any()					  //  .:.
+| <LPAREN> regexp() <RPAREN>
+| double_quoted_string()
+| epsilon()                   // U+03F5 GREEK LUNATE EPSILON SYMBOL
+                              //    to represent the empty string
+| char_union()					// [a-z]
+| complement_char_union()		// [^a-z]
+
+| net_func_call()
+// $&foo(args)      $&lambda(params){block}(args)
+
+// built-in functions
+
+| net_reverse_func_call()
+
+| net_invert_func_call()
+| net_invert_dest_func_call()
+
+| net_optimize_func_call()
+| net_optimize_dest_func_call()
+
+| net_rmepsilon_func_call()
+| net_rmepsilon_dest_func_call()
+
+| net_determinize_func_call()
+| net_determinize_dest_func_call()
+
+| net_minimize_func_call()
+| net_minimize_dest_func_call()
+
+| net_synchronize_func_call()
+| net_synchronize_dest_func_call()
+
+| net_case_func_call()
+| net_diac_func_call()
+
+| net_shortestPath_func_call()
+
+| net_inputproj_dest_func_call()
+| net_inputproj_func_call()
+
+| net_outputproj_dest_func_call()
+| net_outputproj_func_call()
+
+| net_to_string_func_call()
+| net_implode_func_call()
+| net_explode_func_call()
+
+// functions returning an individual net from a list of nets
+|	net_head_func_call()
+|	net_getlast_func_call()
+| 	net_get_func_call()
+
+|	net_pop_dest_func_call()
+|	net_removelast_dest_func_call()	// $&__removeLast!($@list, #index)
+|	net_remove_dest_func_call()		// $&__remove!($@list, #index)
+
+| 	net_get_net_func_call()
+|	net_sub_func_call()
+| 	net_embed_rtn_subnets_func_call()
+|	net_expand_rtn_func_call()
+
+| net_close_sigma_func_call()
+| net_close_sigma_dest_func_call()
+
+| net_copy_func_call()
+| net_rm_weight_dest_func_call()
+| net_rm_weight_func_call()
+| net_subst_symbol_dest_func_call()
+| net_subst_symbol_func_call()
+| net_read_xml_call()
+
+| net_start_func_call()
+
+
+//| net_list_ref()      // $@list[1]         $@(a,b,c)[1]   $@&foo(args)[1]
+
+}
+
+void lit_char() #lit_char: {}
+{
+  (   <CHAR>         { jjtThis.setImage(token.image) ; }
+  |   <ESCAPE_CHAR>  { jjtThis.setImage(token.image) ; }
+
+  |   <ESCAPE_HEX_PYTHON>   { 	int codepoint = Integer.parseInt(token.image, 16) ;
+					   			int codepoints[] = { codepoint } ;
+					   			// will be one char (BMP) or two (supplementary)
+					   			jjtThis.setImage(new String(codepoints, 0, 1)) ;
+					 		}
+  |   <ESCAPE_HEX_PERL>     { 	int codept = Integer.parseInt(token.image, 16) ;
+					   			int codepts[] = { codept } ;
+					   			// will be one char (BMP) or two (supplementary)
+					   			jjtThis.setImage(new String(codepts, 0, 1)) ;
+					 		}
+  )
+}
+
+void multichar_symbol() #multichar_symbol: {}
+{
+  <MULTICHAR_SYMBOL> { jjtThis.setImage(token.image) ; }
+| <WORD_BOUNDARY>    { jjtThis.setImage(token.image) ; } 
+	// just # in the Kleene syntax, stored as '**@#@' internally
+}
+
+
+void double_quoted_string() #double_quoted_string : {}
+{
+  <LEFT_DOUBLE_QUOTE> ( double_quoted_char() )* <RIGHT_DOUBLE_QUOTE>
+}
+
+// a double_quoted_char is a char inside a double-quoted string,
+//   including literalized double quotes
+void double_quoted_char() #double_quoted_char : {}
+{
+    ( <DOUBLE_QUOTED_CHAR> | <DOUBLE_QUOTED_ESCAPE_CHAR> ) { jjtThis.setImage(token.image) ; }
+}
+
+
+// the syntax is [aeiou]  [A-Za-z0-9] etc.
+// should this be Kleene star (allowing an empty set) or Kleene
+// plus?  (see also complement_char_union())
+void char_union() #char_union: {}
+{
+    <LSQUARE>  (  LOOKAHEAD(char_range()) char_range()
+               |  square_bracket_char()
+	       	   |  square_bracket_lit_hyphen()  
+			   // - not specifying a range
+			   |  square_bracket_multichar_symbol()
+               )+  
+    <RSQUARE>
+}
+
+// the syntax is [^aeiou] etc.
+void complement_char_union() #complement_char_union: {}
+{
+    <LSQUARE_CIRCUMFLEX>  (  LOOKAHEAD(char_range()) char_range()
+                          |  square_bracket_char()
+	                      |  square_bracket_lit_hyphen()  
+					      // - not specifying a range
+						  |  square_bracket_multichar_symbol()
+                          )+
+    <RSQUARE>
+}
+
+void square_bracket_lit_hyphen() #lit_char : {}
+{
+    <SQUARE_BRACKET_HYPHEN> { jjtThis.setImage(token.image) ; }
+}
+
+void square_bracket_multichar_symbol() #square_bracket_multichar_symbol()
+: {}
+{
+	<SQUARE_BRACKET_MULTICHAR_SYMBOL> { jjtThis.setImage(token.image) ; }
+}
+
+void char_range() #char_range : {}
+{
+    square_bracket_char() <SQUARE_BRACKET_HYPHEN> square_bracket_char()
+}
+
+// KRB: use #lit_char or #square_bracket_char here ???
+void square_bracket_char() #lit_char : {}
+{
+    (  <SQUARE_BRACKET_CHAR>
+    |  <SQUARE_BRACKET_ESCAPE_CHAR>
+    ) { jjtThis.setImage(token.image) ; }
+}
+
+// note that a void_func_call() is a statement, and so
+// is terminated with a SEMICOLON; this is different from
+// other _func_call() types
+void void_func_call() #void_func_call: {}
+{
+	void_func_exp() arg_list() <SEMICOLON>
+}
+
+void net_func_call() #net_func_call: {}
+{
+  	net_func_exp() arg_list()
+}
+
+void net_reverse_func_call() #net_reverse_func_call: {}
+{
+	<NET_REVERSE_FUNC_ID> regexp_one_arg_list() 
+	// must have one arg, a regexp
+}
+
+void net_invert_func_call() #net_invert_func_call: {}
+{
+	<NET_INVERT_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_invert_dest_func_call() #net_invert_dest_func_call: {}
+{
+	<NET_INVERT_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_optimize_func_call() #net_optimize_func_call: {}
+{
+	<NET_OPTIMIZE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_optimize_dest_func_call() #net_optimize_dest_func_call: {}
+{
+	<NET_OPTIMIZE_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_rmepsilon_func_call() #net_rmepsilon_func_call: {}
+{
+	<NET_RMEPSILON_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_rmepsilon_dest_func_call() #net_rmepsilon_dest_func_call: {}
+{
+	<NET_RMEPSILON_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_determinize_func_call() #net_determinize_func_call: {}
+{
+	<NET_DETERMINIZE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_determinize_dest_func_call() #net_determinize_dest_func_call: {}
+{
+	<NET_DETERMINIZE_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_minimize_func_call() #net_minimize_func_call: {}
+{
+	<NET_MINIMIZE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_minimize_dest_func_call() #net_minimize_dest_func_call: {}
+{
+	<NET_MINIMIZE_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_synchronize_func_call() #net_synchronize_func_call: {}
+{
+	<NET_SYNCHRONIZE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_synchronize_dest_func_call() #net_synchronize_dest_func_call: {}
+{
+	<NET_SYNCHRONIZE_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_case_func_call() #net_case_func_call: {}
+{
+	<NET_CASE_FUNC_ID> case_arg_list()
+}
+
+void net_diac_func_call() #net_diac_func_call: {}
+{
+	<NET_DIAC_FUNC_ID> diac_arg_list()
+}
+
+
+void net_shortestPath_func_call() #net_shortestPath_func_call: {}
+{
+	<NET_SHORTESTPATH_FUNC_ID> regexp_numexp_arg_list() 
+	// must have one arg, a regexp
+}
+
+void net_inputproj_dest_func_call() #net_inputproj_dest_func_call: {}
+{
+	<NET_INPUTPROJ_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_inputproj_func_call() #net_inputproj_func_call: {}
+{
+	<NET_INPUTPROJ_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_outputproj_dest_func_call() #net_outputproj_dest_func_call: {}
+{
+	<NET_OUTPUTPROJ_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_outputproj_func_call() #net_outputproj_func_call: {}
+{
+	<NET_OUTPUTPROJ_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_close_sigma_func_call() #net_close_sigma_func_call: {}
+{
+	<NET_CLOSE_SIGMA_FUNC_ID> regexp_two_arg_list()
+}
+
+void net_close_sigma_dest_func_call() #net_close_sigma_dest_func_call: {}
+{
+	<NET_CLOSE_SIGMA_DEST_FUNC_ID> regexp_two_arg_list()
+}
+
+void net_copy_func_call() #net_copy_func_call: {}
+{
+	<NET_COPY_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_rm_weight_dest_func_call() #net_rm_weight_dest_func_call: {}
+{
+	<NET_RM_WEIGHT_DEST_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_rm_weight_func_call() #net_rm_weight_func_call: {}
+{
+	<NET_RM_WEIGHT_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_subst_symbol_dest_func_call() #net_subst_symbol_dest_func_call: {}
+{
+	<NET_SUBST_SYMBOL_DEST_FUNC_ID> regexp_three_arg_list()
+}
+
+void net_subst_symbol_func_call() #net_subst_symbol_func_call: {}
+{
+	<NET_SUBST_SYMBOL_FUNC_ID> regexp_three_arg_list()
+}
+
+void net_read_xml_call() #net_read_xml_call: {}
+{
+	<NET_READ_XML_FUNC_ID> regexp_one_arg_list()
+	// The built-in $&__readXML requires 1 argument: representing the filepath
+	// This $&__readXML is wrapped as $&readXML in ~/.kleene/global/predefined.kl, 
+}
+
+void net_start_func_call() #net_start_func_call: {}
+{
+	<NET_START_FUNC_ID> rrprod_id_one_arg_list()
+	// $&__start($>foo)  must have one argument, $>name, an rrprod_id
+}
+
+void lng_pathcount_func_call() #lng_pathcount_func_call: {}
+{
+	<LNG_PATHCOUNT_FUNC_ID> regexp_one_arg_list()
+}
+
+void lng_statecount_func_call() #lng_statecount_func_call: {}
+{
+	<LNG_STATECOUNT_FUNC_ID> regexp_one_arg_list()
+}
+
+void lng_arccount_func_call() #lng_arccount_func_call: {}
+{
+	<LNG_ARCCOUNT_FUNC_ID> regexp_one_arg_list()
+}
+
+void lng_arity_func_call() #lng_arity_func_call: {}
+{
+	<LNG_ARITY_FUNC_ID> regexp_one_arg_list() 
+}
+
+// boolean
+
+void lng_is_rtn_func_call() #lng_is_rtn_func_call: {}
+{
+	<LNG_IS_RTN_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_cyclic_func_call() #lng_is_cyclic_func_call: {}
+{
+	<LNG_IS_CYCLIC_FUNC_ID> regexp_one_arg_list() 
+}
+
+//void lng_equivalent_func_call() #lng_equivalent_func_call: {}
+//{
+//	<LNG_EQUIVALENT_FUNC_ID> regexp_regexp_numexp_arg_list() 
+//}
+
+void num_abs_func_call() #num_abs_func_call: {}
+{
+	<NUM_ABS_FUNC_ID> numexp_one_arg_list()
+}
+
+void net_to_string_func_call() #net_to_string_func_call: {}
+{
+	<NET_TO_STRING_FUNC_ID> numexp_one_arg_list()
+}
+
+void net_implode_func_call() #net_implode_func_call: {}
+{
+	<NET_IMPLODE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_explode_func_call() #net_explode_func_call: {}
+{
+	<NET_EXPLODE_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_get_func_call() #net_get_func_call: {}
+{
+	<NET_GET_FUNC_ID> netlist_numexp_arg_list()  
+}
+
+void net_getlast_func_call() #net_getlast_func_call: {}
+{
+	<NET_GETLAST_FUNC_ID> netlist_arg_list()  
+}
+
+void num_get_func_call() #num_get_func_call: {}
+{
+	<NUM_GET_FUNC_ID> numlist_numexp_arg_list()  
+}
+
+void num_getlast_func_call() #num_getlast_func_call: {}
+{
+	<NUM_GETLAST_FUNC_ID> numlist_arg_list()  
+}
+
+void net_head_func_call() #net_head_func_call: {}
+{
+	<NET_HEAD_FUNC_ID> netlist_arg_list()  
+}
+
+void num_head_func_call() #num_head_func_call: {}
+{
+	<NUM_HEAD_FUNC_ID> numlist_arg_list()  
+}
+
+void net_pop_dest_func_call() #net_pop_dest_func_call: {}
+{
+	<NET_POP_DEST_FUNC_ID> netlist_arg_list()  
+}
+
+void net_remove_dest_func_call() #net_remove_dest_func_call: {}
+{
+	<NET_REMOVE_DEST_FUNC_ID> netlist_numexp_arg_list()  
+}
+
+void net_removelast_dest_func_call() #net_removelast_dest_func_call: {}
+{
+	<NET_REMOVELAST_DEST_FUNC_ID> netlist_arg_list()  
+}
+
+void num_pop_dest_func_call() #num_pop_dest_func_call: {}
+{
+	<NUM_POP_DEST_FUNC_ID> numlist_arg_list()  
+}
+
+void num_remove_dest_func_call() #num_remove_dest_func_call: {}
+{
+	<NUM_REMOVE_DEST_FUNC_ID> numlist_numexp_arg_list()  
+}
+
+void num_removelast_dest_func_call() #num_removelast_dest_func_call: {}
+{
+	<NUM_REMOVELAST_DEST_FUNC_ID> numlist_arg_list()  
+}
+
+void net_list_get_slice_func_call() #net_list_get_slice_func_call: {}
+{
+	<NET_LIST_GET_SLICE_FUNC_ID> net_get_slice_arg_list()
+}
+
+void num_list_get_slice_func_call() #num_list_get_slice_func_call: {}
+{
+	<NUM_LIST_GET_SLICE_FUNC_ID> num_get_slice_arg_list()
+}
+
+void net_list_push_dest_func_call() #net_list_push_dest_func_call: {}
+{
+	<NET_LIST_PUSH_DEST_FUNC_ID> regexp_netlist_arg_list()  
+}
+
+void num_list_push_dest_func_call() #num_list_push_dest_func_call: {}
+{
+	<NUM_LIST_PUSH_DEST_FUNC_ID> numexp_numlist_arg_list()  
+}
+
+void net_list_add_dest_func_call() #net_list_add_dest_func_call: {}
+{
+	<NET_LIST_ADD_DEST_FUNC_ID> netlist_regexp_arg_list()  
+}
+
+void num_list_add_dest_func_call() #num_list_add_dest_func_call: {}
+{
+	<NUM_LIST_ADD_DEST_FUNC_ID> numlist_numexp_arg_list()  
+}
+
+void net_list_addat_dest_func_call() #net_list_addat_dest_func_call: {}
+{
+	<NET_LIST_ADDAT_DEST_FUNC_ID> netlist_numexp_regexp_arg_list()  
+}
+
+void num_list_addat_dest_func_call() #num_list_addat_dest_func_call: {}
+{
+	<NUM_LIST_ADDAT_DEST_FUNC_ID> numlist_numexp_numexp_arg_list()  
+}
+
+void net_list_set_dest_func_call() #net_list_set_dest_func_call: {}
+{
+	<NET_LIST_SET_DEST_FUNC_ID> netlist_numexp_regexp_arg_list()  
+}
+
+void num_list_set_dest_func_call() #num_list_set_dest_func_call: {}
+{
+	<NUM_LIST_SET_DEST_FUNC_ID> numlist_numexp_numexp_arg_list()  
+}
+
+void net_list_tail_func_call() #net_list_tail_func_call: {}
+{
+	<NET_LIST_TAIL_FUNC_ID> netlist_arg_list()
+}
+
+void net_list_copy_func_call() #net_list_copy_func_call: {}
+{
+	<NET_LIST_COPY_FUNC_ID> netlist_arg_list()
+}
+
+void num_list_tail_func_call() #num_list_tail_func_call: {}
+{
+	<NUM_LIST_TAIL_FUNC_ID> numlist_arg_list()
+}
+
+void num_list_copy_func_call() #num_list_copy_func_call: {}
+{
+	<NUM_LIST_COPY_FUNC_ID> numlist_arg_list()
+}
+
+void net_list_get_sigma_func_call() #net_list_get_sigma_func_call: {}
+{
+	<NET_LIST_GET_SIGMA_FUNC_ID> regexp_one_arg_list()
+}
+
+void num_list_get_sigma_func_call() #num_list_get_sigma_func_call: {}
+{
+	<NUM_LIST_GET_SIGMA_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_get_net_func_call() #net_get_net_func_call: {}
+{
+	<NET_GET_NET_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_sub_func_call() #net_sub_func_call: {}
+{
+	<NET_SUB_FUNC_ID> net_id_one_arg_list()
+}
+
+void net_embed_rtn_subnets_func_call() #net_embed_rtn_subnets_func_call: {}
+{
+	<NET_EMBED_RTN_SUBNETS_FUNC_ID> regexp_one_arg_list()
+}
+
+void net_expand_rtn_func_call() #net_expand_rtn_func_call: {}
+{
+	<NET_EXPAND_RTN_FUNC_ID> regexp_one_arg_list()
+}
+
+void dbl_ceil_func_call() #dbl_ceil_func_call: {}
+{
+	<DBL_CEIL_FUNC_ID> numexp_one_arg_list()
+}
+
+void dbl_floor_func_call() #dbl_floor_func_call: {}
+{
+	<DBL_FLOOR_FUNC_ID> numexp_one_arg_list()
+}
+
+void lng_round_func_call() #lng_round_func_call: {}
+{
+	<LNG_ROUND_FUNC_ID> numexp_one_arg_list()
+}
+
+void lng_long_func_call() #lng_long_func_call: {}
+{
+	<LNG_LONG_FUNC_ID> numexp_one_arg_list()
+}
+
+void lng_size_func_call() #lng_size_func_call: {}
+{
+	<LNG_SIZE_FUNC_ID> list_arg_list()
+}
+
+void lng_is_empty_func_call() #lng_is_empty_func_call: {}
+{
+	<LNG_IS_EMPTY_FUNC_ID> list_arg_list()
+}
+
+void dbl_double_func_call() #dbl_double_func_call: {}
+{
+	<DBL_DOUBLE_FUNC_ID> numexp_one_arg_list()
+}
+
+void dbl_rint_func_call() #dbl_rint_func_call: {}
+{
+	<DBL_RINT_FUNC_ID> numexp_one_arg_list()
+}
+
+//**************** void_func_exp() *******************
+
+void void_func_exp() #void_func_exp: {}
+{
+	void_func_id()
+|	void_func_lambda_exp()
+|	void_func_func_call()
+}
+
+void void_func_id() #void_func_id : {}
+{
+    ( <VOID_FUNC_ID_BEFORE_ARGLIST> | <VOID_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void void_func_lambda_exp() #void_func_lambda_exp : {}
+{
+    <VOID_FUNC_LAMBDA> param_list() func_block()
+}
+
+void void_func_func_call() #void_func_func_call : {}
+{
+ 	void_func_func_exp() arg_list()
+}
+
+void void_func_func_exp() #void_func_func_exp : {}
+{
+  	void_func_func_id()
+| 	void_func_func_lambda_exp()
+// and don't try to go any deeper
+}
+
+void void_func_func_lambda_exp() #void_func_func_lambda_exp : {}
+{
+    <VOID_FUNC_FUNC_LAMBDA> param_list() func_block()
+}
+
+
+//********************* net_func_exp() ********************
+
+// expression whose value is a func that returns a net
+
+void net_func_exp() #net_func_exp : 
+{}
+{
+	net_func_id()
+|   net_func_lambda_exp()  
+|   net_func_func_call()  
+}
+
+void net_func_id() #net_func_id : {}
+{
+    ( <NET_FUNC_ID_BEFORE_ARGLIST> | <NET_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
+}
+
+void net_func_lambda_exp() #net_func_lambda_exp : {}
+{
+    <NET_FUNC_LAMBDA> param_list() func_block()
+}
+
+void net_func_func_call() #net_func_func_call : {}
+{
+  	net_func_func_exp() arg_list()
+}
+
+void net_func_func_exp() #net_func_func_exp : {}
+{
+  net_func_func_id()
+| net_func_func_lambda_exp()
+// and don't try to go any deeper, would be net_func_func_func_call()
+}
+
+void net_func_func_lambda_exp() #net_func_func_lambda_exp : {}
+{
+    <NET_FUNC_FUNC_LAMBDA> param_list() func_block()
+}
+
+//void list_index_exp() #list_index_exp : {}
+//{
+//    <LPAREN> numexp() <RPAREN>
+//}
+
+// a primary regexp
+//void net_list_ref() #net_list_ref: {}
+//{
+//    net_list_exp() list_index_exp()
+//}
+
+//**************** net_list_exp() **********************
+
+void net_list_exp() #net_list_exp : {}
+{
+  	net_list_id()            // $@listname
+| 	net_list_lit()           // $@(a,b,c)
+
+// built-in functions
+
+|	net_list_get_sigma_func_call()	// $@&__getSigma($fst)
+
+|	net_list_get_slice_func_call()	// $@&getSlice(...)
+// getSlice is wired in because of unlimited special arguments
+|	net_list_tail_func_call()		// $@&__tail($@list)
+|	net_list_copy_func_call()		// $@&__copy($@list)
+|	net_list_push_dest_func_call()	// $@&__push!($fst, $@list)
+|	net_list_add_dest_func_call()	// $@&__add!($@list, $fst)
+|	net_list_addat_dest_func_call()	// $@&__addAt!($@list, #index, $fst)
+|	net_list_set_dest_func_call()	// $@&__set!($@list, #index, $fst)
+
+// user-defined function
+
+| 	net_list_func_call()     // $@&funcretarr(args), $@&map(args)
+}
+
+void net_list_id() #net_list_id : {}
+{
+    <NET_LIST_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void net_list_lit() #net_list_lit : {}
+{
+    <NET_LIST_LIT_PREFIX> <LPAREN> 
+                         ( regexp() ( <COMMA_OP> regexp() )* )?
+                         <RPAREN>
+}
+
+void net_list_func_call() #net_list_func_call : {}
+{
+    net_list_func_exp() arg_list()
+}
+
+// ***************** net_list_func_exp() *********************
+
+void net_list_func_exp() #net_list_func_exp : {}
+{
+    net_list_func_id()
+|   net_list_func_lambda_exp()
+|	net_list_func_func_call()
+}
+
+void net_list_func_id() #net_list_func_id : {}
+{
+    ( <NET_LIST_FUNC_ID_BEFORE_ARGLIST> 
+	| <NET_LIST_FUNC_ID_NO_ARGLIST> 
+	) { jjtThis.setImage(token.image); }   // $@&name
+}
+
+void net_list_func_lambda_exp() #net_list_func_lambda_exp : {}
+{
+    <NET_LIST_FUNC_LAMBDA> param_list() func_block()
+}
+
+void net_list_func_func_call() #net_list_func_func_call : {}
+{
+	net_list_func_func_exp() arg_list()
+}
+
+// ********** net_list_func_func_exp **********************
+
+void net_list_func_func_exp() #net_list_func_func_exp : {}
+{
+  net_list_func_func_id()
+| net_list_func_func_lambda_exp()
+// and don't try to go any deeper, would be net_list_func_func_func_call()
+}
+
+void net_list_func_func_id() #net_list_func_func_id : {}
+{
+    ( <NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST> 
+	| <NET_LIST_FUNC_FUNC_ID_NO_ARGLIST> 
+	) { jjtThis.setImage(token.image); }   // $@&name
+}
+
+void net_list_func_func_lambda_exp() #net_list_func_func_lambda_exp : {}
+{
+    <NET_LIST_FUNC_FUNC_LAMBDA> param_list() func_block()
+}
+
+
+//*****************************************************
+
+// a primary numexp
+//void num_list_ref() #num_list_ref: {}
+//{
+//    num_list_exp() list_index_exp()
+//}
+
+//**************** num_list_exp() **********************
+
+void num_list_exp() #num_list_exp : {}
+{
+  num_list_id()            // $@listname
+| num_list_lit()           // $@(1,2,3)
+
+// built-ins
+
+|	num_list_get_sigma_func_call()	// #@&__getSigma($fst)
+
+|	num_list_get_slice_func_call()	// #@&getSlice(...)
+|	num_list_tail_func_call()		// #@&__tail(#@list)
+|	num_list_copy_func_call()		// #@&__tail(#@list)
+|	num_list_push_dest_func_call()	// #@&__push!(#num, #@list)
+|	num_list_add_dest_func_call()	// #@&__add!(#@list, #num)
+|	num_list_addat_dest_func_call()	// #@&__addAt!(#@list, #index, #num)
+|	num_list_set_dest_func_call()	// #@&__set!(#@list, #index, #num)
+
+// user-defined
+
+| 	num_list_func_call()     // $@&funcretarr(args)
+}
+
+void num_list_id() #num_list_id : {}
+{
+    <NUM_LIST_ID> { jjtThis.setImage(token.image) ; }
+}
+
+void num_list_lit() #num_list_lit : {}
+{
+    <NUM_LIST_LIT_PREFIX> <LPAREN> 
+                         ( numexp() ( <COMMA_OP> numexp() )* )?
+                         <RPAREN>
+}
+
+void num_list_func_call() #num_list_func_call : {}
+{
+    num_list_func_exp() arg_list()
+}
+
+// ***************** num_list_func_exp() *********************
+
+void num_list_func_exp() #num_list_func_exp : {}
+{
+    num_list_func_id()
+|   num_list_func_lambda_exp()
+|	num_list_func_func_call()
+}
+
+void num_list_func_id() #num_list_func_id : {}
+{
+    ( <NUM_LIST_FUNC_ID_BEFORE_ARGLIST> | <NUM_LIST_FUNC_ID_NO_ARGLIST> )
+				{ jjtThis.setImage(token.image); }   // $@&name
+}
+
+void num_list_func_lambda_exp() #num_list_func_lambda_exp : {}
+{
+    <NUM_LIST_FUNC_LAMBDA> param_list() func_block()
+}
+
+void num_list_func_func_call() #num_list_func_func_call : {}
+{
+	num_list_func_func_exp() arg_list()
+}
+
+void num_list_func_func_exp() #num_list_func_func_exp : {}
+{
+  num_list_func_func_id()
+| num_list_func_func_lambda_exp()
+// and don't try to go any deeper, would be net_list_func_func_func_call()
+}
+
+void num_list_func_func_id() #num_list_func_func_id : {}
+{
+    ( <NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST> 
+	| <NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST> 
+	) { jjtThis.setImage(token.image); }   // $@&name
+}
+
+void num_list_func_func_lambda_exp() #num_list_func_func_lambda_exp : {}
+{
+    <NUM_LIST_FUNC_FUNC_LAMBDA> param_list() func_block()
+}
+
+
+// **********************************************************************
+
+void any_any() #any_any: {}
+{
+	<ANY_ANY>
+}
+
+void any() #any: {}
+{
+    <ANY>
+}
+
+void epsilon() #epsilon: {}
+{
+	// U+03F5 GREEK LUNATE EPSILON SYMBOL, or _e_
+	( <EPSILON> | <EPSILON_ASCII> )
+}
+
+void arg_list() #arg_list :  {}
+{
+	<LPAREN> ( LOOKAHEAD( { getToken(1).kind != RPAREN }  )
+				// if this LOOKAHEAD succeeds, there is at least one argument,
+				// any positional_args must precede any named_args.
+				// Commit to parsing some kind of arg(s).
+			   (
+			   	  LOOKAHEAD( { getToken(2).kind == EQUAL_SIGN } )
+				  // If this LOOKAHEAD succeeds, 
+				  // then the first arg is a named arg like $foo = abc
+				  // Because all positional args must come before all
+				  // named_args, all the args must be named_args
+				  named_args()
+
+			   |  LOOKAHEAD( { getToken(2).kind != EQUAL_SIGN } )
+			      // then the first arg must be a positional arg, perhaps
+				  // followed by other positional args, and then perhaps
+				  // named_args
+			      positional_args() 
+				  	( LOOKAHEAD( {getToken(1).kind == COMMA_OP} ) <COMMA_OP> named_args() )?
+			   )
+			 )?
+	<RPAREN>
+}
+
+void positional_args() #positional_args : {}
+{
+	expression() 
+		( LOOKAHEAD( { getToken(1).kind == COMMA_OP && getToken(3).kind != EQUAL_SIGN } )
+					// then commit to parsing another positional_arg
+	               <COMMA_OP> expression()
+		)*
+}
+
+void named_args() #named_args : 
+{}
+{
+		id_with_assignment() ( LOOKAHEAD( { getToken(1).kind == COMMA_OP } ) <COMMA_OP> id_with_assignment() )*
+}
+
+void rrprod_id_one_arg_list() : {}
+{
+	<LPAREN> rrprod_id() <RPAREN>
+}
+
+void regexp_one_arg_list() : {}
+{
+	<LPAREN> regexp() <RPAREN>
+}
+
+void net_id_one_arg_list() : {}
+{
+	<LPAREN> net_id() <RPAREN>
+}
+
+void regexp_two_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> regexp() <RPAREN>
+}
+
+void regexp_three_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> regexp() <COMMA_OP> regexp() <RPAREN>
+}
+
+// match an arg list with at least one regexp arg, perhaps more
+void regexp_one_plus_arg_list() : {}
+{
+	<LPAREN> regexp() ( <COMMA_OP> regexp()) * <RPAREN>
+}
+
+void regexp_numexp_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void regexp_regexp_numexp_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> regexp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void numexp_one_arg_list() : {}
+{
+	<LPAREN> numexp() <RPAREN>
+}
+
+void netlist_numexp_arg_list() : {}
+{
+	<LPAREN> net_list_exp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void numlist_numexp_arg_list() : {}
+{
+	<LPAREN> num_list_exp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void numlist_numexp_numexp_arg_list() : {}
+{
+	<LPAREN> num_list_exp() <COMMA_OP> numexp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void netlist_numexp_regexp_arg_list() : {}
+{
+	<LPAREN> net_list_exp() <COMMA_OP> numexp() <COMMA_OP> regexp() <RPAREN>
+}
+
+void netlist_regexp_arg_list() : {}
+{
+	<LPAREN> net_list_exp() <COMMA_OP> regexp() <RPAREN>
+}
+
+void netlist_arg_list() : {}
+{
+	<LPAREN> net_list_exp() <RPAREN>
+}
+
+void numlist_arg_list() : {}
+{
+	<LPAREN> num_list_exp() <RPAREN>
+}
+
+void list_arg_list() : {}
+{
+	<LPAREN>
+		(	net_list_exp()
+		|	num_list_exp()
+		)
+	<RPAREN>
+}
+
+void regexp_netlist_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> net_list_exp() <RPAREN>
+}
+
+void numexp_numlist_arg_list() : {}
+{
+	<LPAREN> numexp() <COMMA_OP> num_list_exp() <RPAREN>
+}
+
+void net_get_slice_arg_list() : {}
+{
+	<LPAREN> net_list_exp() 	( 	LOOKAHEAD(1) 
+								<COMMA_OP> 
+								numexp() (	LOOKAHEAD(1)
+											<CROSSPRODUCT_OP>
+											// e.g. 1:3 as in Python slices
+											numexp() #slice_exp(2)
+										 )?
+							)+
+	<RPAREN>
+}
+void num_get_slice_arg_list() : {}
+{
+	<LPAREN> num_list_exp() 	( 	LOOKAHEAD(1) 
+								<COMMA_OP> 
+								numexp() (	LOOKAHEAD(1)
+											<CROSSPRODUCT_OP>
+											// e.g. 1:3 as in Python slices
+											numexp() #slice_exp(2)
+										 )?
+							)+
+	<RPAREN>
+}
+
+void case_arg_list() : {}
+{
+	<LPAREN> 	numexp() <COMMA_OP>		// destructive=1
+				numexp() <COMMA_OP>		// convert = 1 (add = 0)
+				numexp() <COMMA_OP>		// all = 1 (init only = 0)
+				
+				regexp() <COMMA_OP>		// the fst input
+				numexp() <COMMA_OP>		// to uppercase
+				numexp() <COMMA_OP>		// to lowercase
+				regexp() 				// projection 
+										// ("input"/"upper", "output"/"lower", or "both"
+	<RPAREN>
+}
+
+void diac_arg_list() : {}
+{
+	<LPAREN> 	numexp() <COMMA_OP>		// destructive=1
+				regexp() <COMMA_OP>		// the fst input
+				regexp() 				// projection 
+										// ("input"/"upper", "output"/"lower", or "both"
+	<RPAREN>
+}
+
+// after 'return', and in arg_list() you have to parse for expression(),
+// which could be any one of 10 (or so) types; this requires some
+// fancy LOOKAHEAD
+
+void expression() : 
+	{ boolean arg_list_present = false ;
+	  boolean second_arg_list_present = false ; }
+{
+
+	// KRB make changes very carefully--this is subtle stuff
+
+	// straightforward regular expressions
+
+	// boolean LOOKAHEAD mustBeRegexp()
+	// looks beyond any left parens for significant tokens indicating
+	//	that a regexp must follow.  Parens are used for grouping only
+	//	in regexp() and numexp(), so after finding one left paren,
+	//	there are other tokens that also signify that a regexp must
+	//	follow.  mustBeRegexp() includes NET_FUNC_ID_BEFORE_ARGLIST
+	
+    LOOKAHEAD( { mustBeRegexp() } )		// looks forward for particular tokens
+    regexp()
+
+// N.B. NET_FUNC_ID_BEFORE_ARGLIST is used, during tokenization, to shift
+// into NON_INITIAL state to tokenize the following arg_list(), and
+// start counting parens 
+
+// net_func_exp()
+//		net_func_id()			// #&reverse
+// |	net_func_lambda_exp()	// $&lambda(){}
+// |	net_func_func_call() 
+
+|	LOOKAHEAD( <NET_FUNC_ID_NO_ARGLIST>			  // no arg_list follows
+			 | <NET_FUNC_FUNC_ID_BEFORE_ARGLIST>  // one arg_list definitely follows
+			 | <NET_FUNC_LAMBDA> 				  // arg_list might follow
+			 )
+	// Then we have at least a net_func_exp.  If there is a following
+	// arg_list (a second arglist, in the case of NET_FUNC_FUNC_ID_BEFORE_ARGLIST),
+	// then we have a net_func_call, which is a kind of regexp.
+	( net_func_exp()  ( LOOKAHEAD( <LPAREN> )
+						// then there's also an arg_list, and so must be
+						//	a net_func_call, which is a kind of regexp
+						arg_list() #net_func_call(2)
+						{ arg_list_present = true ; }
+					  )? 
+	) #regexp(arg_list_present)
+
+// net_func_func_exp()
+//	  	net_func_func_id()
+// | 	net_func_func_lambda_exp()
+// don't try to go deeper, would be net_func_func_func_call()
+
+|	LOOKAHEAD( <NET_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
+			 | <NET_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 )
+	// Then we have at least a net_func_func_exp.  In the case of 
+	// NET_FUNC_FUNC_LAMBDA, one following arg_list makes a net_func_func_call,
+	// which is a kind of net_func_exp; a second following arg_list makes a
+	// net_func_call, which is a kind of regexp.
+	(( net_func_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
+								// then there's a following arg_list, so it's at least a 
+								// net_func_func_call, a kind of net_func_exp
+								arg_list() #net_func_func_call(2) 
+								{ arg_list_present = true ; }
+								// and then look for a following arglist
+								(	LOOKAHEAD ( <LPAREN> )
+									// then there's a net_func_call, a kind of regexp
+									arg_list() #net_func_call(2)
+									{ second_arg_list_present = true ; }
+								)?
+							)? 
+	 ) #net_func_exp(arg_list_present) 
+	) #regexp(second_arg_list_present)
+
+// net_list_exp
+// 		net_list_id()            // $@listname
+// |	net_list_lit()           // $@(a,b,c)
+// | 	net_list_func_call()     // $@&funcretarr(args)
+
+|	LOOKAHEAD( { mustBeNetListExp() } )	
+	// based on lookahead, there must be a net_list_exp
+	// mustBeNetListExp includes NET_LIST_FUNC_ID_BEFORE_ARGLIST
+	net_list_exp()
+
+// net_list_func_exp()
+//    	net_list_func_id()
+// |   	net_list_func_lambda_exp()
+// |	net_list_func_func_call()
+
+|	LOOKAHEAD( <NET_LIST_FUNC_ID_NO_ARGLIST>			// no arg_list follows
+			 | <NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST>	// one arg_list definitely follows
+			 | <NET_LIST_FUNC_LAMBDA> 					// lambda arg list and func block
+			 											//   will follow, arg_list might follow
+			 ) 
+	// Then we have at least a net_list_func_exp.  If there is a following
+	// arg_list (a second arglist, in the case of NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST),
+	// then we have a net_func_call, which is a kind of regexp.
+	( net_list_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
+								// then there's a following arg_list, so it's at least a 
+								// net_list_func_call, a kind of net_list_exp
+								arg_list() #net_list_func_call(2)
+								{ arg_list_present = true ; }
+							)?
+	) #net_list_exp(arg_list_present)
+
+|	LOOKAHEAD( <NET_LIST_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
+			 | <NET_LIST_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 )
+	// Then we have at least a net_list_func_func_exp.  In the case of 
+	// NET_LIST_FUNC_FUNC_LAMBDA, one following arg_list 
+	// makes a net_list_func_func_call, which is a kind of net_list_func_exp; 
+	// a second following arg_list makes a net_list_func_call, 
+	// which is a kind of net_list_exp.
+	(( net_list_func_func_exp()	
+				( 	LOOKAHEAD ( <LPAREN> )
+					// then there's a following arg_list, so it's at least a 
+					// net_list_func_func_call, a kind of net_list_func_exp
+					arg_list() #net_list_func_func_call(2) 
+					{ arg_list_present = true ; }
+					// and then look for a following arglist
+					(	LOOKAHEAD ( <LPAREN> )
+						// then there's a net_list_func_call, a kind of net_list_exp
+						arg_list() #net_list_func_call(2)
+						{ second_arg_list_present = true ; }
+					)?
+				)? 
+	 ) #net_list_func_exp(arg_list_present) 
+	) #net_list_exp(second_arg_list_present)
+
+	// ********************************************************************************
+
+	// boolean LOOKAHEAD mustBeNumexp()
+	// looks beyond any left parens for significant tokens indicating
+	//	that a numexp must follow.  Parens are used for grouping only
+	//	in regexp() and numexp(), so after finding one left paren,
+	//	there are other tokens that also signify that a numexp must
+	//	follow.  mustBeNumexp() includes NUM_FUNC_ID_BEFORE_ARGLIST
+
+|   LOOKAHEAD( { mustBeNumexp() } )		// looks forward for particular tokens
+    numexp()
+
+// N.B. NUM_FUNC_ID_BEFORE_ARGLIST is used, during tokenization, to shift
+// into NON_INITIAL state to tokenize the following arg_list(), and
+// start counting parens
+
+// num_func_exp
+//    	num_func_id()          // #&add
+// |   	num_func_lambda_exp()  // #&lambda(){}
+// |   	num_func_func_call()
+
+|	LOOKAHEAD ( <NUM_FUNC_ID_NO_ARGLIST>			// no arg_list follows
+			  | <NUM_FUNC_FUNC_ID_BEFORE_ARGLIST> 	// one arg_list definitely follows
+			  | <NUM_FUNC_LAMBDA> 					// arg_list might follow
+			  )
+	// Then we have at least a num_func_exp.  If there is a following
+	// arg_list, (a second arg_list, in the case of NUM_FUNC_FUNC_ID_BEFORE_ARGLIST),
+	// then we have a num_func_call, which is a kind of numexp.
+    ( num_func_exp() ( 	LOOKAHEAD( <LPAREN> )
+						// then there's also an arg_list, and so must be
+						//	a num_func_call, which is a kind of numexp
+						arg_list() #num_func_call(2)
+						{ arg_list_present = true ; }
+					)? 
+	) #numexp(arg_list_present)
+
+// num_func_func_exp()
+//     num_func_func_id()
+// |   num_func_func_lambda_exp()
+// and don't try to go any deeper, would be num_func_func_func_call()
+
+|	LOOKAHEAD( <NUM_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
+			 | <NUM_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 )
+	// Then we have at least a num_func_func_exp.  In the case of 
+	// NUM_FUNC_FUNC_LAMBDA, one following arg_list makes a num_func_func_call,
+	// which is a kind of num_func_exp; a second following arg_list makes a
+	// num_func_call, which is a kind of numexp.
+	(( num_func_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
+								// then there's an arg_list, so it's at least a 
+								// num_func_func_call, a kind of num_func_exp
+								arg_list() #num_func_func_call(2) 
+								{ arg_list_present = true ; }
+								// then look for another arglist
+								(	LOOKAHEAD ( <LPAREN> )
+									// then there's a num_func_call, a kind of numexp
+									arg_list() #num_func_call(2)
+									{ second_arg_list_present = true ; }
+								)?
+							)?
+	 ) #num_func_exp(arg_list_present)
+	) #numexp(second_arg_list_present)
+
+//num_list_exp() #num_list_exp : {}
+//  num_list_id()            // $@listname
+//| num_list_lit()           // $@(1,2,3)
+//| num_list_func_call()     // $@&funcretarr(args)
+
+|	LOOKAHEAD( { mustBeNumListExp() } )	
+	// there must be a num_list_exp
+	// mustBeNumListExp includes NUM_LIST_FUNC_ID_BEFORE_ARGLIST
+	num_list_exp()
+
+// num_list_func_exp()
+//    	num_list_func_id()
+// |   	num_list_func_lambda_exp()
+// |	num_list_func_func_call()
+
+|	LOOKAHEAD( <NUM_LIST_FUNC_ID_NO_ARGLIST>			// no arg_list follows
+			 | <NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST>	// one arg_list definitely follows
+			 | <NUM_LIST_FUNC_LAMBDA> 					// arg_list might follow
+			 )
+	// Then we have at least a num_list_func_exp.  If there is a following
+	// arg_list (a second arglist, in the case of NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST,
+	// then we have a num_func_call, which is a kind of numexp.
+	( num_list_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
+								// then there's a following arg_list, so it's at least a 
+								// num_list_func_call, a kind of num_list_exp
+								arg_list() #num_list_func_call(2)
+								{ arg_list_present = true ; }
+							)?
+	) #num_list_exp(arg_list_present) 
+
+|	LOOKAHEAD( <NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
+			 | <NUM_LIST_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 )
+	// Then we have at least a num_list_func_func_exp.  In the case of 
+	// NUM_LIST_FUNC_FUNC_LAMBDA, one following arg_list 
+	// makes a num_list_func_func_call, which is a kind of num_list_func_exp; 
+	// a second following arg_list makes a num_list_func_call, 
+	// which is a kind of num_list_exp.
+	(( num_list_func_func_exp()	
+				( 	LOOKAHEAD ( <LPAREN> )
+					// then there's a following arg_list, so it's at least a 
+					// num_list_func_func_call, a kind of num_list_func_exp
+					arg_list() #num_list_func_func_call(2) 
+					{ arg_list_present = true ; }
+					// and then look for a following arglist
+					(	LOOKAHEAD ( <LPAREN> )
+						// then there's a num_list_func_call, a kind of num_list_exp
+						arg_list() #num_list_func_call(2)
+						{ second_arg_list_present = true ; }
+					)?
+				)? 
+	 ) #num_list_func_exp(arg_list_present) 
+	) #num_list_exp(second_arg_list_present)
+}
+
+// change the following to accept zero or more bare params,
+// followed by zero or more id_with_assignments
+
+// ASTparam_list will have 0, 1, or 2 daughters:
+//      1.  ASTrequired_params
+//      2.  ASToptional_params  (each with a default value indicated)
+//
+
+// As in Python, all syntactic required params must come before all
+//   optional params.
+// $&myfunc($a, $b, $c = abc, $d = xyz) = { ... }
+
+// Probably need to use semantic lookahead to decide when to
+// stop parsing params_required, e.g.
+//  LOOKAHEAD ( { getToken(2).kind != EQUAL_SIGN } )
+
+// Need parallel changes in arg_list
+// and in the Interpreter, in bind_params
+
+void param_list() #param_list : {}
+{
+  <LPAREN> ( LOOKAHEAD(1)
+             (
+			   LOOKAHEAD( { getToken(2).kind != EQUAL_SIGN } )
+               required_params() ( <COMMA_OP> optional_params() )?
+
+		     | optional_params()
+			 )
+		   )?
+  <RPAREN>
+}
+
+void required_params() #required_params: {}
+{
+	param() ( LOOKAHEAD( 1, { getToken(3).kind != EQUAL_SIGN } )
+	          <COMMA_OP> param()
+	        )*
+}
+
+void optional_params() #optional_params: {}
+{
+
+	id_with_assignment() ( LOOKAHEAD(1) <COMMA_OP> id_with_assignment() )*
+}
+  
+
+// coordinate any changes in param() with bind_params in interpreter
+void param() : {}
+{
+    net_id()                       //  $mynet
+  | net_func_id()                  //  $&myfunc
+  | net_func_func_id()             //  $&&foo
+
+  | net_list_id()		   			//  $@foo
+  | net_list_func_id()              //  $@&foo
+  | net_list_func_func_id()         //  $@&&foo
+
+  | num_id()                       //  #myname
+  | num_func_id()                  //  #&foo
+  | num_func_func_id()             //  #&&foo
+
+  | num_list_id()		   			//  #@foo
+  | num_list_func_id()              //  #@&foo
+  | num_list_func_func_id()         //  #@&&foo
+
+  | void_func_id()
+  | void_func_func_id()
+}
+
+// coordinate any changes in id_with_assignment() 
+// with bind_params in interpreter
+void id_with_assignment() : {}
+{
+	LOOKAHEAD({getToken(2).kind != EQUAL_SIGN})
+	{ appendGuiError("Positional args must precede named args.") ; }
+	net_id()   // try to match something arbitrary here
+	//{ throw new ParseException("Positional args must precede named args.") ; }
+  | 
+    net_id_with_assignment()            //  $mynet =
+  | net_func_id_with_assignment()       //  $&myfunc =
+  | net_func_func_id_with_assignment()  //  $&&foo =
+
+  | net_list_id_with_assignment()		//  $@foo =
+  | net_list_func_id_with_assignment()   //  $@&foo =
+  //| net_list_func_func_id_with_assignment() //  $@&&foo =
+
+  | num_id_with_assignment()            //  #myname =
+  | num_func_id_with_assignment()       //  #&foo =
+  | num_func_func_id_with_assignment()  //  #&&foo =
+
+  | num_list_id_with_assignment()		   //  #@foo =
+  | num_list_func_id_with_assignment()   //  #@&foo =
+  //| num_list_func_func_id_with_assignment()    //  #@&&foo =
+
+  | void_func_id_with_assignment()		// &foo =
+  | void_func_func_id_with_assignment()	// &&foo =
+}
+
+void net_id_with_assignment() #net_id_with_assignment: {}
+{
+    net_id() <EQUAL_SIGN> regexp() ( <SEMICOLON> )?
+}
+void net_func_id_with_assignment() #net_func_id_with_assignment : {}
+{
+	// $&foo = $&bar ;
+	// $&foo = $&lambda(){} ;
+    net_func_id() <EQUAL_SIGN> net_func_exp() ( <SEMICOLON> )?
+}
+void net_func_func_id_with_assignment() #net_func_func_id_with_assignment : {}
+{
+    net_func_func_id() <EQUAL_SIGN> net_func_func_exp() ( <SEMICOLON> )?
+}
+
+void void_func_id_with_assignment() #void_func_id_with_assignment : {}
+{
+	// &foo = &bar ;
+	// &foo = &lambda(){} ;
+    void_func_id() <EQUAL_SIGN> void_func_exp() ( <SEMICOLON> )?
+}
+void void_func_func_id_with_assignment() #void_func_func_id_with_assignment : {}
+{
+    void_func_func_id() <EQUAL_SIGN> void_func_func_exp() ( <SEMICOLON> )?
+}
+
+
+
+void net_list_id_with_assignment() #net_list_id_with_assignment : {}
+{
+    net_list_id() <EQUAL_SIGN> net_list_exp() ( <SEMICOLON> )?
+}
+void net_list_func_id_with_assignment() #net_list_func_id_with_assignment : {}
+{
+	net_list_func_id() <EQUAL_SIGN> net_list_func_exp() ( <SEMICOLON> )?
+}
+// net_list_func_func_id_with_assignment
+
+
+void num_id_with_assignment() #num_id_with_assignment: {}
+{
+  	num_id() <EQUAL_SIGN> numexp() ( <SEMICOLON> )?
+}
+void num_func_id_with_assignment() #num_func_id_with_assignment : {}
+{
+	// #&foo = #&bar ;
+	// #&foo = #&lambda(){} ;
+    num_func_id() <EQUAL_SIGN> num_func_exp() ( <SEMICOLON> )?
+}
+void num_func_func_id_with_assignment() #num_func_func_id_with_assignment : {}
+{
+    num_func_func_id() <EQUAL_SIGN> num_func_func_exp() ( <SEMICOLON> )?
+}
+
+
+void num_list_id_with_assignment() #num_list_id_with_assignment : {}
+{
+    num_list_id() <EQUAL_SIGN> num_list_exp() <SEMICOLON>
+}
+void num_list_func_id_with_assignment() #num_list_func_id_with_assignment : {}
+{
+	num_list_func_id() <EQUAL_SIGN> num_list_func_exp() ( <SEMICOLON> )?
+}
+// num_list_func_func_id_with_assignment
+

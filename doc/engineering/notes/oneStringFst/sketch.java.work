@@ -1,0 +1,152 @@
+
+../kleene/src/sketch.java(.work)
+
+Sketch of how to go about getting an Fst to encode a language 
+consisting of a single String, starting with a Java String object.
+(Should handle case of empty string, I think.)  Used in lookup/lookdown.
+
+In Java:
+
+
+import java.util.Set ;
+import java.lang.StringBuilder ; // faster version of StringBuffer
+import com.ibm.icu.text.UTF16 ;  // provides static .countCodePoint(str)
+import com.ibm.icu.text.UCharacterIterator ;
+import com.ibm.icu.text.Transliterator ;
+
+
+// helper function
+String stringFromCpv (int cpv) {
+	If (Character.charCount(cpv) == 1) {
+		return String.valueOf((char) cpv) ;
+	} else {
+		// overhead of creating a char[] array and discarding it
+		return new String(Character.toChars(cpv)) ;
+	}
+}
+
+// Making an input-string "tokenizer" transform from the current
+// str2int (a TreeMap, see SymMap.java)
+
+// Any-Hex/Java is a built-in Transliterator that converts "cat"
+// to a string containing the appropriate backslash-uHHHH Java-escape
+// sequences.
+Transliterator tr2JavaEsc = Transliterator.getInstance("Any-Hex/Java") ;
+Transliterator trTok ;    // this one will be built from rules
+
+
+// Create a String containing a sequence of Transliterator rules,
+// of the form
+// input > output
+// for all Multicharacter Symbols.
+// To avoid problems with special characters, both input and output
+// will be expressed in the String as sequences of backslash-uHHHH
+// escape sequences.
+
+StringBuilder rulebuf = new StringBuilder() ;
+rulebuf.append("use variable range 0xF000 0xF4FF; ") ;
+// undocumented "rule" that tells a Transliterator which portion
+// of the PUA to use for its own variables;  if you don't do this,
+// it reserves the whole PUA.
+
+// Get the Set of Map.Entrys from str2int (will be in order, longer
+// before shorter, because of the way that str2int, a TreeMap, is built.
+
+Set <Map.Entry<String, Integer>> set = str2int.entrySet() ;
+
+String key ;
+int val ;
+// look through the entries in the set of Map.Entry
+for (Map.Entry<String, Integer> me: set) {
+	key = me.getKey() ;
+	val = me.getValue().intValue() ;
+	if (key.length() > 1) { // need a "rule" only if a MCS
+		rulebuf.append(tr2JavaEsc.transliterate(key) + " > " +
+		        tr2JavaEsc.transliterate(stringFromCpv(val)) + " ; ") ;
+	}
+}
+// rulebuf now contains a list of rules that map MCSs to CPV strings.
+// These Transliterator rules work by moving a match-point through the
+// input string, trying its rule IN ORDER; the first rule that matches
+// fires, and the match point is moved after the result.
+
+// Now create the actual Transliterator from these rules.
+
+trTok = Transliterator.createFromRules("TokMCS", rulebuf.toString(), 
+										Transliterator.FORWARD) ;
+
+// declare a native method
+public static native long oneStringFst(int[]) ;
+// the argument is an array of int, representing the code point values
+
+String str = "whatever" ;  // may contain surrogates
+
+// here need to "transform" str to find any Multicharacter Symbols
+// and replace them with their code point value; will still be a String
+// at this point, multicharacter symbols from the supplementary
+// area will be represented with a pair of surrogate chars.
+
+// need transform built by rules taken from the str2int TreeMap
+String tokenizedstr = trTok.transliterate(str) ;
+
+int strlen = UTF16.countCodePoint(tokenizedstr) ;  // ret. number of Unicode characters
+
+// need to pass an array of int (code point values) to a native
+// method oneStringFst(); might be used during "lookup" and
+// "lookdown"
+
+int[] intArray = new int[strlen] ;
+
+UCharacterIterator iter =  UCharacterIterator.getInstance(tokenizedstr) ;
+
+for (int i = 0; i < strlen; i++) {
+	intArray[i] = iter.nextCodePoint() ;
+}
+
+// while (int codepoint = iter.nextCodePoint()) != UCharacterIterator.DONE) {}
+
+// now pass the int array to the native method
+long fstPtr = oneStringFst(intArray) ;
+//Fst fst = new Fst(fstPtr, false) ;  // if need to store it
+...
+// cppDelete(fstptr) ;  // when done with it (not nec. if Fst is
+// created)
+
+*******************  Native method in kleeneopenfst.cc  *********************
+
+JNIEXPORT jlong JNICALL
+Java_OpenFstInterpreterKleeneVisitor_oneStringFst
+   (JNIEnv *env, jclass cls,
+	jintArray intArray)
+{
+	StdVectorFst *fstp = new StdVectorFst() ;
+	fstp->AddState() ;   // will be state 0
+	fstp->SetStart(0) ;
+
+	jboolean isCopy ;
+	jint * intArrayElements = env->GetIntArrayElements(intArray, &isCopy) ;
+	jint size = env->GetArrayLength(intArray) ;
+
+	int cpv ;
+
+	if (size == 0) {
+		fstp->setFinal(0, 0.0) ;  // empty string language
+	} else {
+		int i ;
+		for (i = 0; i < size; i++) {
+			cpv = intArrayElements[i] ;
+
+			fstp->AddState() ;  // will be state i+1
+			fstp->AddArc(i, StdArc(cpv, cpv, 0.0, i+1)) ;
+		}
+		fstp->setFinal(i, 0.0) ;
+	}
+
+	if (isCopy == JNI_TRUE) {
+		env->ReleaseIntArrayElements(intArray, intArrayElements, 0) ;
+	}
+	return (jlong) fstp ;
+}
+
+
+

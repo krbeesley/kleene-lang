@@ -1,0 +1,321 @@
+
+##	Makefile_nmake
+##
+##	The Kleene Programming Language
+
+##   Copyright 2006-2012 SAP AG
+
+##   Licensed under the Apache License, Version 2.0 (the "License");
+##   you may not use this file except in compliance with the License.
+##   You may obtain a copy of the License at
+##
+##       http://www.apache.org/licenses/LICENSE-2.0
+##
+##   Unless required by applicable law or agreed to in writing, software
+##   distributed under the License is distributed on an "AS IS" BASIS,
+##   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+##   See the License for the specific language governing permissions and
+##   limitations under the License.
+
+##   Authors:	Phil Sours
+##				ken.beesley@sap.com (Kenneth R. Beesley)
+
+##	This nmake makefile builds and manages Kleene for Windows.
+
+
+# Set os_type to standard name for OS type.
+os_type=win
+
+VERSION=0.9.1.0
+NAME=Kleene
+RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
+RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
+
+!IFDEF PROGRAMW6432     # defined on Win7, points to non-x86 Program Files dir
+WINRAR="$(PROGRAMW6432)\WinRAR\WinRAR.exe"
+DOT="$(PROGRAMW6432) (x86)\Graphviz2.26.3\bin\dot"
+!ELSE       # else 32-bit OS, PROGRAMFILES points to non-x86 Program Files dir
+WINRAR="$(PROGRAMFILES)\WinRAR\WinRAR.exe"
+DOT="$(PROGRAMFILES)\Graphviz2.26.3\bin\dot"
+!ENDIF
+
+WINPORT_DIR=$(MAKEDIR)\..\..\..\winport
+STLPORT_DIR=$(WINPORT_DIR)\STLport\STLport-5.2.1
+COMMONS_MAKEDIR=$(MAKEDIR)\..\..\..\tools\Apache_Commons
+COMMONS_LANG_BASENAME=commons-lang-2.4
+COMMONS_LANG_DIR=$(COMMONS_MAKEDIR)\$(COMMONS_LANG_BASENAME)
+COMMONS_LANG_JAR=$(COMMONS_LANG_BASENAME).jar
+DOM4J_MAKEDIR=$(MAKEDIR)\..\..\..\tools\dom4j
+DOM4J_BASENAME=dom4j-1.6.1
+DOM4J_DIR=$(DOM4J_MAKEDIR)\$(DOM4J_BASENAME)
+DOM4J_JAR=$(DOM4J_BASENAME).jar
+ICU4J_BASENAME=icu4j-4_0_1
+ICU4J_DIR=$(MAKEDIR)\..\..\..\tools\ICU
+ICU4J_JAR=$(ICU4J_BASENAME).jar
+JAVACC_MAKEDIR=$(MAKEDIR)\..\..\..\tools\JavaCC
+JAVACC_BASENAME=javacc-4.2
+JAVACC_BINDIR=$(JAVACC_MAKEDIR)\$(JAVACC_BASENAME)\bin
+JAXEN_MAKEDIR=$(MAKEDIR)\..\..\..\tools\Jaxen
+JAXEN_BASENAME=jaxen-1.1.1
+JAXEN_DIR=$(JAXEN_MAKEDIR)\$(JAXEN_BASENAME)
+JAXEN_JAR=$(JAXEN_BASENAME).jar
+ROME_BASENAME=rome-1.0
+ROME_DIR=$(MAKEDIR)\..\..\..\tools\ROME
+ROME_JAR=$(ROME_BASENAME).jar
+OPENFST_MAKEDIR=$(MAKEDIR)\..\..\..\tools\OpenFst
+OPENFST_BASENAME=openfst-1.1
+OPENFST_DIR=$(OPENFST_MAKEDIR)\$(OPENFST_BASENAME)
+OPENFST_LIBDIR=$(OPENFST_DIR)\src\lib
+OPENFST_BINDIR=$(OPENFST_DIR)\src\bin
+OPENFST_INCDIR=$(OPENFST_DIR)\src\include
+OPENFST_INCS=$(OPENFST_INCDIR)\fst\*.h
+ICU_OS_VERSION=win32_x86
+ICU_CPP_VERSION=vc8
+ICU_NAME_VERSION=4.2.0.0_32
+ICU_DIR=$(MAKEDIR)\..\..\..\..\..\tp\tp.ibm.icu.cpp\4.2_sap.1\REL
+ICU_INCDIR=$(ICU_DIR)\export\iface\$(ICU_OS_VERSION)\$(ICU_CPP_VERSION)\include
+ICU_LIBDIR=$(ICU_DIR)\$(ICU_OS_VERSION)\$(ICU_CPP_VERSION)\release\lib
+ICUDT_BASENAME=bosap_icudt$(ICU_NAME_VERSION)
+ICUDT_DLL=$(ICU_LIBDIR)\$(ICUDT_BASENAME).dll
+ICUIN_BASENAME=bosap_icuin$(ICU_NAME_VERSION)
+ICUIN_DLL=$(ICU_LIBDIR)\$(ICUIN_BASENAME).dll
+ICUUC_BASENAME=bosap_icuuc$(ICU_NAME_VERSION)
+ICUUC_DLL=$(ICU_LIBDIR)\$(ICUUC_BASENAME).dll
+LIBNAME=kleeneopenfst
+
+#DEBUG=
+!IFDEF DEBUG
+OPT=/Od
+CDFLAGS=$(OPT) /MDd /RTC1 /Z7
+LDDFLAGS=/DEBUG
+STLPORT_BASENAME=stlportd.5.2
+!ELSE
+OPT=/O2 /Oi
+CDFLAGS=$(OPT) /D_SECURE_SCL=0 /DNDEBUG /MD
+LDDFLAGS=
+STLPORT_BASENAME=stlport.5.2
+!ENDIF
+CFLAGS=$(CDFLAGS) /EHsc /GS /Zc:wchar_t /Zc:forScope /W2 /w34099 /w34503 /nologo /c /Wp64 /TP /D__gnu_cxx=std \
+       /DWIN32 /DWIN32_LEAN_AND_MEAN /D_CRT_SECURE_NO_WARNINGS \
+       /Dssize_t=long /Dstrtoll=_strtoi64 /Dsnprintf=_snprintf \
+       /I$(OPENFST_INCDIR) /I$(WINPORT_DIR) /I$(STLPORT_DIR)\stlport /I$(ICU_INCDIR) \
+       /I"$(JAVA_HOME)\include" /I"$(JAVA_HOME)\include\win32"
+LDFLAGS=$(LDDFLAGS) /NOLOGO /INCREMENTAL:NO
+
+FSTLIB_BASENAME=fst
+FSTLIB=$(OPENFST_LIBDIR)\$(FSTLIB_BASENAME).dll
+STLPORT_DLL=$(STLPORT_DIR)\bin\$(STLPORT_BASENAME).dll
+LIBS=$(FSTLIB:.dll=_dll.lib) $(STLPORT_DIR)\lib\$(STLPORT_BASENAME).lib \
+     $(ICUDT_DLL:.dll=.lib) $(ICUIN_DLL:.dll=.lib) $(ICUUC_DLL:.dll=.lib)
+LIBFULLNAME=$(LIBNAME).dll
+CLASSPATHFLAG=-classpath "lib\$(COMMONS_LANG_JAR);lib\$(DOM4J_JAR);lib\$(ICU4J_JAR);lib\$(JAXEN_JAR);lib\$(ROME_JAR);."
+
+# The default is to build the Kleene jar file (which requires library, etc.).
+default : externals jar
+
+###############################################################################
+# Required external items.
+###############################################################################
+
+# External directories to make.
+# These commands are always executed, to make sure the dirs are up-to-date.
+# Note anything that depends on a "phony" target will also always be executed.
+DIRS_TO_MAKE :
+    @echo.
+    @echo Building required external items...
+    cd $(OPENFST_MAKEDIR) && nmake /nologo /f Makefile_nmake
+    cd $(WINPORT_DIR) && nmake /nologo /f Makefile_nmake
+    cd $(COMMONS_MAKEDIR) && nmake /nologo /f Makefile_nmake
+    cd $(DOM4J_MAKEDIR) && nmake /nologo /f Makefile_nmake
+    cd $(JAVACC_MAKEDIR) && nmake /nologo /f Makefile_nmake
+    cd $(JAXEN_MAKEDIR) && nmake /nologo /f Makefile_nmake
+
+# Files to copy in.
+# These commands are executed if needed (as normal).
+EXTERNAL_FILES=$(FSTLIB_BASENAME).dll $(STLPORT_BASENAME).dll \
+               $(ICUDT_BASENAME).dll \
+               $(ICUIN_BASENAME).dll \
+               $(ICUUC_BASENAME).dll \
+               lib\$(COMMONS_LANG_JAR) lib\$(DOM4J_JAR) \
+               lib\$(ICU4J_JAR) lib\$(JAXEN_JAR) lib\$(ROME_JAR)
+$(FSTLIB_BASENAME).dll : $(FSTLIB)
+    copy $? $@
+$(STLPORT_BASENAME).dll : $(STLPORT_DLL)
+    copy $? $@
+$(ICUDT_BASENAME).dll : $(ICUDT_DLL)
+    copy $? $@
+$(ICUIN_BASENAME).dll : $(ICUIN_DLL)
+    copy $? $@
+$(ICUUC_BASENAME).dll : $(ICUUC_DLL)
+    copy $? $@
+lib :
+	mkdir lib
+lib\$(COMMONS_LANG_JAR) : $(COMMONS_LANG_DIR)\$(COMMONS_LANG_JAR)
+	copy $? $@
+lib\$(DOM4J_JAR) : $(DOM4J_DIR)\$(DOM4J_JAR)
+	copy $? $@
+lib\$(ICU4J_JAR) : $(ICU4J_DIR)\$(ICU4J_JAR)
+	copy $? $@
+lib\$(JAXEN_JAR) : $(JAXEN_DIR)\$(JAXEN_JAR)
+	copy $? $@
+lib\$(ROME_JAR) : $(ROME_DIR)\$(ROME_JAR)
+	copy $? $@
+
+externals : DIRS_TO_MAKE lib $(EXTERNAL_FILES)
+
+###############################################################################
+# Compile the Kleene grammar into Java code from our supplied .jjt file.
+###############################################################################
+
+# Build Kleene .jj file from our supplied .jjt file.
+# Copy in our hand-modified .java files -- jjtree will skip overwriting them
+# if they already exist.
+# Since jjtree doesn't delete target on failure, we append commands to manually handle it.
+$(NAME).jj : $(NAME).jjt
+    @echo.
+    @echo Compiling the Kleene grammar into Java code from our supplied .jjt file...
+    copy /y hand-modified\* .
+    $(JAVACC_BINDIR)\jjtree "-JDK_VERSION="1.5"" $(NAME).jjt || (del 2>NUL $@ & exit 1)
+# HACK: jjtree 4.2 overwrites this hand-modified file!
+    copy /y hand-modified\JJTKleeneState.java .
+
+# Building Kleene java file from its .jj file.
+KleeneVisitor.java : $(NAME).java
+$(NAME).java : $(NAME).jj
+    $(JAVACC_BINDIR)\javacc "-JDK_VERSION="1.5"" $(NAME).jj
+# Use an inline Visual Basic Script to replace text like the Linux sed command.
+    cscript //nologo <<sed_s.vbs "s/protected JJTKleeneState jjtree/protected static JJTKleeneState jjtree/" <Kleene.java >Kleene.temp
+Dim pat, patparts, rxp, inp
+pat = WScript.Arguments(0)
+patparts = Split(pat,Mid(pat,2,1))
+Set rxp = new RegExp
+rxp.Global = True
+rxp.Pattern = patparts(1)
+Do While Not WScript.StdIn.AtEndOfStream
+  inp = WScript.StdIn.ReadLine()
+  WScript.Echo rxp.Replace(inp, patparts(2))
+Loop
+<<
+    move /y Kleene.temp Kleene.java
+
+###############################################################################
+# Build all the Kleene class files from their java files.
+###############################################################################
+
+# Build all the Kleene class files from their java files.
+# Note that javac silently compiles all referenced java source files as
+# needed, so it's best to just consciously compile all of them at once.
+class : $(NAME).class
+$(NAME).class OpenFstLibraryWrapper.class : *.java
+    @echo.
+    @echo Building all the Kleene class files from their java files...
+    javac $(CLASSPATHFLAG) *.java
+
+###############################################################################
+# Build the JNI bridge library so we can use OpenFst from Java.
+###############################################################################
+
+# Generate OpenFstLibraryWrapper.h from its class file.
+.PRECIOUS: OpenFstLibraryWrapper.h
+OpenFstLibraryWrapper.h : KleeneVisitor.java OpenFstLibraryWrapper.class
+    @echo.
+    @echo Building the JNI bridge library so we can use OpenFst from Java...
+    javah $(CLASSPATHFLAG) -jni OpenFstLibraryWrapper
+
+# Compile library .cc file, which includes OpenFstLibraryWrapper.h.
+$(LIBNAME).obj : $(FSTLIB) $(STLPORT_DLL) $(LIBNAME).cc $(OPENFST_INCS) OpenFstLibraryWrapper.h
+    $(CC) $(CFLAGS) /DBUILDING_KLEENEOPENFST_DLL /Fo$*.obj $*.cc
+
+# Build Kleene JNI library, which uses OpenFst fst dynamic library.
+library sharedlib sharedlibrary : $(LIBFULLNAME)
+$(LIBFULLNAME) : $(LIBNAME).obj
+    $(CC) $(LIBNAME).obj $(LIBS) /link /DLL $(LDFLAGS) /OUT:$@
+    mt -manifest $@.manifest -outputresource:$@;2
+
+###############################################################################
+# Build the Kleene jar file, which packages up most of what's needed to run Kleene.
+###############################################################################
+
+jar : $(NAME).jar
+$(NAME).jar : $(LIBFULLNAME) $(NAME).class images
+	@echo.
+	@echo Building the Kleene jar file...
+# Dynamically build manifest file indicating our required .jar files.
+    @echo>$(NAME).mf  Manifest-Version: 1.0
+    @echo>>$(NAME).mf Main-Class: $(NAME)
+    @echo>>$(NAME).mf Class-Path: lib/$(COMMONS_LANG_JAR) lib/$(DOM4J_JAR) lib/$(ICU4J_JAR) lib/$(JAXEN_JAR) lib/$(ROME_JAR)
+# Use $(JAVA_HOME)\bin\jar since Cygwin has its own version of "jar".
+    "$(JAVA_HOME)\bin\jar" cmf $(NAME).mf $(NAME).jar *.class images
+    @echo.
+    @echo To run the executable jar:  java -jar $(NAME).jar
+
+###############################################################################
+# Additional items for managing and working with Kleene.
+###############################################################################
+
+# Run the Kleene environment.
+run : jar
+    java -jar $(NAME).jar
+
+# Generate documentation for the BNF grammar of Kleene.
+bnf : $(NAME).html
+doc : $(NAME).html
+$(NAME).html : $(NAME).jj
+    $(JAVACC_BINDIR)\jjdoc $(NAME).jj
+
+# Off-line tools to display the last network developed in the Kleene environment.
+last :
+    $(OPENFST_BINDIR)\fstprint last.binary last.txt
+    type last.txt
+# $(OPENFST_BINDIR)\fstdraw last.binary last.dot
+# last.dot is produced for each ASTnet_assignment (alt. -Tpdf)
+#draw :
+#    $(DOT) -Tps last.dot > last.ps
+#    start "" last.ps
+draw :
+    $(DOT) -Tpdf last.dot > last.pdf
+    start "" last.pdf
+
+# Build the release file for Kleene.
+# We set up a staging area to avoid having read-only files in the archive and
+# to place all the files in a $(RELEASE_BASENAME) subdirectory in the archive.
+# Note that we create an empty dotkleene\tmp directory needed by Kleene.
+# N.B. the release file includes lib\, which contains .jar files that Kleene
+# depends on.  (You can't package a .jar file inside another .jar file, like
+# an executable .jar -- the Kleene.mf manifest file indicates where Kleene.jar
+# can find them at run-time.)
+RELEASE_DIRS=dotkleene lib
+RELEASE_FILES=$(FSTLIB_BASENAME).dll $(STLPORT_BASENAME).dll $(NAME).jar $(LIBFULLNAME) \
+              $(ICUDT_BASENAME).dll \
+              $(ICUIN_BASENAME).dll \
+              $(ICUUC_BASENAME).dll \
+              LICENSE NOTICE README.install README.licenses README.version KleeneFst.rnc
+release : jar
+    if exist $(RELEASE_BASENAME_NOVERSION)* for /d %D in ($(RELEASE_BASENAME_NOVERSION)*) do @rmdir /s/q %D
+    mkdir $(RELEASE_BASENAME)
+    for %D in ($(RELEASE_DIRS)) do @xcopy %D\* $(RELEASE_BASENAME)\%D\* /s/q
+    for %F in ($(RELEASE_FILES)) do @copy %F $(RELEASE_BASENAME)\%F
+    if exist $(RELEASE_BASENAME)\dotkleene\tmp\ rmdir /s/q $(RELEASE_BASENAME)\dotkleene\tmp
+    mkdir $(RELEASE_BASENAME)\dotkleene\tmp
+    del /f 2>NUL $(RELEASE_BASENAME_NOVERSION)*.zip
+    "$(WINRAR)" a $(RELEASE_BASENAME).zip $(RELEASE_BASENAME)
+
+# clean
+# Delete all the temporary java files and $(NAME).java.
+# (The originals of our hand-modified files are kept in the hand-modified
+# subdirectory so they won't be deleted here.)
+clean :
+    del /f 2>NUL $(NAME).jj $(NAME).java *.class *~ $(NAME).html
+    del /f 2>NUL AST*.java JJTKleeneState.java
+    del /f 2>NUL KleeneTreeConstants.java KleeneVisitor.java
+    del /f 2>NUL Node.java SimpleNode.java
+    del /f 2>NUL KleeneConstants.java KleeneTokenManager.java
+    del /f 2>NUL ParseException.java Token.java TokenMgrError.java JavaCharStream.java
+    del /f 2>NUL $(LIBFULLNAME) $(LIBNAME).obj
+    del /f 2>NUL OpenFstLibraryWrapper.h
+    del /f 2>NUL $(NAME).jar $(NAME).mf
+    del /f 2>NUL $(EXTERNAL_FILES)
+    if exist lib\ rmdir /s/q lib
+    if exist $(RELEASE_BASENAME_NOVERSION)* for /d %D in ($(RELEASE_BASENAME_NOVERSION)*) do @rmdir /s/q %D
+    del /f 2>NUL $(RELEASE_BASENAME_NOVERSION)*.zip
+    del /f 2>NUL *.obj *.lib *.dll *.exp *.manifest *.pdb *~

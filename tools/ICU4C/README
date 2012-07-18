@@ -1,0 +1,40 @@
+ICU4C
+
+See ./Makefile
+See site.icu-project.org/download
+
+2012-07-04
+	needs icu4c-49_1_2-src.tgz
+
+2012-06-10
+	Downloaded icu4c-49_1_2-src.tgz
+
+2012-04-13
+	Downloaded icu4c-49_1_1-src.tgz
+
+2012-04-05
+	Downloaded icu4c-49_1-src.tgz
+
+When downloaded and unzipped, it creates an icu/ directory.
+See ./Makefile
+Invoked by the general Kleene Makefile.
+
+For manual building (not recommended---see Makefile)
+cd icu/source
+./configure
+make
+
+After running configure and make:
+
+tools/ICU4C/icu/source/common/unicode/
+	contains:	utypes.h
+				uchar.h
+				unistr.h
+				normlzr.h
+	(needed for kleeneopenfst.cc)
+
+tools/ICU4C/icu/source/lib
+	contains:	libicudata.dylib	or libicudata.so
+				libicui18n.dylib	or libicui18n.so
+				libicuuc.dylib		or libicuuc.so
+

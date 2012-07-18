@@ -1,0 +1,503 @@
+
+				Kleene Compiled Binary Installation Notes
+						(Beta)
+
+				Kleene for OS X and Linux
+
+				(see README.install_windows
+				for Windows installation)
+
+				2012-07-17
+
+CORRECTIONS, AND SUGGESTIONS TO MAKE THE INSTALLATION STEPS ACCURATE,
+COMPLETE AND CLEAR TO ALL POTENTIAL USERS, WOULD BE MUCH APPRECIATED.
+
+Kenneth R. Beesley
+SAP Labs
+ken.beesley@sap.com
+krbeesley@gmail.com
+
+Kleene is released under the Apache license, Version 2, by SAP AG.  The formal
+approval for this release is dated 4 May 2012.  See the file named LICENSE.
+
+Kleene is built on OpenFst and other openly-licensed libraries.  For
+dependencies and acknowledgments, see the file named NOTICE.
+
+********************************************************************************
+
+	Please follow these instructions carefully to install Kleene on your
+	system.  Kleene is still a beta project, and we definitely plan to make
+	the installation more automatic in the future.  If any of the
+	instructions are unclear, inaccurate or insufficient please contact us
+	to help us improve this document.
+
+Here we assume that you are installing a pre-compiled "binary release" of
+Kleene.  Check that you have the most recent Kleene release available,
+where higher numbers are more recent.  In what follows, we will refer
+generically to version W.X.Y.Z instead of 0.9.1.0, 0.9.1.7, 1.0.0.0, or
+whatever.
+
+
+1.  For Linux and OS X, pre-compiled Kleene releases are packaged as gzipped
+"tarballs" named kleene-<platform>-<version>.tar.gz, e.g.
+
+kleene-linux-W.X.Y.Z.tar.gz
+kleene-mac-W.X.Y.Z.tar.gz
+
+For Windows (see README.install_windows), the releases are zipped, e.g.
+
+kleene-win-W.X.Y.Z.zip
+
+In what follows, the gzipped tarball will be called the "release package."
+Unless you build Kleene yourself from the source files, you will need to
+obtain a copy of the gzipped tarball, either from the Kleene website
+(www.kleene-lang.org) or some other mirror or source.
+
+2.  Pre-requisites:
+
+	a.  To continue with the installation, you must know how to open a
+	terminal window in your operating system and perform basic "shell"
+	operations, such as moving about in the directory structure, moving
+	files, creating directories, editing your ~/.bashrc (or ~/.cshrc, or
+	~/.tschrc or whatever) file, etc.  If this means nothing to you, get
+	help from your local gurus and give them a copy of this README.install
+	file.
+
+	To see which shell you are running, enter
+
+	$ echo $SHELL
+
+	at a terminal command-line prompt.  (In this and other examples below,
+	the dollar sign represents the command-line prompt, which may be very
+	different on your system.) The response will be something like
+
+	/bin/bash			(indicating that you're running "bash")
+
+	or
+
+	/bin/tcsh			(indicating that you're running the "tcshell")
+
+	or
+
+	/bin/csh			(indicating that you're running the "cshell")
+
+	b.  You need to have Java version 1.5 or higher installed.  To check
+	your Java installation, from a Terminal command line enter the
+	following
+
+	$ java -version
+
+	On my Mac, this currently returns
+
+	java version "1.6.0_33"
+
+	On my Linux system, this currently returns
+
+	java version "1.6.0_11"
+
+	Install or update Java if necessary on your system to get version 1.5
+	or higher.
+
+	c.  To allow Kleene to draw finite-state networks on your screen:
+	
+	If you're running OS X, it's best to install a "native" version of OS X
+	GraphViz, i.e. one specialized for OS X.  If you do not already have an
+	application called "Graphviz" in your /Applications/ directory, surf to
+	http://www.graphviz.org/Download_macos.php and follow the installation
+	instructions there.  Then proceed to step d below.
+
+	If you are on Linux, or on OS X but for some reason cannot install a
+	"native" Graphviz for OS X, you will need to have a standard
+	installation of GraphViz.  In particular, you will need the 'dot'
+	application of GraphViz.  To see if you have it, enter
+
+	$ which dot
+	
+	If you do not already have 'dot' installed, i.e. if no path is
+	returned, then surf to http://www.graphvix.org/Download.php and follow
+	the installation instructions there.
+
+	Once you have installed GraphViz, from a Terminal command line, enter
+
+	$ which dot
+
+	On my Mac, this returns 
+
+	/usr/local/bin/dot
+
+	on my Linux box, this returns
+
+	/usr/bin/dot
+
+	Write down the full path of the directory where 'dot' is installed on
+	your system and save it; you may need it below.
+
+	d.  If you are running OS X, proceed directly to step 3 below.  If you
+	are running Linux, you will need to find (or install) a suitable
+	PostScript or PDF viewer application on your system.
+
+	If you are running Linux (RHEL 5), you should have the 'evince'
+	application.  Try
+
+	$ echo evince
+
+	and note the path (e.g. /usr/bin/evince).
+
+	Else if you are running Linux (RHEL 5) with KDE, you should have
+	'kghostview' installed.  Try
+
+	$ echo kghostview
+
+	and note the path (e.g.  /usr/bin/kghostview).
+
+	Else if you are running Linux with Gnome, you should should have 'ggv'
+	or 'gpdf' installed.  Try
+
+	$ echo ggv
+
+	or
+
+	$ echo gpdf
+
+	and note the path (e.g. /usr/bin/ggv).  You will need the path below.
+	(Corrections and suggestions would be appreciated.)
+
+3.  Installation Steps
+
+	NOTE THE FOLLOWING NAMING DISTINCTIONS (over which I have no control):
+
+	On OS X (Mac),
+		JNI shared libraries have the extension  .jnilib
+		General shared libraries have the extension .dylib
+
+	On Linux,
+		Both general and JNI shared libraries have the extension .so
+
+	a.  Move the Kleene release package to a convenient directory.  It
+	could be just about anywhere, but in the examples that follow, I assume
+	that you place it in the directory ~/kleene/, which on OS X would be
+
+	/Users/<yourUserName>/kleene
+
+	and on Linux would be something like
+
+	/home/<yourUserName>/kleene
+	
+	Do
+
+	$ cd
+	$ pwd
+
+	and the full path of your home directory will be displayed.  Then,
+	assuming that you want to install Kleene in ~/kleene/, do
+
+	$ cd
+	$ mkdir kleene
+
+	(Remember that you can cd wherever you want and make the "kleene"
+	directory there.)
+
+	Move the release package to that directory.  E.g. if you have a Linux
+	system and the release package kleene-linux-W.X.Y.Z.tar.gz is currently
+	in ~/Desktop/, then do
+
+	$ mv  ~/Desktop/kleene-linux-W.X.Y.Z.tar.gz  ~/kleene
+
+	b.  cd to that directory
+
+	$ cd ~/kleene
+
+	c.  gunzip the release package:
+
+	$ gunzip *.gz
+	$ ls
+
+	You should now see a file named kleene-linux-W.X.Y.Z.tar or, on OS X,
+	kleene-mac-W.X.Y.Z.tar.  Now you "de-tar" that file:
+
+	$ tar xvf *.tar
+	$ ls
+
+	You should now see a directory named kleene-linux-W.X.Y.Z or
+	kleene-mac-W.X.Y.Z (with real digits 0-9 for the W, X, Y and Z). For
+	convenience, create a "soft link" to this file called 'current', e.g.
+
+	$ ln -s kleene-linux-W.X.Y.Z  current
+	or
+	$ ln -s kleene-mac-W.X.Y.Z  current
+		
+	cd into that directory, e.g.
+
+	$ cd current
+
+	d.  Invoking 'ls', you should then see following files:
+
+	$ ls
+
+	Kleene.jar				(The Kleene executable jar file)
+
+	libkleeneopenfst.jnilib (for OS X, a shared JNI library)
+or  libkleeneopenfst.so     (for Linux)
+
+	libfst.dylib			(for OS X, the OpenFst library)
+or  libfst.so               (for Linux)
+
+	libicudata.49.1.2.dylib	(for OS X, ICU4C data library)
+or	libicudata.49.1.2.so	(for Linux)
+
+	libicui18n.49.1.2.dylib	(for OS X, ICU4C internationalization library)
+or	libicui18n.49.1.2.so	(for Linux)
+
+	libicuuc.49.1.2.dylib	(for OS X, ICU4C letter-casing library)
+or	libicuuc.49.1.2.so		(for Linux)
+
+	LICENSE					(Apache License, Version 2)
+	NOTICE					(dependencies, and their licenses)
+	README.install			(this file)
+	README.version
+	dotkleene/				(see below)
+	lib/					(contains .jar files, Java library dependencies)
+
+	Kleene is written in Java, and the shared JNI library
+	(libkleeneopenfst) must be loaded by Kleene at runtime.  To allow Java
+	to find it, you must set the environment variable LD_LIBRARY_PATH in
+	Linux, and DYLD_LIBRARY_PATH in OS X.  This library path must be set to
+	the installation directory just created (shown as ~/kleene/current in the
+	examples above).  If you have not installed Kleene inside
+	~/kleene/current, then modify the examples below as appropriate.
+
+	If you are running bash on Linux, then edit your ~/.bashrc file to include
+
+	export LD_LIBRARY_PATH=/home/<yourUserName>/kleene/current
+
+	Else if you are running cshell (or tcshell) on Linux, then edit your
+	~/.cshrc (or ~/.tcshrc) file to include
+
+	setenv LD_LIBRARY_PATH /home/<yourUserName>/kleene/current
+
+	If you are running bash on OS X, then edit your ~/.bashrc file to include
+
+	export DYLD_LIBRARY_PATH=/Users/<yourUserName>/kleene/current
+
+	If you are running cshell on OS X, then edit your ~/.cshrc file to include
+
+	setenv DYLD_LIBRARY_PATH /Users/<yourUserName>/kleene/current
+
+
+	e.  Setting your "preferences":
+
+	First copy the dotkleene directory to your home directory, renaming it
+	.kleene, e.g.
+
+	$ cd ~/kleene/current
+	$ cp -r dotkleene ~/.kleene
+
+	This .kleene directory contains preference files and a global startup
+	script that is run automatically whenever Kleene is launched.
+
+	If you have a "native" GraphViz installed in /Applications/Graphviz
+	(see above), you are done with preferences; skip the rest of this step
+	and proceed to step 4 below.
+
+	[This step will be easier in future releases after I implement
+	preference-selection in the GUI.  But for now ...]  In a previous step,
+	you wrote down where 'dot' and (if you're running Linux) evince (for
+	RHEL), kghostview (for KDE) or ggv (for Gnome) are installed.  You now
+	need to look at, and perhaps edit, the file ~/.kleene/prefs/prefs.xml
+	(an XML file) included in the Kleene distribution.  E.g. using the vim
+	or gvim editor
+
+	$ vim  ~/.kleene/prefs/prefs.xml
+
+	or
+
+	$ gvim ~/.kleene/prefs/prefs.xml
+	
+	For OS X:
+
+	Concentrate on the <osx>...</osx> element, which has two daughter
+	elements, <default>...</default> and <user>...</user>, that look like
+	this:
+
+	<osx>
+		<!-- defaults are for initial values and restoration of defaults -->
+		<!-- do not edit the default element unless you know what
+		you're doing; edit the user element -->
+		<default>
+	  	    <dot>
+				<dotpath>/usr/local/bin/dot</dotpath>
+				<dotflag>ps</dotflag>
+                <viewer>/usr/bin/open -a /Applications/Preview.app/Contents/MacOS/Preview</viewer>
+	  	    </dot>
+		</default>
+		<user>
+			<dot>
+				<dotpath></dotpath>
+				<dotflag></dotflag>
+				<viewer></viewer>
+	  	    </dot>
+		</user>
+    </osx>
+
+	DO NOT edit the <default>...</default> element; you may need to edit
+	(carefully) the <user>...</user> element.
+
+	If the default 'dot' path shown in osx/default/dot/dotpath (i.e. the
+	default value is /usr/local/bin/dot) matches the path to 'dot' on your
+	system (found above using 'which dot'), then you are done with this
+	step.  But if the path to 'dot' on your system is different from the
+	osx/default/dot/dotpath value (here /usr/local/bin/dot), e.g. if it's
+	/usr/bin/dot, then put that value in osx/user/dot/dotpath
+
+		<user>
+			<dot>
+				<dotpath>/user/bin/dot</dotpath>
+				<dotflag></dotflag>
+				<viewer></viewer>
+	  	    </dot>
+		</user>
+
+	Non-empty 'user' values override the 'default' values.  The default
+	values for dotflag and viewer should be OK on OS X.  If you had to edit
+	the file, save the result.  Exit the editor.
+
+	End of preference-editing for OS X.  Proceed to step 4 below.
+
+	For Linux:
+
+	If you are running Linux, concentrate on the <linux>...</linux> element,
+	which has two daughter elements, <default>...</default> and <user>...</user>.
+
+	<linux>
+		<!-- do not edit the default element unless you know what
+		you're doing; edit the user element -->
+		<default>
+			<dot>
+				<dotpath>/usr/bin/dot</dotpath>
+				<dotflag>ps</dotflag>
+				<viewer>/usr/bin/kghostview</viewer>  <!-- for KDE-->
+			</dot>
+		</default>
+		<user>
+			<dot>
+				<dotpath></dotpath>
+				<dotflag></dotflag>
+				<viewer></viewer>   <!-- /usr/bin/ggv  for Gnome -->
+			</dot>
+		</user>
+    </linux>
+
+	DO NOT edit the <default>...</default> element; you may need to edit the 
+	<user>...</user> element.
+
+	If the default path to 'dot' on your system is different from the
+	linux/default/dot/dotpath value (here /usr/bin/dot), e.g. if it's
+	/usr/local/bin/dot, then put your system's path to dot (found above
+	using 'which dot') in linux/user/dot/dotpath like this
+
+		<user>
+			<dot>
+				<dotpath>/usr/local/bin/dot</dotpath>
+				<dotflag></dotflag>
+				<viewer></viewer>
+			</dot>
+		</user>
+
+	Similarly, if the path to the PostScript viewer on your system is
+	different from the default linux/default/dot/viewer value (here
+	/usr/bin/kghostview), e.g. if your running KDE and it's /usr/bin/ggv,
+	then enter the correct value for your system in linux/user/dot/viewer,
+	e.g.
+
+		<user>
+			<dot>
+				<dotpath>/usr/local/bin/dot</dotpath>
+				<dotflag></dotflag>
+				<viewer>/usr/bin/ggv</viewer>
+			</dot>
+		</user>
+
+	The 'user' values, if not empty, override the 'default' values.  If you
+	made any changes, be sure to save the result to file.  Exit the editor.
+
+	End of preference-editing for Linux.
+
+4.  Launching Kleene
+
+	Kleene should now be installed, and you shouldn't need to install again
+	until you upgrade to a new release.  To launch Kleene, now or in the future, 
+	just do the following:
+
+	$ cd ~/kleene/current
+	$ java -jar Kleene.jar
+
+	You should see the Kleene GUI appear, with a "pseudo-terminal" window
+	on the left, and a "symbol table" window on the right.  At the bottom
+	of the pseudo-terminal is a line where you type input.  Try typing
+	the following on this line
+
+	$net = a*b+[c-g]{2} ;
+
+	and then enter it by pressing the ENTER key.  If all is working well,
+	you should see an icon named "$net" appear in the symbol-table window.
+
+	Right-click on the icon to see various options, including 'draw' and
+	'delete'.  Try 'draw'; you should see the network displayed on your
+	screen.  You can also double-click on the icon to cause the
+	finite-state machine to be displayed.
+
+5.  Launching Kleene from Anywhere
+
+	To facilitate launching Kleene, without having to cd to the ~/kleene directory,
+	add the full path to Kleene.jar to your CLASSPATH environment variable.
+
+	If you are using bash:
+
+	export CLASSPATH=$CLASSPATH:$USER_HOME/kleene/current/Kleene.jar:.
+
+	If you are using csh:
+
+	set CLASSPATH = ($CLASSPATH $USER_HOME/kleene/current/Kleene.jar .)
+
+6.  Some things that might go wrong (especially with the current Linux port):
+
+	a.  If 'draw' doesn't work:  Review the setting of preferences above
+	(involving editing of the .kleene/prefs/prefs.xml file.  Make sure,
+	especially on Linux, that the full-path values in
+	linux/user/dot/dotpath and linux/user/dot/viewer are correct for your
+	system.  (The defaults are likely to work on OS X.)
+
+	b.  If nothing is working, you will have to recompile Kleene from
+	source.
+
+7.  A sincere plea for help.  
+
+I've tried to write this README.install file to be as exact and
+understandable as possible, but the binaries have been tested on very few
+machines.  Please help me correct errors and omissions and make the
+instructions as bullet-proof as possible.
+
+NOTES ***********************************************************************
+
+A.  ~/.kleene/global/predefined.kl file is a global start-up script that is
+run automatically whenever you launch Kleene.  In general it is a VERY BAD
+idea for users to try to edit this file; the definitions in this file are
+effectively part of the Kleene language, and any errors that you introduce
+will prevent Kleene from launching correctly. Rather than editing
+predefined.kl, users should edit and run their own separate startup files
+that augment or override, where desired or necessary, definitions made in
+this global predefined.kl script.
+
+To launch Kleene with your own start-up script, and then go into the
+interactive GUI, do
+
+$ java -jar Kleene.jar pathToYourStartupScript -gui
+
+By convention, Kleene scripts usually have a .kl suffix, e.g.
+
+$ java -jar Kleene.jar myKleeneStartup.kl -gui
+
+The built-in global script in ~/.kleene/global/predefined.kl will always be
+executed first, and any definitions in the user's own startup script will
+shadow same-named definitions in the system's global startup script.
+

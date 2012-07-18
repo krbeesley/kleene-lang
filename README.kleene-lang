@@ -1,0 +1,25 @@
+
+doc/
+	Kleene documentation
+
+dotkleene/
+	During installation, should be copied to the user's home directory 
+		as .kleene, i.e.
+	$ cp -r dotkleene ~/.kleene
+
+kleene/
+	Kleene code proper, minus JAR, OpenFst and ICU4J dependencies
+
+	src/main/cpp
+	src/main/java
+	src/main/resources
+
+tools/
+	JAR, OpenFst and ICU4J dependencies
+
+winport/
+	README
+	os_type.mk		included in several Makefiles to determine the 
+					operating system (os)
+
+

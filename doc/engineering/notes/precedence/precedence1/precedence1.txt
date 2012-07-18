@@ -1,0 +1,36 @@
+High to Low
+
+Primary and inherently bracketed regexp
+a
+'multicharsymbol'
+$fstname
+.
+"literalizedsymbolconcat"
+[abm-z]
+[^abm-z]
+
+Call to function returning FST
+$&funcname(args...)
+
+Overt bracketing
+(regexp)
+
+(Book2 order is
+crossproduct
+Kleene iteration
+complement)
+This is also the order recommended by Helmut Schmid 30 April 2008
+
+// this current order puts unary operators higher than binary operators,
+// and postfix operators higher than the prefix complement operator, so
+// ~.+ is ~(.*) or the empty language.
+iteration       * + ? {5} {2,4}
+complement
+crossproduct
+concatenation
+intersection
+union
+difference
+rule-based operations
+composition
+

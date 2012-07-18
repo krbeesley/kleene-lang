@@ -1,0 +1,76 @@
+StdArc implements the Tropical Semiring, wherein the weights are -log(probability), 
+       known as "costs"
+
+     Mindtuning about Probabilities vs. Costs
+
+       The probability p ranges 0.0 <= p <= 1.0
+	   where 0.0 is impossible (zero probability)
+		and 1.0 is certainty
+
+           E.g. If you have a bag of marbles, all black, and pick out one at random, the
+           probability that it is black is 1.0, i.e. Certain; the probability that it is 
+           white is 0.0, i.e. Impossible.
+           If you have a bag of marbles, half black and half white, and you pick out a
+           marble at random, the probability that it is black is 0.5.
+
+           If you have a path in a weighted automaton, and each arc in the path has a
+           \emph{probability} weight, these weights are combined along the path by multiplying
+           them (this "extend" or "extension" operation is generically known in OpenFst
+           as Times()).  Formally, this scheme, wherein the weights are probabilities,
+           and the extend operation is multiplication, is known as the "Real Semiring".
+
+       In practical NLP applications, it is often more convenient (and more efficient at
+       runtime) to recast probabilities as "costs", where a cost is -log(probability).  
+       For those, like myself, who haven't grappled with logarithms since high school, 
+       here's a summary of how logarithms work, and why translating probabilities into 
+       costs is attractive.
+
+       Some Fundamentals:
+
+		  log(1), for any logarithm base, is 0.0
+		  log(v), where 0.0 < v < 1.0, gets increasingly negative as v approaches 0.0
+		  log(0), for any base, is negative infinity
+
+       For example (computed in Python, using math.log(x), which is the "natural" log)
+
+		log(1)  =            0.0
+		log(.9) =           -0.10536051565782628
+		log(.8) =           -0.22314355131420971
+		log(.7) =           -0.35667494393873245
+		log(.6) =           -0.51082562376599072
+		log(.5) =           -0.69314718055994529
+		log(.4) =           -0.916290731874155
+		log(.3) =           -1.2039728043259361
+		log(.2) =           -1.6094379124341003
+		log(.1) =           -2.3025850929940455
+		log(.01) =          -4.6051701859880909
+		log(.001) =         -6.9077552789821368
+		log(.0001) =        -9.2103403719761818
+		log(.00001) =      -11.512925464970229
+		log(.0000000001) = -23.025850929940457
+
+        and so on, with log(p) approaching negative infinity as p approaches 0.0.
+
+     	If we multiply each log() value by -1, we get a positive "cost", 
+     	such that as the probability gets lower and lower (approaching zero), the 
+     	cost gets higher and higher (approaching positive infinity).  When the
+		probability is 1.0 (certain), then the cost is zero.
+
+     	Why go to the trouble?  Logarithms have an interesting feature: to multiply
+     	two or more numbers, you can _add_ their logarithms and then take the antilog
+     	of the sum to get the result.  If weights in an automaton are expressed as 
+     	costs (where, again, a cost is -log(probability))
+		then the extension operation for combining weights along one path (the 
+     	"Times()" operation) for combining weights along a path is addition.  And
+		computers perform addition much more efficiently than multiplication.
+		Intuitively, as you add cost weights along a path, the total cost of the path increases.
+
+     	Individual arc weights (costs) can be computed once at compile time, and at 
+     	runtime, weight extension via addition of costs is inherently more efficient 
+     	than multiplication of the corresponding probabilities.  This scheme, wherein
+     	weights are costs, and the extend operation is addition, is known as the Tropical
+     	Semiring.  In this semiring, the collection (or Plus()) operation is min(),
+     	which takes multiple solutions and returns just the one with the lowest cost
+     	(comparable to the solution with the highest probability, in the Real
+     	Semiring).
+

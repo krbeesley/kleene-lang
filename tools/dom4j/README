@@ -1,0 +1,10 @@
+dom4j
+
+2012-07-04
+	using dom4j-1.6.1.tar.gz
+
+2012-06-10
+2012-04-02
+	dom4j has 2.0.0 available, but only in ALPHA, and ALPHA-2
+	stay with 1.6.1 for now
+

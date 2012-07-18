@@ -1,0 +1,5 @@
+
+To validate:
+
+rncv prefs.rnc prefs.xml
+

@@ -1,0 +1,16 @@
+# This nmake makefile extracts Jaxen files that we use.
+# Written here by Phil Sours (not from Jaxen).
+#
+# Jaxen is an open source XPath library written in Java.
+# http://jaxen.codehaus.org/
+
+WINRAR="$(PROGRAMFILES)\WinRAR\WinRAR.exe"
+JAXEN_BASENAME=jaxen-1.1.1
+JAXEN_ARCHIVE=$(JAXEN_BASENAME).tar.gz
+
+$(JAXEN_BASENAME) : $(JAXEN_ARCHIVE)
+    @nmake /nologo /f Makefile_nmake clean
+    "$(WINRAR)" x $(JAXEN_ARCHIVE) $(JAXEN_BASENAME)\$(JAXEN_BASENAME).jar
+
+clean :
+    -for /d %D in (*) do @rmdir /s/q %D

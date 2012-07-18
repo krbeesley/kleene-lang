@@ -1,0 +1,10 @@
+The global/ directory contains the file 'predefined.kl', which contains
+the basic global definitions, which become part of the Kleene language.
+These global definitions go into the `global' (root) symtab Frame and
+can be overridden in the `program' symtab Frame and other descendant
+Frames (including stand-alone code blocks).
+
+IT IS ALMOST ALWAYS A BAD IDEA FOR USERS TO EDIT predefined.kl
+
+The definitions in predefined.kl become part of the Kleene language.
+

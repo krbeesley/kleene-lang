@@ -1,0 +1,101 @@
+
+Syntax:  $foo =  $&start($>foo) ;
+
+        The $&start($>foo) call is a kind of regex.
+		This call has to be interpreted immediately to
+		return a network value.  (I.e. it has to be
+		immediately interpretABLE, or throw a Runtime
+		Exception.)
+
+Big Question:
+Can the regex in the statement:
+
+$>foo ::= regexp ;
+
+be compiled immediately into a network, OR does it have to
+be left as an AST until $&start() is called?
+
+Consider:  references like $>bar inside the regexp could be
+handled like a multichar symbol, given a PUA int to be used
+on the label.
+BUT what about calls to functions that might not yet be defined?
+Do I want to make it possible to refer to functions before
+they are defined (Today, I think so).
+
+ASTrrprod_definition
+	ASTrrprod_id
+	ASTregexp
+
+*******************************************************
+
+		In OpenFstInterpreterKleeneVisitor (Java)
+
+The AST corresponding to  $&__start($>foo) is
+
+ASTnet_start_func_call
+  ASTrrprod_id
+
+rrprod_id has a .getImage() method
+
+
+(env.get(name) returns an Object; for a rrprod_id name,
+it returns not an Fst object but a RrProdObject, which
+has methods .getASTregexp() and .getStartStateNum() and
+.getRrDependencies(), which returns HashSet<String> )
+
+Set RrGramStart = $>foo  (a String?)
+
+Add RrGramStart to ProdArrayList
+
+While there is another production in ProdArrayList
+	CurrentProd = ProdQueue.next
+	if CurrentProd is not defined in the symtab
+		throw new UndefinedIdException
+	Get ProdList (productions referenced by CurrentProd)
+	For each PL in ProdList
+		if PL not already in the ProdArrayList
+			add it to the ProdArrayList
+	
+Remove RrGramStart from the ProdQueue
+
+Call native rrGram(RrGramStart, StartFstName, ProdQueue)
+
+
+		Native C++ Method
+
+StartFst = copy(RrGramStart)
+
+Add (StartFstName, StartFst.Start()) to map
+
+
+foreach fst in ProdQueue
+	numstatesStartFst = StartFst->NumStates()
+	prodStartFst = StartFst.Properties(kFstProperties, false) ;
+	startFst = fst.Start()
+	prod2 = fst.Properties(kFstProperties, false) ;
+	Add (fstName, startFst+numstatesStartFst) to map
+
+	add fst's states and arcs to StartFst (see Concat code)
+	StartFst->SetProperties(ConcatProperties(prodStartFst, prod2),
+	kFstProperties) ;
+
+// Change all arcs labeled $>foo (and currently leading to a final
+//   state) to eps:eps arcs leading to the start state of the $>foo
+//   network.
+
+for (StateIterator<Fst<Arc>> siter(startFst) ;
+     !siter.Done() ;
+	 siter.Next() ) {
+	StateId s = siter.Value() ;  // basically an int
+	for (ArcIterator<Fst<Arc>> aiter(startFst, s) ;
+	     !aiter.Done() ;
+		 aiter.Next() ) {
+		Arc a = aiter.Value() ;
+		if (a.ilabel is in the rrMap) {  // if int label represents a $>name
+			a.ilabel = 0 ;
+			a.olabel = 0 ;
+			a.nextstate = rrMap(a.ilabel) ;  // get number of start state
+		}
+	}
+}
+

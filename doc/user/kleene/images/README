@@ -1,0 +1,10 @@
+To convert .ps to .pdf
+
+$ ps2pdf13 foo.ps foo.pdf
+
+To crop the pdf, send it to the Mac
+View with Preview
+	Tools > Select
+	Tools > Crop
+then save it
+

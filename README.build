@@ -1,0 +1,10 @@
+2012-07-17
+
+To build Kleene from source.
+
+1.  See tools/ and its daughter directories.  You will need to download
+the various libraries needed by Kleene as indicated in the README files.
+
+2.  cd kleene/src/main/java/org/kleene-lang/
+	make
+

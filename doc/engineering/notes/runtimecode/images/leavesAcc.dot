@@ -1,0 +1,26 @@
+digraph foo {
+rankdir=LR ;
+ranksep =".25" ;
+
+/* default shape for nodes */
+node [shape=circle, style=solid, fontsize=12]
+edge [fontsize=12] ;
+
+s0 -> s1 [label="l:l"] ;
+s0 [style=bold] ; 
+s1 -> s2 [label="e:e"] ;
+s2 -> s3 [label="a:a"] ;
+
+s6 [shape=doublecircle] ;
+
+s3 -> s4 [label="f:f"] ;
+s4 -> s5 [label="[Noun]:[Noun]"] ;
+s5 -> s6 [label="[Pl]:[Pl]"] ;
+
+s3 -> s7 [label="v:v"] ;
+s7 -> s8 [label="e:e"] ;
+s8 -> s9 [label="[Verb]:[Verb]"] ;
+
+s9 -> s6 [label="[3ps]:[3ps]"] ;
+
+}

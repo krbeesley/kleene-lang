@@ -1,0 +1,6 @@
+When you add a jpg file to this directory, do
+
+make
+
+to update the 'listing' file.
+

@@ -1,0 +1,44 @@
+Hi Ken,
+
+It looks like the current version of my code is pretty similar to the earlier version:
+
+// a bad idea if there are loops :)
+void printAllStrings(VectorFst? &fst) {
+vector str(0);
+TropicalWeight? tw(TropicalWeight?::One());
+printAllStringsHelper(fst, 0, str, tw);
+}
+
+void printAllStringsHelper(VectorFst? &fst, int state, vector str, TropicalWeight? cost) {
+if(fst.Final(state) = TropicalWeight?::Zero()) 
+      cout << vectorToString(str) << " with cost " << (Times(cost,fst.Final(state))) << endl;
+    for(ArcIterator?<VectorFst > aiter(fst,state); ! aiter.Done(); aiter.Next()) {
+      StdArc? arc = aiter.Value();
+      str.push_back(arc.ilabel);
+      printAllStringsHelper(fst, arc.nextstate, str, Times(cost, arc.weight.Value()));
+      str.pop_back();
+    }
+  }
+
+  string vectorToString(vector v) {
+    if(v.size() = 0)
+return "<>";
+string result = "<" + itos(v[0]);
+for(int i = 1; i < v.size(); i++) {
+result += "," + itos(v[i]);
+}
+return result + ">";
+}
+
+string itos(int i) { // convert int to string; from Bjarne Stroustrup's FAQ
+stringstream s;
+s << i;
+return s.str();
+}
+
+I have a similar but separate function pair for LogArc? FSTs. It would be nice to have a single function pair that works for any arc type, and except for the types the code would be the same, but I don't see how to do it because there isn't a common superclass for LogArc? and StdArc?. If someone else sees how to do this, let me know!
+
+And please feel free to use this code :)
+
+Roger
+

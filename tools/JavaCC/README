@@ -1,0 +1,16 @@
+JavaCC
+Needed to compile the Kleene.jjt file into Kleene.jj and then
+Kleene.java
+
+For downloads, see http://java.net/projects/javacc/downloads
+
+2012-07-04
+	needs javacc-5.0.tar.gz
+	
+2012-04-01
+	Had javacc-4.2.tar.gz
+	Downloaded new javacc-5.0.tar.gz
+	Fixed the Makefiles
+	Note that javacc...tar.gz does not reduce to a .jar library,
+	rather the Makefile extracts javacc-5.0/bin/, which contains
+	javacc and javah

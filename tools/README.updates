@@ -1,0 +1,4 @@
+
+When any of these libraries are updated (manually),
+note the version numbers and edit the main Kleene
+Makefile accordingly.

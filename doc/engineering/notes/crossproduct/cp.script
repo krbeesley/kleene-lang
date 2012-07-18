@@ -1,0 +1,46 @@
+clear stack
+
+define LangA {dog} | {cat} | {mouse} | {pig}  ;
+define LangB {fish} | {elephant} | {horse} | [] ;
+
+! SigmaA a c d e g i m o p s t u
+! SigmaB a e f h i l n o p r s t
+
+define Q [
+a:a | a:e | a:f | a:h | a:i | a:l | a:n | a:o | a:p | a:r | a:s | a:t |
+c:a | c:e | c:f | c:h | c:i | c:l | c:n | c:o | c:p | c:r | c:s | c:t |
+d:a | d:e | d:f | d:h | d:i | d:l | d:n | d:o | d:p | d:r | d:s | d:t |
+e:a | e:e | e:f | e:h | e:i | e:l | e:n | e:o | e:p | e:r | e:s | e:t |
+g:a | g:e | g:f | g:h | g:i | g:l | g:n | g:o | g:p | g:r | g:s | g:t |
+i:a | i:e | i:f | i:h | i:i | i:l | i:n | i:o | i:p | i:r | i:s | i:t |
+m:a | m:e | m:f | m:h | m:i | m:l | m:n | m:o | m:p | m:r | m:s | m:t |
+o:a | o:e | o:f | o:h | o:i | o:l | o:n | o:o | o:p | o:r | o:s | o:t |
+p:a | p:e | p:f | p:h | p:i | p:l | p:n | p:o | p:p | p:r | p:s | p:t |
+s:a | s:e | s:f | s:h | s:i | s:l | s:n | s:o | s:p | s:r | s:s | s:t |
+t:a | t:e | t:f | t:h | t:i | t:l | t:n | t:o | t:p | t:r | t:s | t:t |
+u:a | u:e | u:f | u:h | u:i | u:l | u:n | u:o | u:p | u:r | u:s | u:t ]* ;
+
+echo Foo
+print stack
+
+define R [a:0 | c:0 | d:0 | e:0 | g:0 | i:0 | m:0 | o:0 | p:0 | s:0 | t:0 | u:0]* ;
+define S [0:a | 0:e | 0:f | 0:h | 0:i | 0:l | 0:n | 0:o | 0:p | 0:r | 0:s | 0:t]* ;
+
+define T [ Q [ R | S ]] ;
+
+regex LangA .o. T .o. LangB ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

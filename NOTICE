@@ -1,0 +1,155 @@
+
+NOTICE file
+
+   Kleene Programming Language
+   Copyright 2006-2012 SAP AG
+
+   All trademarks and registered trademarks mentioned herein are the
+   property of their respective owners.
+
+   1.  This product includes software developed at SAP AG
+   (http://www.sap.com/), and in particular at SAP Labs
+   (http://www.sap.com/corporate-en/our-company/innovation/saplabs/index.epx).
+   The SAP approval to make Kleene open-source, under the Apache
+   License, Version 2.0, is dated 4 May 2012, finalized by Stefan Sigg.
+   The Kleene website is www.kleene-lang.org.  
+   See the file LICENSE for a copy of the Apache License, Version 2.0.
+
+   2.  This product includes the OpenFst library (www.openfst.org)
+   which is released by Google, Inc. under the Apache License,
+   Version 2.0.
+
+   3.  This product includes the Apache_Commons library
+   (commons.apache.org) which is released under the Apache License,
+   Version 2.0.
+
+   4.  This product includes ICU4J and ICU4C (International Components
+   for Unicode) (http://site.icu-project.org/) which are released under a
+   nonrestrictive open source license
+   (http://source.icu-project.org/repos/icu/icu/trunk/license.html),
+   reproduced here:
+
+Copyright (c) 1995-2012 International Business Machines Corporation and others
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, and/or sell copies of the Software, and to permit persons to whom
+the Software is furnished to do so, provided that the above copyright notice(s) and this
+permission notice appear in all copies of the Software and that both the above copyright
+notice(s) and this permission notice appear in supporting documentation.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER
+OR HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR
+CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall not be used in
+advertising or otherwise to promote the sale, use or other dealings in this Software
+without prior written authorization of the copyright holder.
+
+(End of ICU license.)
+
+   5.  This product includes the Jaxen XPath library (http://jaxen.codehaus.org/), which
+   is released under an "Apache-style open source license"
+   (http://jaxen.codehaus.org/license.html), reproduced here:
+
+ Copyright 2003-2006 The Werken Company. All Rights Reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  * Neither the name of the Jaxen Project nor the names of its
+    contributors may be used to endorse or promote products derived 
+    from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+(End of Jaxen license.)
+   
+   6. This project includes the dom4j library (http://dom4j.sourceforge.net), which is
+   licensed under a "BSD style license" (http://dom4j.sourceforge.net/license.html)
+   reproduced here:
+
+Copyright 2001-2010 (C) MetaStuff, Ltd. All Rights Reserved.
+
+Redistribution and use of this software and associated documentation
+("Software"), with or without modification, are permitted provided
+that the following conditions are met:
+
+1. Redistributions of source code must retain copyright
+   statements and notices.  Redistributions must also contain a
+   copy of this document.
+ 
+2. Redistributions in binary form must reproduce the
+   above copyright notice, this list of conditions and the
+   following disclaimer in the documentation and/or other
+   materials provided with the distribution.
+ 
+3. The name "DOM4J" must not be used to endorse or promote
+   products derived from this Software without prior written
+   permission of MetaStuff, Ltd.  For written permission,
+   please contact dom4j-info@metastuff.com.
+ 
+4. Products derived from this Software may not be called "DOM4J"
+   nor may "DOM4J" appear in their names without prior written
+   permission of MetaStuff, Ltd. DOM4J is a registered
+   trademark of MetaStuff, Ltd.
+ 
+5. Due credit should be given to the DOM4J Project - 
+   http://dom4j.sourceforge.net
+ 
+THIS SOFTWARE IS PROVIDED BY METASTUFF, LTD. AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT
+NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
+METASTUFF, LTD. OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGE.
+   
+(End of dom4j license.)
+
+	7.  Binary distributions of this product do not include JavaCC or JJTree, but the
+	Kleene project depends on JavaCC and JJTree to compile the Kleene parser from the
+	Kleene.jjt source file.  The JavaCC/JJTree applications may be included in
+	source-code distributions.  JavaCC/JJTree is distributed under The BSD License
+	(http://www.opensource.org/licenses/bsd-license.php).
+	http://java.net/projects/javacc, http://javacc.java.net
+	http://www.java.net/javanet-web-site-terms-use
+
+	8.  This product does not include the GraphViz library, but the Kleene executable by
+	default calls GraphViz (at least in the OS X version) to display networks. Kleene
+	users on OS X are invited to install GraphViz, which is released under the Eclipse
+	Public License, v. 1.0 (http://www.graphviz.org/License.php,
+	http://www.graphviz.org/Download.php).  OS X users can install GraphViz from
+	http://www.graphviz.org/Download_macos.php.  General downloads are available from
+	http://www.graphvix.org/Download.php.
+

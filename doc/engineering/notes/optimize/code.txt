@@ -1,0 +1,70 @@
+﻿
+if (isUnweighted(fstp) && isAcceptor(fstp)) {
+    // no need to Encode
+    // unweighed acceptors can always be determinized and Determinize()d
+
+    // determinize in place
+    *fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    Minimize(fstp) ;
+
+    if (!isEpsilonFree(fstp)) {
+		RmEpsilon(fstp)
+
+    	*fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    	Minimize(fstp) ;
+	}
+} elsif (isAcyclic(fstp)) {
+    // any acyclic network can be determinized,
+    // however, to Determinize() a network it must also be Functional.
+    // To get around this restriction (and avoid crashes), 
+    // Encode() the labels, reducing the network to an acceptor (which
+    // is always functional)
+
+    EncodeMapper<Arc> encoder(kEncodeLabels, ENCODE) ;
+
+    Encode(fstp, &encoder) ;
+    *fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    Minimize(fstp) ;
+    Decode(fstp, encoder) ;
+
+    if (!isEpsilonFree(fstp)) {
+		RmEpsilon(fstp) ;
+
+    	Encode(fstp, &encoder) ;
+    	*fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    	Minimize(fstp) ;
+    	Decode(fstp, encoder) ;
+	}
+} elsif (isIdempotent(fstp)) { 
+    // The network is cyclic
+    // and the semiring is idempotent, then encode both labels and weights.
+	// The semiring of the FST can be tested in C++ using
+	// fstp->Type(), e.g.
+	// if (fstp->Type() == "standard")
+
+    EncodeMapper<Arc> encoder(kEncodeLabels | kEncodeWeights, ENCODE) ;
+
+    Encode(fstp, &encoder) ;
+    *fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    Minimize(fstp) ;
+    Decode(fstp, encoder) ;
+
+    if (!isEpsilonFree()) {
+		RmEpsilon(fstp) ;
+
+    	Encode(fstp, &encoder) ;
+    	*fstp = DeterminizeFst<Arc>(*fstp, 
+                 DeterminizeFstOptions<Arc>(CacheOptions(true, 0)));
+    	Minimize(fstp) ;
+    	Decode(fstp, encoder) ;
+	}
+} else {
+    // do nothing?
+    // or invoke RmEpsilon() ?? ///
+}
+

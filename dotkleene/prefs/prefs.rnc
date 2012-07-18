@@ -1,0 +1,18 @@
+
+start = Prefs
+
+Prefs = element prefs { OSX, Linux, Windows }
+
+OSX = element osx { Default, User }
+Linux = element linux { Default, User }
+Windows = element windows { Default, User }
+
+Default = element default { Dot }
+User = element user { Dot }
+
+Dot = element dot { Dotpath, Dotflag, Viewer }
+
+Dotpath = element dotpath { text }
+Dotflag = element dotflag { text }
+Viewer  = element viewer  { text }
+

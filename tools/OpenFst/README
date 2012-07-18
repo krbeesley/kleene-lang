@@ -1,0 +1,17 @@
+OpenFst
+see www.openfst.org
+
+2012-07-04
+	currently using openfst-1.3.2.tar.gz
+
+2012-06-10
+	Downloaded openfst-1.3.2.tar.gz
+
+2012-04-01
+	Had openfst-1.1
+	Downloaded new openfst-1.3.1
+	Updated the Makefiles
+	N.B. that what is needed is libfst.so (for Linux)
+		or libfst.dylib (for Mac); see Makefile
+		May need libfst.0.dylib or pointer to libfst.dylib
+

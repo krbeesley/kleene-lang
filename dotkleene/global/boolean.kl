@@ -1,0 +1,100 @@
+// dotkleene/global/boolean.kl
+// 
+// Sketches for desired boolean functions--not yet implemented
+
+// cf   existing #&arity($fst)
+//	__arity
+//	LNG_ARITY_FUNC_ID
+//	lng_arity_func_call
+//
+//	#lng_arity_func_call
+//		interp
+//		rr
+
+// existing #&isRtn($fst)       #&__isRtn($fst)
+// existing #&isCyclic($fst)	#&__isCyclic($fst)
+// already defined in basic.kl
+
+#&isAcceptor($fst) {
+	return #&arity($fst) == 1 ;
+}
+
+#&isTransducer($fst) {
+	return #&arity($fst) == 2 ;
+}
+
+#&isSemanticAcceptor($fst) {
+	return #&__isSemanticAcceptor($fst) ;
+}
+
+#&isSemanticTransducer($fst) {
+	return !#&__isSemanticAcceptor($fst) ;	
+	// lib.IsSemanticTransducer
+}
+
+#&isWeighted($fst) {
+	return #&__isWeighted($fst) ;	// lib.IsWeighted
+}
+
+#&isUnweighted($fst) {
+	return #&__isUnweighted($fst) ;	// lib.IsUnweighted
+}
+
+#&isIDeterministic($fst) {
+	return #&__isIDeterministic($fst) ;	// lib.IsIDeterministic
+}
+
+#&isODeterministic($fst) {
+	return #&__isODeterministic($fst) ;	// lib.IsODeterministic
+}
+
+#&isCyclic($fst) {
+	return #&__isCyclic($fst) ;	// lib.IsCyclic
+}
+
+#&isAcyclic($fst) {
+	return #&__isAcyclic($fst) ;	// lib.IsAcyclic
+}
+
+#&isEpsilonFree($fst) {
+	return #&__isEpsilonFree($fst) ;  // check lib.???
+}
+
+#&isEmpty($fst) {
+	return #&__isEmpty($fst) ;		// lib.IsEmpty 
+}
+
+// alias
+#&isEmptyLanguage = #&isEmpty ;
+
+#&isEmptyString($fst) {
+	// accepts only the empty string
+	return #&__isEmptyStringLanguage($fst) ;
+	// check name lib.IsEmptyStringLanguageFst ???
+}
+
+// alias
+#&isEmptyStringLanguage = #&isEmptyString ;
+
+#&isUniversal($fst) {
+	return 	#&arity($net) == 1
+		&&	#&size(#@&getSigma($net)) == 0
+		&&	#&stateCount(~$net) == 0 ; }
+
+// alias
+#&isUniversalLanguage = #&isUniversal ;
+#&isWildcard = #&isUniversal ;
+
+#&containsOther($fst) {
+	return #&__containsOther($fst) ;
+}
+
+#&isString($fst) {
+	return #&__isString($fst) ;
+}
+
+// test for SAP RTN
+// #&__isRtn() already done
+#&isRtn($fst) {
+	return #&__isRtn($fst) ;
+}

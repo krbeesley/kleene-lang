@@ -1,0 +1,31 @@
+	KRB 2012-04-18 notes about tools/
+	external libraries that Kleene depends on.
+	See Makefile
+
+
+JavaCC/JJTree, needed to convert Kleene.jjt into Java code.  Currently
+version 5.0.
+
+Java .jar files
+
+	Apache_Commons	for		commons-lang3-3.1.jar		(from tar.gz)
+	dom4j					dom4j-1.6.1.jar				(from tar.gz)
+	icu4j					icu4j-49_1.jar				(dist. as a .jar)
+	jaxen					jaxen-1.1.1.jar				(from tar.gz)
+	rome					rome-1.0.jar				(dist. as a .jar)
+					Copied into Kleene/src/java/lib/
+
+The ROME/rome library appears to be used only for
+import com.sun.syndication.io.XmlReader
+a reader that gets an XML file and determines the encoding.
+
+C++ libraries, must be recompiled for each platform. See Makefile
+
+	ICU4C			for		libicudata.49.1.1.dylib  or .so  or .dll
+							libicui18n.49.1.1.dylib
+							libicuuc.49.1.1.dylib
+					Copied into Kleene/src/java/
+
+	OpenFst			for		libfst.dylib			or .so or .dll
+					Copied into Kleene/src/java/
+

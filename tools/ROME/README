@@ -1,0 +1,12 @@
+ROME
+
+2012-07-04
+	using rome-1.0.jar
+	just for com.sun.syndication.io.XmlReader
+
+
+2012-04-01
+	N.B. that ROME is distributed as a .jar file
+	abandoned? check what I use it for
+	Currently available at
+	download.java.net/maven/2/rome/rome/1.0

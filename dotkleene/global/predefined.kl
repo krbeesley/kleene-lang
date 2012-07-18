@@ -1,0 +1,660 @@
+// basic global definition script for Kleene
+// ~/.kleene/global/basic.kl
+
+// Users should NOT edit this file.
+
+// Definitions in this file become part of the basic Kleene language.
+
+// These definitions go into the "Global" (primary)
+// symbol table and can be overridden by the user's
+// own startup scripts, which place definitions in
+// the "program" symbol table, which is a daughter of
+// the global symbol table.  User-supplied definitions will
+// "shadow" global definitions.
+
+// Wrap some built-in functions (names beginning with __ are
+// reserved for built-ins, which are tokenized and parsed 
+// directly in JavaCC).  The following wrappings make these built-ins
+// look like user-defined functions.  These global definitions
+// effectively become part of the Kleene language.
+
+// Kleene variables that control routine Optimization
+
+// a kind of enum
+#true =  1 ;
+#false = 0 ;
+
+#KLEENEdeterminize = #true ;
+#KLEENEminimize    = #true ;
+#KLEENErmepsilon   = #true ;
+
+// a kind of enum
+#KLEENEopenFstRtnConventions = 0 ;
+#KLEENEsapRtnConventions = 1 ;
+
+#KLEENErtnConventions = #KLEENEopenFstRtnConventions ;
+
+// under #KLEENEopenFstRtnConventions, a reference to a subnet $foo
+// is a multichar symbol '__$foo' that appears on the output/lower
+// side of a label, with epsilon on top.  See the OpenFstRtnConventions
+// statement.
+
+// under #KLEENEsapRtnConventions, a reference to a subnet $foo
+// is a multichar symbol '$foo' that appears on the input/upper
+// side of a label.  On the lower side, '$foo' appears for a simple
+// reference, and $eps appears for a "mapping to epsilon", which
+// is handled in Phil Sours' SAP-RTN runtime code.
+
+// void function to reset all
+&setOptimize(#b) {
+	external #KLEENEdeterminize, #KLEENEminimize, #KLEENErmepsilon
+	;
+	#KLEENEdeterminize 	= #b ;
+	#KLEENEminimize 	= #b ;
+	#KLEENErmepsilon 	= #b ;
+}
+
+&setDeterminize(#b) {
+	external #KLEENEdeterminize ;
+	#KLEENEdeterminize = #b ;
+}
+&setMinimize(#b) {
+	external #KLEENEminimize ;
+	#KLEENEminimize    = #b ;
+}
+&setRmepsilon(#b) {
+	external #KLEENErmepsilon ; 
+	#KLEENErmepsilon   = #b ;
+}
+&setRmEpsilon = &setRmepsilon ;  // alias
+
+// ******************************************************
+
+$&complement($fst) {
+	return ~$fst ;
+}
+
+$&reverse($fst) {				
+	return $&__reverse($fst) ; 	// built-in
+}
+
+$&shortestPath($fst, #nshortest = 1) {
+	return $&__shortestPath($fst, #nshortest) ;
+}
+
+$&inputside!($fst) {
+	return $&__inputproj!($fst) ;  // built-in
+}
+$&inputProj! = $&inputside! ;  // alias
+$&inputProject! = $&inputside! ;  // alias
+$&inputProjection! = $&inputside! ;  // alias
+$&upperside! = $&inputside! ;  // alias, Xerox visualization
+
+$&inputside($fst) {
+	return $&__inputproj($fst) ;  // built-in
+}
+$&inputProj = $&inputside ;	// alias
+$&inputProject = $&inputside ;	// alias
+$&inputProjection = $&inputside ;  // alias
+$&upperside = $&inputside ; // alias, Xerox visualization
+
+$&outputside!($fst) {
+	return $&__outputproj!($fst) ; // built-in
+}
+$&outputProj! = $&outputside! ;	// alias
+$&outputProject! = $&outputside! ;	// alias
+$&outputProjection! = $&outputside! ;	// alias
+$&lowerside! = $&outputside! ;  // alias, Xerox visualization
+
+$&outputside($fst) {
+	return $&__outputproj($fst) ; // built-in
+}
+$&outputProj = $&outputside ;	// alias
+$&outputProject = $&outputside ;	// alias
+$&outputProjection = $&outputside ;	// alias
+$&lowerside = $&outputside ; // alias, Xerox visualization
+
+$&copy($fst) {
+	return $&__copy($fst) ;  // built-in
+}
+
+$&rmWeight!($fst) {
+	return $&__rmWeight!($fst) ; // built-in
+}
+
+$&rmWeight($fst) {
+	return $&__rmWeight($fst) ; // built-in
+}
+
+$&substSymbol!($fst, $old, $new) {
+	return $&__substSymbol!($fst, $old, $new) ;
+	// $old and $new must each denote an acceptor
+	// with one arc (so one label)
+}
+
+$&substSymbol($fst, $old, $new) {
+	return $&__substSymbol($fst, $old, $new) ;
+	// $old and $new must each denote an acceptor
+	// with one arc (so one label)
+}
+
+$&toString(#num) {
+	return $&__toString(#num) ;  // built-in
+}
+
+$&implode($fst) {
+	return $&__implode($fst) ;
+}
+// take one-path, acceptor fst, return one-arc fst with multichar-symbol label
+
+$&explode($fst) {
+	return $&__explode($fst) ;
+}
+
+$&get($@list, #n) {
+	return $&__get($@list, #n) ;
+}
+
+$&getLast($@list) {
+	return $&__getLast($@list) ;
+}
+
+#&get(#@list, #n) {
+	return #&__get(#@list, #n) ;
+}
+
+#&getLast(#@list) {
+	return #&__getLast(#@list) ;
+}
+
+$&head($@list) {
+	return $&__head($@list) ;
+}
+
+#&head(#@list) {
+	return #&__head(#@list) ;
+}
+
+$&pop!($@list) {
+	return $&__pop!($@list) ;
+}
+
+#&pop!(#@list) {
+	return #&__pop!(#@list) ;
+}
+
+$&remove!($@list, #n) {
+	return $&__remove!($@list, #n) ;
+}
+
+$&removeLast!($@list) {
+	return $&__removeLast!($@list) ;
+}
+// alias
+$&pop_back! = $&removeLast! ;
+
+#&remove!(#@list, #n) {
+	return #&__remove!(#@list, #n) ;
+}
+
+#&removeLast!(#@list) {
+	return #&__removeLast!(#@list) ;
+}
+// alias
+#&pop_back! = #&removeLast! ;
+
+$@&push!($fst, $@list) {
+	return $@&__push!($fst, $@list) ;
+}
+
+#@&push!(#num, #@list) {
+	return #@&__push!(#num, #@list) ;
+}
+
+$@&add!($@list, $fst) {
+	return $@&__add!($@list, $fst) ;
+}
+
+// alias
+$@&push_back! = $@&add! ;
+
+#@&add!(#@list, #num) {
+	return #@&__add!(#@list, #num) ;
+}
+
+// alias
+#@&push_back! = #@&add! ;
+
+$@&addAt!($@list, #n, $fst) {
+	return $@&__addAt!($@list, #n, $fst) ;
+}
+
+#@&addAt!(#@list, #n, #num) {
+	return #@&__addAt!(#@list, #n, #num) ;
+}
+
+$@&set!($@list, #n, $fst) {
+	return $@&__set!($@list, #n, $fst) ;
+}
+
+#@&set!(#@list, #n, #num) {
+	return #@&__set!(#@list, #n, #num) ;
+}
+
+$@&tail($@list) {
+	return $@&__tail($@list) ;
+}
+
+#@&tail(#@list) {
+	return #@&__tail(#@list) ;
+}
+
+$@&copy($@list) {
+	return $@&__copy($@list) ;
+}
+
+#@&copy(#@list) {
+	return #@&__copy(#@list) ;
+}
+
+$@&getSigma($fst) {
+	return $@&__getSigma($fst) ;
+}
+
+#@&getSigma($fst) {
+	return #@&__getSigma($fst) ;
+}
+
+$&readXML($pathfst) {
+	return $&__readXML($pathfst) ;  // built-in
+}
+
+#&pathCount($fst) {
+	return #&__pathCount($fst) ;  // built-in
+}
+
+#&stateCount($fst) {
+	return #&__stateCount($fst) ; // built-in
+}
+
+#&arcCount($fst) {
+	return #&__arcCount($fst) ;   // built-in
+}
+
+#&arity($fst) {
+	return #&__arity($fst) ;      // built-in
+}
+
+/*
+#&equivalent($one, $two, #delta=0.0) {
+	return #&__equivalent($one, $two, #delta) ;      // built-in
+}
+*/
+
+#&abs(#num) {
+	return #&__abs(#num) ;       // built-in
+}
+
+#&ceil(#num) {
+	return #&__ceil(#num) ;      // built-in
+}
+
+#&floor(#num) {
+	return #&__floor(#num) ;      // built-in
+}
+
+#&round(#num) {
+	return #&__round(#num) ;      // built-in
+}
+
+#&long(#num) {
+	return #&__long(#num) ;      // built-in
+}
+
+#&int(#num) {
+	return #&__long(#num) ;      // built-in (alias for #&long())
+}
+
+#&double(#num) {
+	return #&__double(#num) ;      // built-in
+}
+
+#&float(#num) {
+	return #&__double(#num) ;      // built-in (alias for #&double())
+}
+
+#&rint(#num) {
+	return #&__rint(#num) ;      // built-in
+}
+// "round to int"?  Returns the double value that is closest in value to the argument and is equal to a mathematical integer.
+
+$&invert!($fst) {
+	return $&__invert!($fst) ;  // built-in, destructive
+}
+
+$&invert($fst) {
+	return $&__invert($fst) ;  // built-in
+}
+
+// optimizations
+
+$&optimize($fst) {
+	return $&__optimize($fst) ; // built-in
+}
+$&optimize!($fst) {
+	return $&__optimize!($fst) ; // built-in
+}
+
+$&rmEpsilon($fst) {
+	return $&__rmEpsilon($fst) ; // built-in
+}
+$&rmepsilon($fst) {
+	return $&__rmEpsilon($fst) ; // built-in
+}
+
+$&rmEpsilon!($fst) {
+	return $&__rmEpsilon!($fst) ; // built-in
+}
+$&rmepsilon!($fst) {
+	return $&__rmEpsilon!($fst) ; // built-in
+}
+
+$&determinize($fst) {
+	return $&__determinize($fst) ; // built-in
+}
+$&determinize!($fst) {
+	return $&__determinize!($fst) ; // built-in
+}
+
+$&minimize($fst) {
+	return $&__minimize($fst) ; // built-in
+}
+$&minimize!($fst) {
+	return $&__minimize!($fst) ; // built-in
+}
+
+$&synchronize($fst) {
+	return $&__synchronize($fst) ; // built-in
+}
+$&synchronize!($fst) {
+	return $&__synchronize!($fst) ; // built-in
+}
+
+$&closeSigma($fst, $base="") {
+	return $&__closeSigma($fst, $base) ;
+}
+
+$&closeSigma!($fst, $base="") {
+	return $&__closeSigma!($fst, $base) ;
+}
+
+
+// Some more advanced definitions.
+
+$&priority_union_input($q, $r) {
+	return $q | ( ~$&inputside($q) _o_ $r ) ;
+}
+
+$&priority_union_output($q, $r) {
+	return $q | ( $r _o_ ~$&outputside($q) ) ;
+}
+
+$&lenient_composition_input($base, $filter) {
+	return $&priority_union_input($base _o_ $filter, $base) ;
+}
+
+$&lenient_composition_output($filter, $base) {
+	return $&priority_union_output($filter _o_ $base, $base) ;
+}
+
+// The present definition of ignore is based on two ideas:
+// The PARC  BASE/FLUFF is formally equivalent to [BASE .o. [0->(FLUFF)]].l
+// In Kleene syntax, $&ignore($base, $fluff) is equivalent to 
+//    $&outputProject( $base _o_ (_e_ -> $fluff) )
+// but we don't have -> rules yet.
+// KRB proposes that _e_ -> $fluff is always equiv. to (.* (_e_:$fluff)*)*
+// so the definition of $&ignore is
+
+$&ignore($base, $fluff) {
+	return $&outputProject( $base _o_ (.* (_e_:$fluff)*)* ) ;
+}
+
+$&contains($fst) {
+	return .* $fst .* ;
+}
+
+$eps = "" ;
+$e = "" ;
+
+// Some functions defined for convenience.
+// The XML element names reflect informal conventions.
+// Before changing them, check with Phil Sours to ensure
+// compatibility with Runtime Code.
+
+&applyDownTokensTextFile($fst, $inputFilePath, $outputFilePath, 
+	// optional parameters, with their default values 
+	$inputFileEncoding="UTF-8", $outputFileEncoding="UTF-8", 
+	$rootElmtName="tokens", $tokenElmtName="token", 
+	$inputElmtName="input", $outputsElmtName="outputs", 
+	$outputElmtName="output", $weightAttrName="weight") { 
+
+  testTokensTextFile $fst, $inputFilePath, $inputFileEncoding,
+	$outputFilePath, $outputFileEncoding, 
+	$rootElmtName, $tokenElmtName, $inputElmtName, 
+	$outputsElmtName, $outputElmtName, $weightAttrName ; 
+} 
+
+&applyUpTokensTextFile($fst, $inputFilePath, $outputFilePath, 
+	// optional parameters, with their default values 
+	$inputFileEncoding="UTF-8", $outputFileEncoding="UTF-8", 
+	$rootElmtName="tokens", $tokenElmtName="token", 
+	$inputElmtName="input", $outputsElmtName="outputs", 
+	$outputElmtName="output", $weightAttrName="weight") { 
+
+  testTokensTextFile $&invert($fst), $inputFilePath, $inputFileEncoding,
+	$outputFilePath, $outputFileEncoding, 
+	$rootElmtName, $tokenElmtName, $inputElmtName, 
+	$outputsElmtName, $outputElmtName, $weightAttrName ; 
+} 
+
+&applyDownTokensXMLFile($fst, $inputFilePath, $outputFilePath, 
+	// optional parameters, with their default values 
+	$srcInputElmtName="input", $outputFileEncoding="UTF-8", 
+	$rootElmtName="tokens", $tokenElmtName="token", 
+	$inputElmtName="input", $outputsElmtName="outputs", 
+	$outputElmtName="output", $weightAttrName="weight") { 
+
+  testTokensXMLFile $fst, $inputFilePath, $srcInputElmtName,
+	$outputFilePath, $outputFileEncoding, 
+	$rootElmtName, $tokenElmtName, $inputElmtName, 
+	$outputsElmtName, $outputElmtName, $weightAttrName ; 
+} 
+
+&applyUpTokensXMLFile($fst, $inputFilePath, $outputFilePath, 
+	// optional parameters, with their default values 
+	$srcInputElmtName="input", $outputFileEncoding="UTF-8", 
+	$rootElmtName="tokens", $tokenElmtName="token", 
+	$inputElmtName="input", $outputsElmtName="outputs", 
+	$outputElmtName="output", $weightAttrName="weight") { 
+
+  testTokensXMLFile $&invert($fst), $inputFilePath, $srcInputElmtName,
+	$outputFilePath, $outputFileEncoding, 
+	$rootElmtName, $tokenElmtName, $inputElmtName, 
+	$outputsElmtName, $outputElmtName, $weightAttrName ; 
+} 
+
+#destructive = 1 ;
+
+#add = 0 ;
+#convert = 1 ;
+
+#init = 0 ;
+#all = 1 ;
+
+#init = 0 ;
+#all = 1 ;
+
+$&uc($fst, $proj="both") {
+	return $&__case(!#destructive, #convert, #all, $fst, 1, 0, $proj) ;
+}
+
+$&uc!($fst, $proj="both") {
+	return $&__case(#destructive, #convert, #all, $fst, 1, 0, $proj) ;
+}
+
+$&lc($fst, $proj="both") {
+	return $&__case(!#destructive, #convert, #all, $fst, 0, 1, $proj) ;
+}
+
+$&lc!($fst, $proj="both") {
+	return $&__case(#destructive, #convert, #all, $fst, 0, 1, $proj) ;
+}
+
+// ********************
+
+$&init_uc($fst, $proj="both") {
+	return $&__case(!#destructive, #convert, #init, $fst, 1, 0, $proj) ;
+}
+
+$&init_uc!($fst, $proj="both") {
+	return $&__case(#destructive, #convert, #init, $fst, 1, 0, $proj) ;
+}
+
+$&init_lc($fst, $proj="both") {
+	return $&__case(!#destructive, #convert, #init, $fst, 0, 1, $proj) ;
+}
+
+$&init_lc!($fst, $proj="both") {
+	return $&__case(#destructive, #convert, #init, $fst, 0, 1, $proj) ;
+}
+
+// **********************
+
+$&opt_uc($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #all, $fst, 1, 0, $proj) ;
+}
+
+$&opt_uc!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #all, $fst, 1, 0, $proj) ;
+}
+
+$&opt_lc($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #all, $fst, 0, 1, $proj) ;
+}
+
+$&opt_lc!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #all, $fst, 0, 1, $proj) ;
+}
+
+// ********************
+
+$&opt_init_uc($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #init, $fst, 1, 0, $proj) ;
+}
+
+$&opt_init_uc!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #init, $fst, 1, 0, $proj) ;
+}
+
+$&opt_init_lc($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #init, $fst, 0, 1, $proj) ;
+}
+
+$&opt_init_lc!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #init, $fst, 0, 1, $proj) ;
+}
+
+// **********************
+
+$&opt_ci($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #all, $fst, 1, 1, $proj) ;
+}
+
+$&opt_ci!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #all, $fst, 1, 1, $proj) ;
+}
+
+$&ci = $&opt_ci ;
+$&ci! = $&opt_ci! ;
+
+// ********************
+
+$&opt_init_ci($fst, $proj="both") {
+	return $&__case(!#destructive, #add, #init, $fst, 1, 1, $proj) ;
+}
+
+$&opt_init_ci!($fst, $proj="both") {
+	return $&__case(#destructive, #add, #init, $fst, 1, 1, $proj) ;
+}
+
+$&init_ci = $&opt_init_ci ;
+$&init_ci! = $&opt_init_ci! ;
+
+// **********************
+
+$&opt_di($fst, $proj="both") {
+	return $&__diac(!#destructive, $fst, $proj) ;
+}
+
+$&opt_di!($fst, $proj="both") {
+	return $&__diac(#destructive, $fst, $proj) ;
+}
+
+$&di = $&opt_di ;
+$&di! = $&opt_di! ;
+
+
+// **********************
+
+// arguments are a list of networks, and a binary function that
+// takes two network arguments and returns a network
+$&reduceLeft($&bin, $@list) {
+	$result = $&head($@list) ;	// throws exception if empty
+	foreach($n in $@&tail($@list)) {
+		$result = $&bin($result, $n) ;
+	}
+
+	return $&optimize!($result) ;
+}
+$&foldLeft = $&reduceLeft ;
+
+// arguments are a list of numbers, and a binary function that
+// takes two number arguments and returns a number
+#&reduceLeft(#&bin, #@list) {
+	#result = #&head(#@list) ;	// throws exception if empty
+	foreach(#n in #@&tail(#@list)) {
+		#result = #&bin(#result, #n) ;
+	}
+
+	return #result ;
+}
+#&foldLeft = #&reduceLeft ;
+
+$@&map($&func, $@list) {
+	$@outList = $@() ;
+	foreach ($item in $@list) {
+		$@outList = $@&add!($@outList, $&func($item)) ;
+	}
+	return $@outList ;
+}
+
+#@&map(#&func, #@list) {
+	#@outList = #@() ;
+	foreach (#item in #@list) {
+		#@outList = #@&add!(#@outList, #&func(#item)) ;
+	}
+	return #@outList ;
+}
+
+// boolean functions
+
+#&isRtn($fst) {
+	return #&__isRtn($fst) ;
+}
+
+#&isRTN = #&isRtn ;
+
+#&isCyclic($fst) {
+	return #&__isCyclic($fst) ;
+}
+

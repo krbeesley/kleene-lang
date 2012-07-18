@@ -1,0 +1,5 @@
+
+os_type.mk
+
+is code included in several Makefiles in the Kleene project
+to determine the operating system

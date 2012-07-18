@@ -1,0 +1,31 @@
+
+		Kleene Version Notes
+
+***********************************************************
+2012-07-17
+
+0.9.1.0	 release number when Kleene was pushed to github
+
+***********************************************************
+At SAP Labs, Kleene was declared "1.0" 2011-01-31 and the
+project was canceled.  I (Ken Beesley) still considered it
+a beta project, so when Kleene was released as Open Source
+4 May 2012, I moved the release number back to 0.9.1.0
+
+Release 1.0.0.0     2011-01-31
+
+***********************************************************
+
+When preparing the code to 'tag' a commit, which is typically
+for a new official release, modify the following files as
+appropriate
+
+README.version (this file)
+
+kleene/src/main/java/org/kleene-lang/Makefile
+kleene/src/main/java/org/kleene-lang/Makefile_nmake
+	(see VERSION=X.X.X.X)
+
+kleene/src/main/java/org/kleene-lang/KleeneGuiConstants.java
+
+

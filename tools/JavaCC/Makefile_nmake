@@ -1,0 +1,16 @@
+# This nmake makefile extracts the JavaCC pre-built bin files.
+# Written here by Phil Sours (not from JavaCC).
+#
+# JavaCC is a free, open-source compiler compiler or parser generator
+# for use by Java applications.  https://javacc.dev.java.net/
+
+WINRAR="$(PROGRAMFILES)\WinRAR\WinRAR.exe"
+JAVACC_BASENAME=javacc-5.0
+JAVACC_ARCHIVE=$(JAVACC_BASENAME).tar.gz
+
+$(JAVACC_BASENAME) : $(JAVACC_ARCHIVE)
+    @nmake /nologo /f Makefile_nmake clean
+    "$(WINRAR)" x $(JAVACC_ARCHIVE) .\$(JAVACC_BASENAME)\bin
+
+clean :
+    -for /d %D in (*) do @rmdir /s/q %D

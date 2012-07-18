@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<prefs>
+
+  <osx>
+    <!-- defaults are for initial values and restoration of defaults -->
+    <!-- do not edit the default element unless you know what
+         you're doing; edit the user element -->
+    <default>
+      <dot>
+        <dotpath>/usr/local/bin/dot</dotpath>
+        <dotflag>ps</dotflag>
+        <viewer>/usr/bin/open -a /Applications/Preview.app/Contents/MacOS/Preview</viewer>
+      </dot>
+    </default>
+    <user>
+      <dot>
+        <dotpath></dotpath>
+        <dotflag></dotflag>
+        <viewer></viewer>
+      </dot>
+    </user>
+  </osx>
+
+  <linux>
+    <!-- defaults are for initial values and restoration of defaults -->
+    <!-- do not edit the default element unless you know what
+         you're doing; edit the user element -->
+    <default>
+      <dot>
+        <dotpath>/usr/bin/dot</dotpath>
+        <dotflag>ps</dotflag>
+        <viewer>/usr/bin/evince</viewer> <!-- for Gnome -->
+      </dot>
+    </default>
+    <user>
+      <dot>
+        <dotpath></dotpath>
+        <dotflag></dotflag>
+        <viewer></viewer>  <!-- for KDE, put /usr/bin/kghostview here -->
+      </dot>
+    </user>
+  </linux>
+
+  <windows>
+    <!-- defaults are for initial values and restoration of defaults -->
+    <!-- do not edit the default element unless you know what
+         you're doing; edit the user element -->
+    <default>
+      <dot>
+        <dotpath>%ProgramFiles(x86)%\Graphviz2.26.3\bin\dot.exe</dotpath>
+        <dotflag>pdf</dotflag>
+        <viewer>%ProgramFiles(x86)%\Adobe\Reader 9.0\Reader\AcroRd32.exe</viewer>
+      </dot>
+    </default>
+    <user>
+      <dot>
+        <dotpath></dotpath>
+        <dotflag></dotflag>
+        <viewer></viewer>
+      </dot>
+    </user>
+  </windows>
+
+</prefs>

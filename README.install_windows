@@ -1,0 +1,95 @@
+Kleene:  WINDOWS XP/Vista INSTALLATION INSTRUCTIONS
+
+Originally by Paola Nieddu
+Edited 2010-08-11 by Ken Beesley
+
+2012-06-17  Kleene is not currently running on Windows.
+
+=========================================================
+
+1) Install the Java runtime environment(from http://www.java.com/)
+	This page will first determine the recommended version for your operating system.
+	Then click-select the option to install.  The resulting jre6 should end up in
+		C:\Program Files\Java\
+
+2) To set environment variables, 
+	Right click on the main "My Computer" or "Computer" icon.
+	Choose "Properties" from the context menu
+	Click the "Advanced" tab ("Advanced system settings" in Vista)
+	Click the "Environment Variables" button
+	Under "User Variables" click "New" to add an environment variable.
+		Enter the name of the variable in the "Variable name" field
+		Enter the path in the "Variable value" field
+
+	Add the following:
+		JAVA_HOME		
+		C:\Program Files\Java\jre6
+
+		CLASSPATH		
+		.
+
+	(Note that the . designates the "current directory".)
+
+	If you already have an environment variable named PATH, add %JAVA_HOME%\bin
+	Else add
+		PATH			
+		%JAVA_HOME%\bin
+	
+3) Install dot (from http://www.graphviz.org/): graphviz-2.26.3.msi
+   o Double-click on the Graphviz installer and follow instructions (default settings are fine)
+
+4) Install Kleene: kleene-win-w.x.y.z.zip , where w.x.y.z indicates the version number,
+e.g. kleene-win-0.9.0.21.zip  (this is the "zip file").
+   o Unzip the build package to a directory of your choice.
+   		You can put the build package anywhere really.  To put it in 
+		C:\Program Files\Kleene\
+			Open the "My Computer" or "Computer" icon.
+			Double click on the C: drive
+			Double click on the "Program Files" directory.
+			Right click to create a new directory named "Kleene"
+
+			Then drag the zip files into this new Kleene directory.
+			Right click on the zip file and unzip it.
+		
+   o Open a DOS shell and cd to the root directory of your Kleene installation
+   		e.g.  
+		cd C:\Program Files\Kleene\kleene-win-0.9.0.21
+		dir
+
+		(The dir command should display contents including Kleene.jar and
+		a directory named "dotkleene".)
+
+   o Issue the command: xcopy dotkleene <HOME>\.kleene /S /E
+     where <HOME> is:
+      o Windows XP: C:\Documents and Settings\<YOUR_SAP_I_NUMBER>
+      o Windows Vista: C:\Users\<YOUR_SAP_I_NUMBER>
+   o Open the file <HOME>\.kleene\prefs.xml, check the values of dotpath and viewer
+     in the windows section, and update them if necessary.  (Update the <user>
+	 values rather than the <default> values.  The <user> values have precedence.)
+
+   o Right-click on the Kleene.jar file and create a Shortcut.  Optionally, drag
+   		the shortcut to your desktop.
+
+5) Run Kleene
+	A.  Command-line approach:
+   		o Open a DOS shell and cd to the root directory of your Kleene installation
+				e.g.
+				cd C:\Program Files\Kleene\kleene-win-0.9.0.21
+   		o Issue the command: java -jar Kleene.jar
+	B.  Easy option (if you created the Shortcut)
+		o Double-click the Shortcut
+
+Optional:
+
+5) Install the Kleene runtime: KleeneRt-win-0.9.0.16.zip
+   o Unzip the build package to a directory of your choice
+
+NOTE:
+
+If you get an "UnsatisfiedLinkError" when running Kleene, copy the following to 
+the root directory of your Kleene installation and try again:
+
+\\Usjhy001\inx-boston\phil\Microsoft.VC80.CRT.manifest
+\\Usjhy001\inx-boston\phil\msvcm80.dll
+\\Usjhy001\inx-boston\phil\msvcp80.dll
+\\Usjhy001\inx-boston\phil\msvcr80.dll

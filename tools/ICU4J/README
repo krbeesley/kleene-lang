@@ -1,0 +1,11 @@
+ICU4J
+for downloads, see http://site.icu-project.org/download
+
+2012-07-04
+	needs icu4j-49_1.jar
+
+2012-04-01
+	Had icu4j-4_0_1.jar
+	Downloaded new icu4j-49_1.jar (sic, new numbering system,
+									effectively 4_9_1)
+	N.B. that ICU4J is distributed as a .jar file

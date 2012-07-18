@@ -1,0 +1,3 @@
+update:
+	ls *.jpg > listing
+

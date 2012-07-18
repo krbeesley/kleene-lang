@@ -1,0 +1,19 @@
+# This nmake makefile extracts Apache Commons files that we use.
+# Written here by Phil Sours (not from Apache Commons).
+#
+# The Apache Commons is an Apache project focused on all aspects of
+# reusable Java components.  http://commons.apache.org/
+#
+# We currently use the following Apache Commons components:
+# Lang - Provides extra functionality for classes in java.lang.  
+
+WINRAR="$(PROGRAMFILES)\WinRAR\WinRAR.exe"
+COMMONS_LANG_BASENAME=commons-lang3-3.1
+COMMONS_LANG_ARCHIVE=$(COMMONS_LANG_BASENAME)-bin.tar.gz
+
+$(COMMONS_LANG_BASENAME) : $(COMMONS_LANG_ARCHIVE)
+    @nmake /nologo /f Makefile_nmake clean
+    "$(WINRAR)" x $(COMMONS_LANG_ARCHIVE) $(COMMONS_LANG_BASENAME)\$(COMMONS_LANG_BASENAME).jar
+
+clean :
+    -for /d %D in (*) do @rmdir /s/q %D

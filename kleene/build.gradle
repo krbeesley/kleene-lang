@@ -1,0 +1,7 @@
+
+task placeholder << {
+	println "build.gradle for Kleene is just a stub for now"
+}
+
+defaultTasks 'placeholder'
+
