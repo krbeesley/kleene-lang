@@ -1,8 +1,14 @@
 Jaxen
-see jaxen.codehaus.org/releases.html
+
+You need to download jaxen-1.1.4.tar.gz from
+ 	http://jaxen.codehaus.org/releases.html
+into 	
+	kleene-lang/tools/Jaxen/
+
+jaxen-1.1.4.tar.gz is "the 1.1.4 binaries in tar/gz format"
 
 2012-07-04
-	needs jaxen-1.1.4.tar.gz
+	needs jaxen-1.1.4.tar.gz 
 
 2012-06-10
 	Downloaded jaxen-1.1.4.tar.gz

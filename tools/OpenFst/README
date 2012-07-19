@@ -1,5 +1,12 @@
 OpenFst
-see www.openfst.org
+
+You need to download openfst-1.3.2.tar.gz
+from
+	http://www.openfst.org
+to
+	kleene-lang/tools/OpenFst/
+
+
 
 2012-07-04
 	currently using openfst-1.3.2.tar.gz

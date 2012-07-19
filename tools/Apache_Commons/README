@@ -1,5 +1,13 @@
 Apache_Commons
 
+You need to download commons-lang3-3.1-bin.tar.gz
+from 
+	http://commons.apache.org/lang/download_lang.cgi
+to
+kleene-lang/tools/Apache_Commons/
+
+
+
 2012-07-04
 	needs commons-lang3-3.1-bin.tar.gz
 

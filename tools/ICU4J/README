@@ -1,5 +1,11 @@
 ICU4J
-for downloads, see http://site.icu-project.org/download
+
+You need to download icu4j-49_1.jar
+from
+	http://site.icu-project.org/download
+to
+	kleene-lang/tools/ICU4J/
+
 
 2012-07-04
 	needs icu4j-49_1.jar

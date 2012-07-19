@@ -1,5 +1,12 @@
 dom4j
 
+You need to download dom4j-1.6.1.tar.gz
+from
+	http://sourceforge.net/projects/dom4j/files/dom4j/1.6.1/
+to
+	kleene-lang/tools/dom4j/
+
+
 2012-07-04
 	using dom4j-1.6.1.tar.gz
 

@@ -1,7 +1,13 @@
 ICU4C
 
 See ./Makefile
-See site.icu-project.org/download
+
+You need to download icu4c-49_1_2-src.tgz
+from
+	http://site.icu-project.org/download
+to
+	kleene-lang/tools/ICU4C/
+
 
 2012-07-04
 	needs icu4c-49_1_2-src.tgz

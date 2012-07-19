@@ -1,5 +1,12 @@
 ROME
 
+You need to download rome-1.0.jar
+from
+	http://download.java.net/maven/2/rome/rome/1.0/
+to
+	kleene-lang/tools/ROME/
+
+
 2012-07-04
 	using rome-1.0.jar
 	just for com.sun.syndication.io.XmlReader
