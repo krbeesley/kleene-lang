@@ -37,6 +37,9 @@ NAME=Kleene
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
 
+KLEENE_LANG_DIR=../../../../../..
+RELEASE_DIRS=$(KLEENE_LANG_DIR)/dotkleene lib
+
 # the tools/ directory has subdirectories for
 # Java .jar libraries used by Kleene, and the OpenFst and ICU4C
 # Libraries (C++).  Some of the Java libraries are distributed
@@ -106,10 +109,13 @@ ifeq ($(os_type),linux)
  # libicudata.so.49, both pointing to libicudata.so.49.1.2
  ICU4CDT_BASENAME=libicudata
  ICU4CDT_DLL=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)
+ ICU4CDT_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)*
  ICU4CIN_BASENAME=libicui18n
  ICU4CIN_DLL=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME).$(DYLIBTYPE)
+ ICU4CIN_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME).$(DYLIBTYPE)*
  ICU4CUC_BASENAME=libicuuc
  ICU4CUC_DLL=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)
+ ICU4CUC_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)*
  CFLAGS=$(OPT)  # for 64-bit Linux, add -fPIC
  CINC=-I$(OPENFST_INCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(ICU4C_INCDIR)
  LDLFLAGS=-Wl,-L$(OPENFST_LIBDIR)/.libs,-L$(ICU4C_LIBDIR)
@@ -119,6 +125,12 @@ ifeq ($(os_type),linux)
  SOFLAGS=-shared
  FSTLIB_BASENAME=libfst
  FSTLIB=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)
+ # FSTLIB_AND_LINKS is intended to cover libfst.so and 
+ # libfst.so.1 and libfst.so.1.2, etc.  In Linux the numbers, if any, come
+ # after the .so
+ FSTLIB_AND_LINKS=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)*
+ # flags to copy pointers as pointers (differ on Linux and OS X at least)
+ CPFLAGS=-P
  # for the command-line link args, strip the "lib" off the names
  LIBS=-lfst -lm -lpthread -ldl \
       -l$(subst lib,,$(ICU4CDT_BASENAME)) \
@@ -127,6 +139,18 @@ ifeq ($(os_type),linux)
  FRAMEWORK=
  LIBFULLNAME=lib$(LIBNAME).$(JNILIBTYPE)
  CLASSPATHFLAG=-classpath "lib/$(COMMONS_LANG_JAR):lib/$(DOM4J_JAR):lib/$(ICU4J_JAR):lib/$(JAXEN_JAR):lib/$(ROME_JAR):."
+ # shared libraries on Linux have .so followed by major.minor version
+ # numbers, e.g.  libname.so and libname.so.49 are links to name.so.49.1.2
+ RELEASE_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE)* \
+ 			  $(ICU4CDT_BASENAME).$(DYLIBTYPE)* \
+              $(ICU4CIN_BASENAME).$(DYLIBTYPE)* \
+              $(ICU4CUC_BASENAME).$(DYLIBTYPE)* \
+			  $(NAME).jar \
+			  $(LIBFULLNAME) \
+              $(KLEENE_LANG_DIR)/LICENSE \
+			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README.install \
+			  $(KLEENE_LANG_DIR)/README.version
 endif
 
 ifeq ($(os_type),mac)
@@ -140,12 +164,15 @@ ifeq ($(os_type),mac)
  ICU4C_SOURCE_DIR=$(ICU4C_DIR)/source
  ICU4C_INCDIR=$(ICU4C_SOURCE_DIR)/common
  ICU4C_LIBDIR=$(ICU4C_SOURCE_DIR)/lib
- ICU4CDT_BASENAME=libicudata.$(ICU4C_NAME_VERSION)
+ ICU4CDT_BASENAME=libicudata
  ICU4CDT_DLL=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)
- ICU4CIN_BASENAME=libicui18n.$(ICU4C_NAME_VERSION)
+ ICU4CDT_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME)*.$(DYLIBTYPE)
+ ICU4CIN_BASENAME=libicui18n
  ICU4CIN_DLL=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME).$(DYLIBTYPE)
- ICU4CUC_BASENAME=libicuuc.$(ICU4C_NAME_VERSION)
+ ICU4CIN_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME)*.$(DYLIBTYPE)
+ ICU4CUC_BASENAME=libicuuc
  ICU4CUC_DLL=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)
+ ICU4CUC_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME)*.$(DYLIBTYPE)
  CFLAGS=$(OPT)
  CINC=-I$(OPENFST_INCDIR) -I/System/Library/Frameworks/JavaVM.framework/Headers -I$(ICU4C_INCDIR)
  LDLFLAGS=-Wl,-L$(OPENFST_LIBDIR)/.libs,-L$(ICU4C_LIBDIR)
@@ -154,6 +181,10 @@ ifeq ($(os_type),mac)
  SOFLAGS=-dynamiclib -flat_namespace -undefined suppress
  FSTLIB_BASENAME=libfst
  FSTLIB=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)
+ # FSTLIB_AND_LINKS is intended to cover libfst.dylib and libfst.0.dylib
+ FSTLIB_AND_LINKS=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME)*.$(DYLIBTYPE)
+ # flags to copy links as links (different on OS X and Linux at least)
+ CPFLAGS=-R -P
  LIBS=-lfst \
       -l$(subst lib,,$(ICU4CDT_BASENAME)) \
       -l$(subst lib,,$(ICU4CIN_BASENAME)) \
@@ -161,6 +192,20 @@ ifeq ($(os_type),mac)
  FRAMEWORK=-framework JavaVM
  LIBFULLNAME=lib$(LIBNAME).$(JNILIBTYPE)
  CLASSPATHFLAG=-classpath "lib/$(COMMONS_LANG_JAR):lib/$(DOM4J_JAR):lib/$(ICU4J_JAR):lib/$(JAXEN_JAR):lib/$(ROME_JAR):."
+ # shared library names on OS X have the version numbers in the middle, e.g.
+ # libfst.dylib is a link to libfst.0.dylib
+ # libicudata.dylib and libicudata.49.dylib are links to
+ # libicudata.49.1.2.dylib
+ RELEASE_FILES=$(FSTLIB_BASENAME)*.$(DYLIBTYPE) \
+			  $(ICU4CDT_BASENAME)*.$(DYLIBTYPE) \
+              $(ICU4CIN_BASENAME)*.$(DYLIBTYPE) \
+              $(ICU4CUC_BASENAME)*.$(DYLIBTYPE) \
+			  $(NAME).jar \
+			  $(LIBFULLNAME) \
+              $(KLEENE_LANG_DIR)/LICENSE \
+			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README.install \
+			  $(KLEENE_LANG_DIR)/README.version
 endif
 
 ifeq ($(os_type),cygwin)
@@ -176,10 +221,16 @@ ifeq ($(os_type),cygwin)
  ICU4C_LIBDIR=        # TBD
  ICU4CDT_BASENAME=libicudata  # TBD
  ICU4CDT_DLL=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)
+ # check this for cygwin
+ ICU4CDT_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)*
  ICU4CIN_BASENAME=libicui18n  # TBD
  ICU4CIN_DLL=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME).$(DYLIBTYPE)
+ # check this for cygwin
+ ICU4CIN_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CIN_BASENAME).$(DYLIBTYPE)*
  ICU4CUC_BASENAME=libicuuc    # TBD
  ICU4CUC_DLL=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)
+ # check this for cygwin
+ ICU4CUC_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)*
  CFLAGS=$(OPT) -frepo -mno-cygwin -D__int64=long\ long
  CINC=-I$(OPENFST_INCDIR) -I$(WINPORT_DIR) -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/win32" -I$(ICU4C_INCDIR)
  LDLFLAGS=
@@ -188,12 +239,29 @@ ifeq ($(os_type),cygwin)
  SOFLAGS=-shared -mno-cygwin -Wl,--kill-at -Wl,--enable-auto-import
  FSTLIB_BASENAME=libfst
  FSTLIB=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)
+ # FSTLIB_AND_LINKS is intended to cover main "real" library file and links to it; see
+ # notes below for RELEASE_FILES.  May be wrong for cygwin.  Check it.
+ FSTLIB_AND_LINKS=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)*
+ # flags to copy links as links (check this for windows)
+ CPFLAGS=-P
  LIBS=$(FSTLIB:$(DYLIBTYPE)=dll.a) \
       $(ICU4CDT_DLL:$(DYLIBTYPE)=dll.a) \
       $(ICU4CIN_DLL:$(DYLIBTYPE)=dll.a) \
       $(ICU4CUC_DLL:$(DYLIBTYPE)=dll.a)
  LIBFULLNAME=$(LIBNAME).$(JNILIBTYPE)
  CLASSPATHFLAG=-classpath "lib\$(COMMONS_LANG_JAR);lib\$(DOM4J_JAR);lib\$(ICU4J_JAR);lib\$(JAXEN_JAR);lib\$(ROME_JAR);."
+ # here the use of wildcard * may be wrong for Windows; see notes for linux
+ # and macos above
+ RELEASE_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE)* \
+              $(ICU4CDT_BASENAME).$(DYLIBTYPE)* \
+              $(ICU4CIN_BASENAME).$(DYLIBTYPE)* \
+              $(ICU4CUC_BASENAME).$(DYLIBTYPE)* \
+			  $(NAME).jar \
+			  $(LIBFULLNAME) \
+              $(KLEENE_LANG_DIR)/LICENSE \
+			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README.install_windows \
+			  $(KLEENE_LANG_DIR)/README.version
 endif
 
 # The default is to build the Kleene jar file (which requires library, etc.).
@@ -220,7 +288,8 @@ DIRS_TO_MAKE:
 # Files to copy in.
 # These commands are executed if needed (as normal).
 # For locally-built & p4 files, we can copy sym links as sym links (using cp -P).
-# On OS X, it seems like we need cp -R -P to do that
+# On OS X, it seems like we need cp -R -P to do that.
+# Now use $(CPFLAGS) to get -P for Linux and -R -P for OS X
 EXTERNAL_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE) \
                $(ICU4CDT_BASENAME).$(DYLIBTYPE) \
                $(ICU4CIN_BASENAME).$(DYLIBTYPE) \
@@ -235,13 +304,17 @@ EXTERNAL_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE) \
 # $(@D) is the directory part of the file name of the target, with
 # the trailing slash removed.
 $(FSTLIB_BASENAME).$(DYLIBTYPE): $(FSTLIB)
-	cp -P $?* $(@D)/
+	#cp $(CPFLAGS) $?* $(@D)/
+	cp $(CPFLAGS) $(FSTLIB_AND_LINKS) $(@D)/
 $(ICU4CDT_BASENAME).$(DYLIBTYPE): $(ICU4CDT_DLL)
-	cp -P $?* $(@D)/
+	#cp $(CPFLAGS) $?* $(@D)/
+	cp $(CPFLAGS) $(ICU4CDT_DLL_AND_LINKS) $(@D)/
 $(ICU4CIN_BASENAME).$(DYLIBTYPE): $(ICU4CIN_DLL)
-	cp -P $?* $(@D)/
+	#cp $(CPFLAGS) $?* $(@D)/
+	cp $(CPFLAGS) $(ICU4CIN_DLL_AND_LINKS) $(@D)/
 $(ICU4CUC_BASENAME).$(DYLIBTYPE): $(ICU4CUC_DLL)
-	cp -P $?* $(@D)/
+	#cp $(CPFLAGS) $?* $(@D)/
+	cp $(CPFLAGS) $(ICU4CUC_DLL_AND_LINKS) $(@D)/
 lib:
 	mkdir lib
 lib/$(COMMONS_LANG_JAR): $(COMMONS_LANG_DIR)/$(COMMONS_LANG_JAR)
@@ -389,24 +462,12 @@ draw:
 # depends on.  (You can't package a .jar file inside another .jar file, like
 # an executable .jar -- the Kleene.mf manifest file indicates where Kleene.jar
 # can find them at run-time.)
-KLEENE_LANG_DIR=../../../../../..
-RELEASE_DIRS=$(KLEENE_LANG_DIR)/dotkleene lib
-RELEASE_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE)* \
-			  $(NAME).jar \
-			  $(LIBFULLNAME) \
-              $(ICU4CDT_BASENAME).$(DYLIBTYPE)* \
-              $(ICU4CIN_BASENAME).$(DYLIBTYPE)* \
-              $(ICU4CUC_BASENAME).$(DYLIBTYPE)* \
-              $(KLEENE_LANG_DIR)/LICENSE \
-			  $(KLEENE_LANG_DIR)/NOTICE \
-			  $(KLEENE_LANG_DIR)/README.install \
-			  $(KLEENE_LANG_DIR)/README.version
 
 gz: release
 release: jar
 	mkdir $(RELEASE_BASENAME)
 	cp -R $(RELEASE_DIRS) $(RELEASE_BASENAME)/
-	cp -P $(RELEASE_FILES) $(RELEASE_BASENAME)/
+	cp $(CPFLAGS) $(RELEASE_FILES) $(RELEASE_BASENAME)/
 	chmod -R u+w $(RELEASE_BASENAME)/
 	rm -rf $(RELEASE_BASENAME)/dotkleene/tmp/
 	mkdir $(RELEASE_BASENAME)/dotkleene/tmp
