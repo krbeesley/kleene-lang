@@ -222,6 +222,11 @@ public class KleeneGUI extends JFrame implements ActionListener {
 		licenseItem.setActionCommand("license") ;
 		licenseItem.addActionListener(this) ;
 		//licenseItem.setEnabled(false) ;
+
+		JMenuItem sourcesItem = new JMenuItem("Source Code") ;
+		sourcesItem.setActionCommand("sources") ;
+		sourcesItem.addActionListener(this) ;
+		//sourcesItem.setEnabled(false) ;
 		
 		JMenuItem preferencesItem = new JMenuItem("Preferences") ;
 		// preferencesItem.setMnemonic(KeyEvent.VK_P) ;
@@ -239,6 +244,7 @@ public class KleeneGUI extends JFrame implements ActionListener {
 
 		kleeneMenu.add(aboutItem) ;
 		kleeneMenu.add(licenseItem) ;
+		kleeneMenu.add(sourcesItem) ;
 		kleeneMenu.addSeparator() ;
 		kleeneMenu.add(preferencesItem) ;
 		kleeneMenu.addSeparator() ;
@@ -324,10 +330,16 @@ public class KleeneGUI extends JFrame implements ActionListener {
 			quit() ;  // see below
 		} else if ("aboutKleene".equals(actionCommand)) {
 			JOptionPane.showInternalMessageDialog(desktop, 
-					"Kleene version " + KleeneGuiConstants.VERSION_NUMBER) ;
+				"Kleene version " + KleeneGuiConstants.VERSION_NUMBER
+                + "\nCopyright \u00a9 " + KleeneGuiConstants.COPYRIGHT_YEAR_RANGE + " SAP AG. "
+                + "\nApache License, Version 2.0."
+				) ;
 		} else if ("license".equals(actionCommand)) {
 			JOptionPane.showInternalMessageDialog(desktop, 
-					"*** The license policy is currently in review. ***\nIt is hoped that Kleene, \nlike the OpenFst library on which it is built, \nwill be released under the Apache License, Version 2.0.  \nSee the file LICENSE in the Kleene distribution\nor LICENSE-2.0.txt at http://www.apache.org/license/LICENSE-2.0, \nhttp://commons.apache.org/license.html.") ;
+					"Kleene is a free and open-source project, \nreleased 4 May 2012 by SAP AG \nunder the Apache License, Version 2.0.\nSee the file LICENSE in the Kleene source release \nor at \nhttp://www.apache.org/licenses/LICENSE-2.0 \nor \nhttp://commons.apache.org/license.html") ;
+		} else if ("sources".equals(actionCommand)) {
+			JOptionPane.showInternalMessageDialog(desktop,
+					"The Kleene source files are available from GitHub:\n$ git clone git://github.com/krbeesley/kleene-lang.git") ;
 		} else if ("preferences".equals(actionCommand)) {
 			JOptionPane.showInternalInputDialog(desktop, "Enter your name") ;
 		}
