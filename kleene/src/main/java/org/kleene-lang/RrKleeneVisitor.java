@@ -459,7 +459,7 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTnum_func_lambda_exp node, Object data) {
+  public Object visit(ASTnum_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -475,11 +475,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnum_func_func_lambda_exp node, Object data) {
+  public Object visit(ASTnum_func_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnum_list_func_func_lambda_exp node, Object data) {
+  public Object visit(ASTnum_list_func_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -1093,11 +1093,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
 
-  public Object visit(ASTnet_func_lambda_exp node, Object data) {
+  public Object visit(ASTnet_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTvoid_func_lambda_exp node, Object data) {
+  public Object visit(ASTvoid_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -1126,11 +1126,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
 
-  public Object visit(ASTnet_func_func_lambda_exp node, Object data) {
+  public Object visit(ASTnet_func_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTvoid_func_func_lambda_exp node, Object data) {
+  public Object visit(ASTvoid_func_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -1166,11 +1166,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTnet_list_func_lambda_exp node, Object data) {
+  public Object visit(ASTnet_list_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnet_list_func_func_lambda_exp node, Object data) {
+  public Object visit(ASTnet_list_func_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -1206,7 +1206,7 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTnum_list_func_lambda_exp node, Object data) {
+  public Object visit(ASTnum_list_func_anon_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }

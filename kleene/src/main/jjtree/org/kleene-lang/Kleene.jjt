@@ -650,14 +650,14 @@ public class Kleene {
 			||	t.kind == ESCAPE_CHAR
 			||	t.kind == ESCAPE_HEX_PYTHON
 			||	t.kind == ESCAPE_HEX_PERL
-			|| 	t.kind == NET_ID						// $foo
+			|| 	t.kind == NET_ID					// $foo
 			|| 	t.kind == LEFT_DOUBLE_QUOTE			// start of double-quoted string
 			||	t.kind == LSQUARE					// start of [abc]
 			|| 	t.kind == LSQUARE_CIRCUMFLEX			// start of [^abc]
 			||	t.kind == MULTICHAR_SYMBOL			// '[Noun]'
 			||	t.kind == WORD_BOUNDARY				// #, used in contexts
 			||	t.kind == LONGEST_DIRECTIVE			// longest{ } -> left _ right
-			||	t.kind == SHORTEST_DIRECTIVE			// shortest{ } -> left _ right
+			||	t.kind == SHORTEST_DIRECTIVE		// shortest{ } -> left _ right
 			||	t.kind == LANGLE 					// start of a weight <0.3>
 			||	t.kind == TILDE_OP					// regular negation/complement 
 			||	t.kind == TILDE_OP_ASCII
@@ -723,19 +723,19 @@ public class Kleene {
 			// there was at least one preceding LPAREN (only regexp and
 			//	numexp have parens for grouping)
 			if (	
-				// outside of grouping parens, NET_FUNC_FUNC_LAMBDA
+				// outside of grouping parens, NET_FUNC_FUNC_ANON
 				// might be net_func_func_exp() or 
 				// (if followed by an arg_list)
 				// start of net_func_exp() or
 				// (if followed by a second arg_list)
 				// start of regexp(); inside grouping parens, must be start of regexp()
-					t.kind == NET_FUNC_FUNC_LAMBDA
+					t.kind == NET_FUNC_FUNC_ANON
 
 				// outside of grouping parens, might be net_func_exp() or 
 				// (if followed by an arg_list)
 				// start of regexp(); inside grouping parens, must be start of regexp()
 				||	t.kind == NET_FUNC_FUNC_ID_BEFORE_ARGLIST
-				||	t.kind == NET_FUNC_LAMBDA
+				||	t.kind == NET_FUNC_ANON
 			   ) {
 				return true ;
 			} else {
@@ -798,19 +798,19 @@ public class Kleene {
 			// there was at least one preceding LPAREN (only regexp and
 			//	numexp have parents for grouping)
 			if (	
-				// outside of grouping parens, NUM_FUNC_FUNC_LAMBDA
+				// outside of grouping parens, NUM_FUNC_FUNC_ANON
 				// might be num_func_func_exp() or 
 				// (if followed by an arg_list)
 				// start of num_func_exp() or
 				// (if followed by a second arg_list)
 				// start of numexp(); inside grouping parens, must be start of regexp()
-					t.kind == NUM_FUNC_FUNC_LAMBDA
+					t.kind == NUM_FUNC_FUNC_ANON
 
 				// outside of grouping parens, might be net_func_exp() or 
 				// (if followed by an arg_list)
 				// start of regexp(); inside grouping parens, must be start of regexp()
 				||	t.kind == NUM_FUNC_FUNC_ID_BEFORE_ARGLIST
-				||	t.kind == NUM_FUNC_LAMBDA
+				||	t.kind == NUM_FUNC_ANON
 			   ) {
 				return true ;
 			} else {
@@ -1275,10 +1275,12 @@ TOKEN: {
 	//    image.deleteCharAt(image.length() - 1) ;
 	//    matchedToken.image = image.toString() ;
 	//}
-//|   
+//|  
+	// for common right-arrow rule  a -> b / l _ r
 	< RIGHT_RULE_ARROW: "\u2192">    // Unicode RIGHTWARDS ARROW
 |   < RIGHT_RULE_ARROW_ASCII: "->" >
 
+	// for optional right-arrow rule  a ->? b / l _ r
 |   < RIGHT_RULE_ARROW_OPT: "\u2192" (<WHITESPACE>)* "?" >
 |   < RIGHT_RULE_ARROW_ASCII_OPT: "->" (<WHITESPACE>)* "?" >
 
@@ -1335,6 +1337,14 @@ TOKEN: {
 	    image.deleteCharAt(image.length() - 1) ;
 	    matchedToken.image = image.toString().trim() ;
         }
+|	< WHERE_MATCHED_DIRECTIVE_DEFAULT: "where" ( <WHITESPACE> )* "{" >
+		{
+			input_stream.backup(1) ;  // backup to re-tokenize the "{"
+
+			image.deleteCharAt(image.length() -1) ;
+			matchedToken.image = image.toString().trim() ;
+		}
+		// equivalent to "where", but more explicit
 |   < WHERE_MATCHED_DIRECTIVE: "where_matched" ( <WHITESPACE> )* "{" >
         {  
 	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
@@ -1393,8 +1403,12 @@ TOKEN: {
 // infix regexp operator, union
 |   < VERTICAL_BAR_OP: "|" >
 
-// infix regexp operator, intersection
+// infix regexp operator, intersection; 
+// was function-name sigil before 0.9.2.0
 |   < AMPERSAND: "&" >
+
+// new (0.9.2.0+) function-name sigil
+|	< CIRCUMFLEX: "^" >
 
 |   < HEX_INT_LITERAL: ( "0x" | "0X" ) ( <HEX_DIGIT> )+ >
         {
@@ -1435,7 +1449,7 @@ TOKEN: {
             if (in_parenthesized) {
 	            paren_count += 1 ;
 	        }
-			// for arg list after lambda(args) { stmts }
+			// for arg list after anon(args) { stmts }
 			if (curLexState == DEFAULT) {
 				SwitchTo(NON_INITIAL) ;
 			}
@@ -1449,7 +1463,7 @@ TOKEN: {
 		}
 		// COMMA_OP handled this way to deal with case of
 		// $@&map($&($a){ return $a $a ;}, $@list)
-		// where the block of the lambda function ends in
+		// where the block of the anon function ends in
 		// DEFAULT mode, but need to switch to NON_INITIAL
 		// to handle any further arguments
 }
@@ -1470,10 +1484,10 @@ TOKEN: {
     // could be DEFAULT or NON_INITIAL
 
     // if DEFAULT, could be a function assignment like
-    // $&union = $&foo ;
+    // $^union = $^foo ;
     // which is easy, or
-    // $&union = $&lambda($a, $b) { return $a | $b   ; } ;
-    // DEF       NON_INIT         DEF      NON_INIT  DEF
+    // $^union = $^($a, $b) { return $a | $b ; } ;
+    // DEF       NON_INIT     DEF      NON_INIT  DEF
     //           count-parens
     // which has a tricky switch back to DEFAULT
 
@@ -1488,75 +1502,75 @@ TOKEN: {
 // N.B.  if adding a function to this list, also examine mustBeRegex()
 //		and the expression() production
 
-|   < NET_REVERSE_FUNC_ID:    <NET_PREFIX> <AMPERSAND> "__reverse" >
+|   < NET_REVERSE_FUNC_ID:    <NET_PREFIX> <CIRCUMFLEX> "__reverse" >
 
-|   < NET_INVERT_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__invert!" >
-|   < NET_INVERT_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__invert" >
+|   < NET_INVERT_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__invert!" >
+|   < NET_INVERT_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__invert" >
 
-|   < NET_OPTIMIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__optimize!" >
-|   < NET_OPTIMIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__optimize" >
+|   < NET_OPTIMIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__optimize!" >
+|   < NET_OPTIMIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__optimize" >
 
-|   < NET_RMEPSILON_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__rmEpsilon!" >
-|   < NET_RMEPSILON_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__rmEpsilon" >
+|   < NET_RMEPSILON_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__rmEpsilon!" >
+|   < NET_RMEPSILON_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__rmEpsilon" >
 
-|   < NET_DETERMINIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__determinize!" >
-|   < NET_DETERMINIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__determinize" >
+|   < NET_DETERMINIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__determinize!" >
+|   < NET_DETERMINIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__determinize" >
 
-|   < NET_MINIMIZE_DEST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__minimize!" >
-|   < NET_MINIMIZE_FUNC_ID:     	<NET_PREFIX> <AMPERSAND> "__minimize" >
+|   < NET_MINIMIZE_DEST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__minimize!" >
+|   < NET_MINIMIZE_FUNC_ID:     	<NET_PREFIX> <CIRCUMFLEX> "__minimize" >
 
-|   < NET_SYNCHRONIZE_DEST_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__synchronize!" >
-|   < NET_SYNCHRONIZE_FUNC_ID:     <NET_PREFIX> <AMPERSAND> "__synchronize" >
+|   < NET_SYNCHRONIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__synchronize!" >
+|   < NET_SYNCHRONIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__synchronize" >
 
-|	< NET_CASE_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__case" >
-|	< NET_DIAC_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__diac" >
+|	< NET_CASE_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__case" >
+|	< NET_DIAC_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__diac" >
 
-|	< NET_SHORTESTPATH_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__shortestPath" >
+|	< NET_SHORTESTPATH_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__shortestPath" >
 
-|   < NET_INPUTPROJ_DEST_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__inputproj!" >
-|   < NET_INPUTPROJ_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__inputproj" >
+|   < NET_INPUTPROJ_DEST_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__inputproj!" >
+|   < NET_INPUTPROJ_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__inputproj" >
 
-|   < NET_OUTPUTPROJ_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__outputproj!" >
-|   < NET_OUTPUTPROJ_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__outputproj" >
+|   < NET_OUTPUTPROJ_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__outputproj!" >
+|   < NET_OUTPUTPROJ_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__outputproj" >
 
-|	< NET_CLOSE_SIGMA_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__closeSigma!" >
-|	< NET_CLOSE_SIGMA_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__closeSigma" >
+|	< NET_CLOSE_SIGMA_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__closeSigma!" >
+|	< NET_CLOSE_SIGMA_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__closeSigma" >
 
-|   < NET_COPY_FUNC_ID:       <NET_PREFIX> <AMPERSAND> "__copy" >
+|   < NET_COPY_FUNC_ID:       <NET_PREFIX> <CIRCUMFLEX> "__copy" >
 
-|	< NET_RM_WEIGHT_DEST_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__rmWeight!" >
-|	< NET_RM_WEIGHT_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__rmWeight" >
-|	< NET_SUBST_SYMBOL_DEST_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__substSymbol!" >
-|	< NET_SUBST_SYMBOL_FUNC_ID: <NET_PREFIX> <AMPERSAND> "__substSymbol" >
+|	< NET_RM_WEIGHT_DEST_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__rmWeight!" >
+|	< NET_RM_WEIGHT_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__rmWeight" >
+|	< NET_SUBST_SYMBOL_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol!" >
+|	< NET_SUBST_SYMBOL_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol" >
 
-| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <AMPERSAND> "__readXML" >
+| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__readXML" >
 
-|	< NET_TO_STRING_FUNC_ID:  <NET_PREFIX> <AMPERSAND> "__toString" >
-|   < NET_IMPLODE_FUNC_ID:    <NET_PREFIX> <AMPERSAND> "__implode" >
-|	< NET_EXPLODE_FUNC_ID:	  <NET_PREFIX> <AMPERSAND> "__explode" >
+|	< NET_TO_STRING_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__toString" >
+|   < NET_IMPLODE_FUNC_ID:    <NET_PREFIX> <CIRCUMFLEX> "__implode" >
+|	< NET_EXPLODE_FUNC_ID:	  <NET_PREFIX> <CIRCUMFLEX> "__explode" >
 
 // functions for retrieving individual networks from network lists 
-|	< NET_GET_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__get" >
-|	< NET_GETLAST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__getLast" >
-|	< NET_HEAD_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__head" >
+|	< NET_GET_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__get" >
+|	< NET_GETLAST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__getLast" >
+|	< NET_HEAD_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__head" >
 
-|	< NET_POP_DEST_FUNC_ID:			<NET_PREFIX> <AMPERSAND> "__pop!" >
-|	< NET_REMOVE_DEST_FUNC_ID:		<NET_PREFIX> <AMPERSAND> "__remove!">
-|	< NET_REMOVELAST_DEST_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "__removeLast!" >
+|	< NET_POP_DEST_FUNC_ID:			<NET_PREFIX> <CIRCUMFLEX> "__pop!" >
+|	< NET_REMOVE_DEST_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__remove!">
+|	< NET_REMOVELAST_DEST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__removeLast!" >
 
 // functions for retrieving individual numbers from num lists 
-|	< NUM_HEAD_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__head" >
-|	< NUM_GETLAST_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__getLast" >
-|	< NUM_GET_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__get" >
+|	< NUM_HEAD_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__head" >
+|	< NUM_GETLAST_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__getLast" >
+|	< NUM_GET_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__get" >
 
-|	< NUM_POP_DEST_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__pop!" >
-|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__removeLast!" >
-|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__remove!" >
+|	< NUM_POP_DEST_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__pop!" >
+|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__removeLast!" >
+|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__remove!" >
 
 // wired-in, need to match following "(" to avoid having longer match 
 // override it.  The getNet function returns a network given a
 // network that encodes the name of the network
-|	< NET_GET_NET_FUNC_ID: <NET_PREFIX> <AMPERSAND> "getNet" (<WHITESPACE>)* "(" >
+|	< NET_GET_NET_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "getNet" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
@@ -1564,47 +1578,47 @@ TOKEN: {
 // wired-in, need to match following "(" to avoid having longer match 
 // override it.  sub creates a "reference" to a subnetwork, used in
 // RTNs
-|	< NET_SUB_FUNC_ID: <NET_PREFIX> <AMPERSAND> "sub" (<WHITESPACE>)* "(" >
+|	< NET_SUB_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "sub" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_PREFIX> <AMPERSAND> "__pathCount">
-|   < LNG_STATECOUNT_FUNC_ID: <NUM_PREFIX> <AMPERSAND> "__stateCount">
-|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_PREFIX> <AMPERSAND> "__arcCount">
+|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_PREFIX> <CIRCUMFLEX> "__pathCount">
+|   < LNG_STATECOUNT_FUNC_ID: <NUM_PREFIX> <CIRCUMFLEX> "__stateCount">
+|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_PREFIX> <CIRCUMFLEX> "__arcCount">
 
-|   < LNG_ARITY_FUNC_ID:      <NUM_PREFIX> <AMPERSAND> "__arity">
+|   < LNG_ARITY_FUNC_ID:      <NUM_PREFIX> <CIRCUMFLEX> "__arity">
 
-// boolean
-|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__isRtn">
-|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__isCyclic">
+// boolean functions
+|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isRtn">
+|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isCyclic">
 
-//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__equivalent">
+//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__equivalent">
 
-|	< NUM_ABS_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__abs">
-|   < DBL_CEIL_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__ceil">
-|	< DBL_FLOOR_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__floor">
-|	< LNG_ROUND_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__round">
-|	< DBL_RINT_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__rint">
-|	< DBL_DOUBLE_FUNC_ID:		<NUM_PREFIX> <AMPERSAND> "__double">
-|	< LNG_LONG_FUNC_ID:			<NUM_PREFIX> <AMPERSAND> "__long">
-//|	< LNG_NET_COUNT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__netCount">
-//|	< LNG_NUM_COUNT_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "__numCount">
+|	< NUM_ABS_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__abs">
+|   < DBL_CEIL_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__ceil">
+|	< DBL_FLOOR_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__floor">
+|	< LNG_ROUND_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__round">
+|	< DBL_RINT_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__rint">
+|	< DBL_DOUBLE_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__double">
+|	< LNG_LONG_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__long">
+//|	< LNG_NET_COUNT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__netCount">
+//|	< LNG_NUM_COUNT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__numCount">
 
 // wired-in, need to match following "(" to avoid having longer match override it
-|	< LNG_SIZE_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "size" (<WHITESPACE>)* "(" >
+|	< LNG_SIZE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "size" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
-|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_PREFIX> <AMPERSAND> "isEmpty" (<WHITESPACE>)* "(" >
+|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "isEmpty" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|   < NET_START_FUNC_ID:      <NET_PREFIX> <AMPERSAND> "start"  (<WHITESPACE>)*
+|   < NET_START_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "start"  (<WHITESPACE>)*
 "(">
 	{
 		input_stream.backup(1) ;
@@ -1612,15 +1626,7 @@ TOKEN: {
 	}
     // for $&start($>foo) 
 
-	// need to order VOID_FUNC_LAMBDA before VOID_FUNC_ID_BEFORE_ARGLIST and VOID-FUNC_ID_NO_ARGLIST
-
-	// VOID_FUNC_LAMBDA used to have an optional "lambda" part, but that caused ambiguity
-	// in cases like $v = a & (a) ;  where '& (' was being taken as the VOID_FUNC_LAMBDA
-	// token.
-	// Revisit this later, e.g. by requiring some prefix on the & to indicate that
-	// no value is returned from a "void" function.
-
-|   < VOID_FUNC_LAMBDA: <AMPERSAND> "lambda" (<WHITESPACE>)* "(" >
+|   < VOID_FUNC_ANON: <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 	     	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1644,7 +1650,7 @@ TOKEN: {
     // the tricky switch back to DEFAULT state for the block
     // requires counting to find a matching closing right paren
 |   < VOID_FUNC_ID_BEFORE_ARGLIST :          
-                     <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+                     <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 		                                             | <DECIMAL_DIGIT>
 		                                             | "_"
 													 )* 
@@ -1664,19 +1670,14 @@ TOKEN: {
             }
         }
 |   < VOID_FUNC_ID_NO_ARGLIST:          
-                     <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+                     <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 		                                             | <DECIMAL_DIGIT>
 		                                             | "_"
 													 )* 
 													 ( "!" )? > : NON_INITIAL
 
-// VOID_FUNC_FUNC_LAMBDA used to allow an optional "lambda", but this caused an ambiguity
-// with #n = 1 && (2) ;  where '&& (' was being interpreted as the VOID_FUNC_FUNC_LAMBDA
-// token.  See also '& (' the VOID_FUNC_LAMBDA.  I have put the "lambda" back in.  Review
-// all this again someday, perhaps using some punctuation symbol as a prefix on the &.
-
-|   < VOID_FUNC_FUNC_LAMBDA: 
-        <AMPERSAND> <AMPERSAND> "lambda" (<WHITESPACE>)* "(" >
+|   < VOID_FUNC_FUNC_ANON: 
+        <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 	     	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1684,7 +1685,7 @@ TOKEN: {
 	     	SwitchTo(NON_INITIAL) ;
         }
 |   < VOID_FUNC_FUNC_ID_BEFORE_ARGLIST :          
-        <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
@@ -1704,7 +1705,7 @@ TOKEN: {
             }
         }
 |   < VOID_FUNC_FUNC_ID_NO_ARGLIST:          
-        <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
@@ -1712,8 +1713,7 @@ TOKEN: {
 		( "!" )? > : NON_INITIAL
 
 
-    // need to order this before NET_FUNC_ID_BEFORE_ARGLIST and NET_FUNC_ID_NO_ARGLIST
-|   < NET_FUNC_LAMBDA: <NET_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NET_FUNC_ANON: <NET_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 	     	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1724,13 +1724,13 @@ TOKEN: {
 // pseudo-function-- need to match the left paren so that it isn't overriden by a longer
 // match below with NET_FUNC_ID_BEFORE_ARGLIST
 
-|	< NET_EMBED_RTN_SUBNETS_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "embedRtnSubnets"
+|	< NET_EMBED_RTN_SUBNETS_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "embedRtnSubnets"
 (<WHITESPACE>)* "(">
         {
 	     	input_stream.backup(1) ;
 	     	SwitchTo(NON_INITIAL) ;
         }
-|	< NET_EXPAND_RTN_FUNC_ID:	<NET_PREFIX> <AMPERSAND> "expandRtn"
+|	< NET_EXPAND_RTN_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "expandRtn"
 (<WHITESPACE>)* "(">
         {
 	     	input_stream.backup(1) ;
@@ -1748,7 +1748,7 @@ TOKEN: {
     // the tricky switch back to DEFAULT state for the block
     // requires counting to find a matching closing right paren
 |   < NET_FUNC_ID_BEFORE_ARGLIST :          
-        <NET_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+        <NET_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 		                                             | <DECIMAL_DIGIT>
 		                                             | "_"
 													 )* 
@@ -1767,29 +1767,28 @@ TOKEN: {
             }
         }
 |   < NET_FUNC_ID_NO_ARGLIST:          
-        <NET_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+        <NET_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 		                                             | <DECIMAL_DIGIT>
 		                                             | "_"
 													 )* 
 													 ( "!" )? > : NON_INITIAL
-	// the $&lambda token will start the counting of parens
+	// the $^ token will start the counting of parens
 
     // could be DEFAULT OR NON_INITIAL
     // if DEFAULT could be either
     // 
     // net func func assignment
-    // $&&addsuff = $&&foo ;
-    // $&&addsuff = $&&lambda(paramlist) {     return exp ;         } ;
+    // $^^addsuff = $^^foo ;
+    // $^^addsuff = $^^(paramlist) {     return exp ;         } ;
     // DEF          NON_INIT             DEF   NON_INIT   DEF
     //              count-parens
     // or syntactic variant, net func func definition
-    // $&&addsuff(paramlist)   = {    }   ;
+    // $^^addsuff(paramlist)   = {    }   ;
     // DEF       NON_INIT      DEF
     //           count-parens
 
-// need to order this one before NET_FUNC_FUNC_ID_BEFORE_ARGLIST and NET_FUNC_FUNC_ID_NO_ARGLIST
-|   < NET_FUNC_FUNC_LAMBDA: 
-        <NET_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NET_FUNC_FUNC_ANON: 
+        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 	     input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -1797,7 +1796,7 @@ TOKEN: {
 	     SwitchTo(NON_INITIAL) ;
         }
 |   < NET_FUNC_FUNC_ID_BEFORE_ARGLIST:          
-        <NET_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
@@ -1817,7 +1816,7 @@ TOKEN: {
             }
         }
 |   < NET_FUNC_FUNC_ID_NO_ARGLIST:          
-        <NET_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
@@ -1836,8 +1835,7 @@ TOKEN: {
 		| "_"
 		)* > : NON_INITIAL
 
-// need to order this before NUM_FUNC_ID_BEFORE_ARGLIST and NUM_FUNC_ID_NO_ARGLIST
-|   < NUM_FUNC_LAMBDA:  <NUM_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(">
+|   < NUM_FUNC_ANON:  <NUM_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
         {
 		 input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -1845,7 +1843,7 @@ TOKEN: {
 	     SwitchTo(NON_INITIAL) ;
         }
 |   < NUM_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <NUM_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT>
 		| "_"
@@ -1865,7 +1863,7 @@ TOKEN: {
             }
         }
 |   < NUM_FUNC_ID_NO_ARGLIST:
-        <NUM_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+        <NUM_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT>
 		| "_"
@@ -1873,8 +1871,8 @@ TOKEN: {
 		( "!" )?
 		> : NON_INITIAL
 
-|   < NUM_FUNC_FUNC_LAMBDA: 
-        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(">
+|   < NUM_FUNC_FUNC_ANON: 
+        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
         {
 		 input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -1883,7 +1881,7 @@ TOKEN: {
         }
 
 |   < NUM_FUNC_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
 		<DECIMAL_DIGIT> | "_")* (<WHITESPACE>)* "(">
         {  
 	    input_stream.backup(1) ;   // lop off the "("
@@ -1898,7 +1896,7 @@ TOKEN: {
             }
         }
 |   < NUM_FUNC_FUNC_ID_NO_ARGLIST:
-        <NUM_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
 		<DECIMAL_DIGIT> | "_")* > : NON_INITIAL
 
 |   < NET_LIST_ID: <NET_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
@@ -1907,8 +1905,8 @@ TOKEN: {
 |   < NET_LIST_LIT_PREFIX: <NET_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
         { input_stream.backup(1) ; }
 
-|   < NET_LIST_FUNC_LAMBDA:
-        <NET_PREFIX> <LIST_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NET_LIST_FUNC_ANON:
+        <NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 		 	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1916,8 +1914,8 @@ TOKEN: {
 	     	SwitchTo(NON_INITIAL) ;
         }
 
-|   < NET_LIST_FUNC_FUNC_LAMBDA:
-        <NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NET_LIST_FUNC_FUNC_ANON:
+        <NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 		 	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1925,8 +1923,8 @@ TOKEN: {
 	     	SwitchTo(NON_INITIAL) ;
         }
 
-|   < NUM_LIST_FUNC_FUNC_LAMBDA:
-        <NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NUM_LIST_FUNC_FUNC_ANON:
+        <NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 		 	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1940,69 +1938,69 @@ TOKEN: {
 // number of arguments (so I can't wrap it in .kleene/global/predefined.kl)
 
 |	< NET_LIST_GET_SLICE_FUNC_ID:	
-	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> "getSlice" (<WHITESPACE>)* "(">
+	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
 |	< NUM_LIST_GET_SLICE_FUNC_ID:	
-	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> "getSlice" (<WHITESPACE>)* "(">
+	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_PUSH_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_PUSH_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__push!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__push!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_ADD_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_ADD_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__add!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__add!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_ADDAT_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_ADDAT_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__addAt!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__addAt!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_SET_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_SET_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__set!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__set!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2010,42 +2008,42 @@ TOKEN: {
 		}
 
 
-|	< NET_LIST_TAIL_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_TAIL_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__tail" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__tail" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_COPY_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_COPY_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__copy" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_COPY_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_COPY_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__copy" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NET_LIST_GET_SIGMA_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NET_LIST_GET_SIGMA_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__getSigma" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND>
+|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
 "__getSigma" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2053,7 +2051,7 @@ TOKEN: {
 		}
 
 |   < NET_LIST_FUNC_ID_BEFORE_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2068,11 +2066,11 @@ TOKEN: {
 		}
 
 |   < NET_LIST_FUNC_ID_NO_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
 
 |   < NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2087,11 +2085,11 @@ TOKEN: {
 		}
 
 |   < NET_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
 
 |   < NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2106,7 +2104,7 @@ TOKEN: {
 		}
 
 |   < NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
 
 |   < NUM_LIST_ID: <NUM_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
@@ -2115,8 +2113,8 @@ TOKEN: {
 |   < NUM_LIST_LIT_PREFIX: <NUM_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
         { input_stream.backup(1) ; }
 
-|   < NUM_LIST_FUNC_LAMBDA:
-        <NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> ( "lambda" )? (<WHITESPACE>)* "(" >
+|   < NUM_LIST_FUNC_ANON:
+        <NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 			input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -2125,7 +2123,7 @@ TOKEN: {
         }
 
 |   < NUM_LIST_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_")* 
@@ -2144,7 +2142,7 @@ TOKEN: {
 		}
 
 |   < NUM_LIST_FUNC_ID_NO_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <AMPERSAND> <UNICODE_ID_LETTER> 
+		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_")*
@@ -2280,7 +2278,6 @@ TOKEN: {
 TOKEN: {
     < #NET_PREFIX:  "$" >
 |   < #NUM_PREFIX:  "#" >
-//|   < #FUNC_PREFIX: "&" >  // indicate <AMPERSAND> instead
 |   < #LIST_PREFIX:  "@" >
 
 |   < #WHITESPACE:        ( " " | "\t" | "\n" )+ >
@@ -2477,10 +2474,10 @@ void statement(): {}
 |	void_func_func_definition()
 
 // syntactic variants
-// $&union = $&foo ;
-// $&union = $&lambda($a, $b) { return $a | $b ; }
-// N.B. LOOKAHEAD(2) makes sure the next tokens are a net_func_id and an equal sign
-//    before commiting the parser to a net_func_assignment()
+// $^union = $^foo ;
+// $^union = $^($a, $b) { return $a | $b ; }
+// N.B. LOOKAHEAD(2) makes sure the next tokens are a net_func_id and an 
+//	equal sign before committing the parser to a net_func_assignment()
 
 |   LOOKAHEAD(2) 
     net_func_assignment()
@@ -2708,8 +2705,8 @@ void num_id() #num_id: {}
 
 void void_func_assignment() #void_func_assignment : {}
 {
-	// &foo = &bar ;
-	// &foo = &lambda(){} ;
+	// ^foo = ^bar ;
+	// ^foo = ^(){} ;
     void_func_id() <EQUAL_SIGN> void_func_exp() <SEMICOLON>
 }
 
@@ -2724,8 +2721,8 @@ void void_func_definition() #void_func_definition : {}
 // example:    $&foo = $&bar ;
 void net_func_assignment() #net_func_assignment : {}
 {
-	// $&foo = $&bar ;
-	// $&foo = $&lambda(){} ;
+	// $^foo = $^bar ;
+	// $^foo = $^(){} ;
     net_func_id() <EQUAL_SIGN> net_func_exp() <SEMICOLON>
 }
 
@@ -2741,7 +2738,7 @@ void net_func_definition() #net_func_definition : {}
 void net_list_func_assignment() #net_list_func_assignment : {}
 {
 	// $@&foo = $@&bar ;
-	// $@&foo = $@&lambda(){} ;
+	// $@&foo = $@&(){} ;
     net_list_func_id() <EQUAL_SIGN> net_list_func_exp() <SEMICOLON>
 }
 
@@ -2755,7 +2752,7 @@ void net_list_func_definition() #net_list_func_definition : {}
 void num_list_func_assignment() #num_list_func_assignment : {}
 {
 	// #@&foo = #@&bar ;
-	// #@&foo = #@&lambda(){} ;
+	// #@&foo = #@&(){} ;
     num_list_func_id() <EQUAL_SIGN> num_list_func_exp() <SEMICOLON>
 }
 
@@ -2769,15 +2766,15 @@ void num_list_func_definition() #num_list_func_definition : {}
 void num_func_assignment() #num_func_assignment : {}
 {
 	// #&foo = #&bar ;
-	// #&foo = #&lambda(){} ;
+	// #&foo = #&(){} ;
     num_func_id() <EQUAL_SIGN> num_func_exp() <SEMICOLON>
 }
 
 // a syntactic variant of num_func_assignment(), with the params
-// on the LHS of the equal-sign, and no lambda
+// on the LHS of the equal-sign
 void num_func_definition() #num_func_definition : {}
 {
-	// #&foo(params) = { } ;
+	// #&foo(params) { } ;
 	// allow just single statement instead of block?
     num_func_id() param_list() func_block()
 }
@@ -3180,8 +3177,8 @@ void numexp_lookahead(): {}
 		          |   <NUM_FUNC_ID_NO_ARGLIST>
 		          |   <NUM_FUNC_FUNC_ID_BEFORE_ARGLIST>
 		          |   <NUM_FUNC_FUNC_ID_NO_ARGLIST>
-		          |   <NUM_FUNC_LAMBDA>
-		          |   <NUM_FUNC_FUNC_LAMBDA> 
+		          |   <NUM_FUNC_ANON>
+		          |   <NUM_FUNC_FUNC_ANON> 
 		          )
 }
 
@@ -3326,7 +3323,7 @@ void num_func_call() #num_func_call : {}
 void num_func_exp() #num_func_exp : {}
 {
     num_func_id()          // #&add
-|   num_func_lambda_exp()  // #&lambda(){}
+|   num_func_anon_exp()  // #&(){}
 |   num_func_func_call()
 }
 
@@ -3335,9 +3332,9 @@ void num_func_id() #num_func_id : {}
     ( <NUM_FUNC_ID_BEFORE_ARGLIST> | <NUM_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
 }
 
-void num_func_lambda_exp() #num_func_lambda_exp : {}
+void num_func_anon_exp() #num_func_anon_exp : {}
 {
-    <NUM_FUNC_LAMBDA> param_list() func_block()
+    <NUM_FUNC_ANON> param_list() func_block()
 }
 
 void num_func_func_call() #num_func_func_call : {}
@@ -3350,13 +3347,13 @@ void num_func_func_call() #num_func_func_call : {}
 void num_func_func_exp() #num_func_func_exp : {}
 {
     num_func_func_id()
-|   num_func_func_lambda_exp()
+|   num_func_func_anon_exp()
 // and don't try to go any deeper
 }
 
-void num_func_func_lambda_exp() #num_func_func_lambda_exp : {}
+void num_func_func_anon_exp() #num_func_func_anon_exp : {}
 {
-    <NUM_FUNC_FUNC_LAMBDA> param_list() func_block()
+    <NUM_FUNC_FUNC_ANON> param_list() func_block()
 }
 
 
@@ -3686,7 +3683,7 @@ void primary_regexp():
 | complement_char_union()		// [^a-z]
 
 | net_func_call()
-// $&foo(args)      $&lambda(params){block}(args)
+// $&foo(args)      $&(params){block}(args)
 
 // built-in functions
 
@@ -4271,7 +4268,7 @@ void dbl_rint_func_call() #dbl_rint_func_call: {}
 void void_func_exp() #void_func_exp: {}
 {
 	void_func_id()
-|	void_func_lambda_exp()
+|	void_func_anon_exp()
 |	void_func_func_call()
 }
 
@@ -4280,9 +4277,9 @@ void void_func_id() #void_func_id : {}
     ( <VOID_FUNC_ID_BEFORE_ARGLIST> | <VOID_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
 }
 
-void void_func_lambda_exp() #void_func_lambda_exp : {}
+void void_func_anon_exp() #void_func_anon_exp : {}
 {
-    <VOID_FUNC_LAMBDA> param_list() func_block()
+    <VOID_FUNC_ANON> param_list() func_block()
 }
 
 void void_func_func_call() #void_func_func_call : {}
@@ -4293,13 +4290,13 @@ void void_func_func_call() #void_func_func_call : {}
 void void_func_func_exp() #void_func_func_exp : {}
 {
   	void_func_func_id()
-| 	void_func_func_lambda_exp()
+| 	void_func_func_anon_exp()
 // and don't try to go any deeper
 }
 
-void void_func_func_lambda_exp() #void_func_func_lambda_exp : {}
+void void_func_func_anon_exp() #void_func_func_anon_exp : {}
 {
-    <VOID_FUNC_FUNC_LAMBDA> param_list() func_block()
+    <VOID_FUNC_FUNC_ANON> param_list() func_block()
 }
 
 
@@ -4311,7 +4308,7 @@ void net_func_exp() #net_func_exp :
 {}
 {
 	net_func_id()
-|   net_func_lambda_exp()  
+|   net_func_anon_exp()  
 |   net_func_func_call()  
 }
 
@@ -4320,9 +4317,9 @@ void net_func_id() #net_func_id : {}
     ( <NET_FUNC_ID_BEFORE_ARGLIST> | <NET_FUNC_ID_NO_ARGLIST> ) { jjtThis.setImage(token.image) ; }
 }
 
-void net_func_lambda_exp() #net_func_lambda_exp : {}
+void net_func_anon_exp() #net_func_anon_exp : {}
 {
-    <NET_FUNC_LAMBDA> param_list() func_block()
+    <NET_FUNC_ANON> param_list() func_block()
 }
 
 void net_func_func_call() #net_func_func_call : {}
@@ -4333,13 +4330,13 @@ void net_func_func_call() #net_func_func_call : {}
 void net_func_func_exp() #net_func_func_exp : {}
 {
   net_func_func_id()
-| net_func_func_lambda_exp()
+| net_func_func_anon_exp()
 // and don't try to go any deeper, would be net_func_func_func_call()
 }
 
-void net_func_func_lambda_exp() #net_func_func_lambda_exp : {}
+void net_func_func_anon_exp() #net_func_func_anon_exp : {}
 {
-    <NET_FUNC_FUNC_LAMBDA> param_list() func_block()
+    <NET_FUNC_FUNC_ANON> param_list() func_block()
 }
 
 //void list_index_exp() #list_index_exp : {}
@@ -4400,7 +4397,7 @@ void net_list_func_call() #net_list_func_call : {}
 void net_list_func_exp() #net_list_func_exp : {}
 {
     net_list_func_id()
-|   net_list_func_lambda_exp()
+|   net_list_func_anon_exp()
 |	net_list_func_func_call()
 }
 
@@ -4411,9 +4408,9 @@ void net_list_func_id() #net_list_func_id : {}
 	) { jjtThis.setImage(token.image); }   // $@&name
 }
 
-void net_list_func_lambda_exp() #net_list_func_lambda_exp : {}
+void net_list_func_anon_exp() #net_list_func_anon_exp : {}
 {
-    <NET_LIST_FUNC_LAMBDA> param_list() func_block()
+    <NET_LIST_FUNC_ANON> param_list() func_block()
 }
 
 void net_list_func_func_call() #net_list_func_func_call : {}
@@ -4426,7 +4423,7 @@ void net_list_func_func_call() #net_list_func_func_call : {}
 void net_list_func_func_exp() #net_list_func_func_exp : {}
 {
   net_list_func_func_id()
-| net_list_func_func_lambda_exp()
+| net_list_func_func_anon_exp()
 // and don't try to go any deeper, would be net_list_func_func_func_call()
 }
 
@@ -4437,9 +4434,9 @@ void net_list_func_func_id() #net_list_func_func_id : {}
 	) { jjtThis.setImage(token.image); }   // $@&name
 }
 
-void net_list_func_func_lambda_exp() #net_list_func_func_lambda_exp : {}
+void net_list_func_func_anon_exp() #net_list_func_func_anon_exp : {}
 {
-    <NET_LIST_FUNC_FUNC_LAMBDA> param_list() func_block()
+    <NET_LIST_FUNC_FUNC_ANON> param_list() func_block()
 }
 
 
@@ -4497,7 +4494,7 @@ void num_list_func_call() #num_list_func_call : {}
 void num_list_func_exp() #num_list_func_exp : {}
 {
     num_list_func_id()
-|   num_list_func_lambda_exp()
+|   num_list_func_anon_exp()
 |	num_list_func_func_call()
 }
 
@@ -4507,9 +4504,9 @@ void num_list_func_id() #num_list_func_id : {}
 				{ jjtThis.setImage(token.image); }   // $@&name
 }
 
-void num_list_func_lambda_exp() #num_list_func_lambda_exp : {}
+void num_list_func_anon_exp() #num_list_func_anon_exp : {}
 {
-    <NUM_LIST_FUNC_LAMBDA> param_list() func_block()
+    <NUM_LIST_FUNC_ANON> param_list() func_block()
 }
 
 void num_list_func_func_call() #num_list_func_func_call : {}
@@ -4520,7 +4517,7 @@ void num_list_func_func_call() #num_list_func_func_call : {}
 void num_list_func_func_exp() #num_list_func_func_exp : {}
 {
   num_list_func_func_id()
-| num_list_func_func_lambda_exp()
+| num_list_func_func_anon_exp()
 // and don't try to go any deeper, would be net_list_func_func_func_call()
 }
 
@@ -4531,9 +4528,9 @@ void num_list_func_func_id() #num_list_func_func_id : {}
 	) { jjtThis.setImage(token.image); }   // $@&name
 }
 
-void num_list_func_func_lambda_exp() #num_list_func_func_lambda_exp : {}
+void num_list_func_func_anon_exp() #num_list_func_func_anon_exp : {}
 {
-    <NUM_LIST_FUNC_FUNC_LAMBDA> param_list() func_block()
+    <NUM_LIST_FUNC_FUNC_ANON> param_list() func_block()
 }
 
 
@@ -4771,13 +4768,13 @@ void expression() :
 // start counting parens 
 
 // net_func_exp()
-//		net_func_id()			// #&reverse
-// |	net_func_lambda_exp()	// $&lambda(){}
+//		net_func_id()			// #^reverse
+// |	net_func_anon_exp()	// $^(){}
 // |	net_func_func_call() 
 
 |	LOOKAHEAD( <NET_FUNC_ID_NO_ARGLIST>			  // no arg_list follows
 			 | <NET_FUNC_FUNC_ID_BEFORE_ARGLIST>  // one arg_list definitely follows
-			 | <NET_FUNC_LAMBDA> 				  // arg_list might follow
+			 | <NET_FUNC_ANON> 				  // arg_list might follow
 			 )
 	// Then we have at least a net_func_exp.  If there is a following
 	// arg_list (a second arglist, in the case of NET_FUNC_FUNC_ID_BEFORE_ARGLIST),
@@ -4792,14 +4789,14 @@ void expression() :
 
 // net_func_func_exp()
 //	  	net_func_func_id()
-// | 	net_func_func_lambda_exp()
+// | 	net_func_func_anon_exp()
 // don't try to go deeper, would be net_func_func_func_call()
 
 |	LOOKAHEAD( <NET_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
-			 | <NET_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 | <NET_FUNC_FUNC_ANON> 			// one or two arg_lists might follow
 			 )
 	// Then we have at least a net_func_func_exp.  In the case of 
-	// NET_FUNC_FUNC_LAMBDA, one following arg_list makes a net_func_func_call,
+	// NET_FUNC_FUNC_ANON, one following arg_list makes a net_func_func_call,
 	// which is a kind of net_func_exp; a second following arg_list makes a
 	// net_func_call, which is a kind of regexp.
 	(( net_func_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
@@ -4829,12 +4826,12 @@ void expression() :
 
 // net_list_func_exp()
 //    	net_list_func_id()
-// |   	net_list_func_lambda_exp()
+// |   	net_list_func_anon_exp()
 // |	net_list_func_func_call()
 
 |	LOOKAHEAD( <NET_LIST_FUNC_ID_NO_ARGLIST>			// no arg_list follows
 			 | <NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST>	// one arg_list definitely follows
-			 | <NET_LIST_FUNC_LAMBDA> 					// lambda arg list and func block
+			 | <NET_LIST_FUNC_ANON> 					//  anon arg list and func block
 			 											//   will follow, arg_list might follow
 			 ) 
 	// Then we have at least a net_list_func_exp.  If there is a following
@@ -4849,10 +4846,10 @@ void expression() :
 	) #net_list_exp(arg_list_present)
 
 |	LOOKAHEAD( <NET_LIST_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
-			 | <NET_LIST_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 | <NET_LIST_FUNC_FUNC_ANON> 			// one or two arg_lists might follow
 			 )
 	// Then we have at least a net_list_func_func_exp.  In the case of 
-	// NET_LIST_FUNC_FUNC_LAMBDA, one following arg_list 
+	// NET_LIST_FUNC_FUNC_ANON, one following arg_list 
 	// makes a net_list_func_func_call, which is a kind of net_list_func_exp; 
 	// a second following arg_list makes a net_list_func_call, 
 	// which is a kind of net_list_exp.
@@ -4890,12 +4887,12 @@ void expression() :
 
 // num_func_exp
 //    	num_func_id()          // #&add
-// |   	num_func_lambda_exp()  // #&lambda(){}
+// |   	num_func_anon_exp()  // #&(){}
 // |   	num_func_func_call()
 
 |	LOOKAHEAD ( <NUM_FUNC_ID_NO_ARGLIST>			// no arg_list follows
 			  | <NUM_FUNC_FUNC_ID_BEFORE_ARGLIST> 	// one arg_list definitely follows
-			  | <NUM_FUNC_LAMBDA> 					// arg_list might follow
+			  | <NUM_FUNC_ANON> 					// arg_list might follow
 			  )
 	// Then we have at least a num_func_exp.  If there is a following
 	// arg_list, (a second arg_list, in the case of NUM_FUNC_FUNC_ID_BEFORE_ARGLIST),
@@ -4910,14 +4907,14 @@ void expression() :
 
 // num_func_func_exp()
 //     num_func_func_id()
-// |   num_func_func_lambda_exp()
+// |   num_func_func_anon_exp()
 // and don't try to go any deeper, would be num_func_func_func_call()
 
 |	LOOKAHEAD( <NUM_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
-			 | <NUM_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 | <NUM_FUNC_FUNC_ANON> 			// one or two arg_lists might follow
 			 )
 	// Then we have at least a num_func_func_exp.  In the case of 
-	// NUM_FUNC_FUNC_LAMBDA, one following arg_list makes a num_func_func_call,
+	// NUM_FUNC_FUNC_ANON, one following arg_list makes a num_func_func_call,
 	// which is a kind of num_func_exp; a second following arg_list makes a
 	// num_func_call, which is a kind of numexp.
 	(( num_func_func_exp()	( 	LOOKAHEAD ( <LPAREN> )
@@ -4947,12 +4944,12 @@ void expression() :
 
 // num_list_func_exp()
 //    	num_list_func_id()
-// |   	num_list_func_lambda_exp()
+// |   	num_list_func_anon_exp()
 // |	num_list_func_func_call()
 
 |	LOOKAHEAD( <NUM_LIST_FUNC_ID_NO_ARGLIST>			// no arg_list follows
 			 | <NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST>	// one arg_list definitely follows
-			 | <NUM_LIST_FUNC_LAMBDA> 					// arg_list might follow
+			 | <NUM_LIST_FUNC_ANON> 					// arg_list might follow
 			 )
 	// Then we have at least a num_list_func_exp.  If there is a following
 	// arg_list (a second arglist, in the case of NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST,
@@ -4966,10 +4963,10 @@ void expression() :
 	) #num_list_exp(arg_list_present) 
 
 |	LOOKAHEAD( <NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST>	// no arg_list follows
-			 | <NUM_LIST_FUNC_FUNC_LAMBDA> 			// one or two arg_lists might follow
+			 | <NUM_LIST_FUNC_FUNC_ANON> 			// one or two arg_lists might follow
 			 )
 	// Then we have at least a num_list_func_func_exp.  In the case of 
-	// NUM_LIST_FUNC_FUNC_LAMBDA, one following arg_list 
+	// NUM_LIST_FUNC_FUNC_ANON, one following arg_list 
 	// makes a num_list_func_func_call, which is a kind of num_list_func_exp; 
 	// a second following arg_list makes a num_list_func_call, 
 	// which is a kind of num_list_exp.
@@ -5095,7 +5092,7 @@ void net_id_with_assignment() #net_id_with_assignment: {}
 void net_func_id_with_assignment() #net_func_id_with_assignment : {}
 {
 	// $&foo = $&bar ;
-	// $&foo = $&lambda(){} ;
+	// $&foo = $&(){} ;
     net_func_id() <EQUAL_SIGN> net_func_exp() ( <SEMICOLON> )?
 }
 void net_func_func_id_with_assignment() #net_func_func_id_with_assignment : {}
@@ -5106,7 +5103,7 @@ void net_func_func_id_with_assignment() #net_func_func_id_with_assignment : {}
 void void_func_id_with_assignment() #void_func_id_with_assignment : {}
 {
 	// &foo = &bar ;
-	// &foo = &lambda(){} ;
+	// &foo = &(){} ;
     void_func_id() <EQUAL_SIGN> void_func_exp() ( <SEMICOLON> )?
 }
 void void_func_func_id_with_assignment() #void_func_func_id_with_assignment : {}
@@ -5134,7 +5131,7 @@ void num_id_with_assignment() #num_id_with_assignment: {}
 void num_func_id_with_assignment() #num_func_id_with_assignment : {}
 {
 	// #&foo = #&bar ;
-	// #&foo = #&lambda(){} ;
+	// #&foo = #&(){} ;
     num_func_id() <EQUAL_SIGN> num_func_exp() ( <SEMICOLON> )?
 }
 void num_func_func_id_with_assignment() #num_func_func_id_with_assignment : {}

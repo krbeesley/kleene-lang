@@ -2544,7 +2544,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnum_func_exp node, Object data) {
-		// could be a num_func_id or a num_func_lambda_exp
+		// could be a num_func_id or a num_func_anon_exp
  		node.jjtGetChild(0).jjtAccept(this, data) ;
 		return data ;
   	}
@@ -2560,7 +2560,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 		return data ;
 	}
-	public Object visit(ASTnum_func_lambda_exp node, Object data) {
+	public Object visit(ASTnum_func_anon_exp node, Object data) {
 		// two daughters:  param_list  func_block
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		ArrayList<ParamSlot> pal = (ArrayList<ParamSlot>) stack.pop() ;
@@ -2752,7 +2752,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		return data ;
     }
-    public Object visit(ASTnum_func_func_lambda_exp node, Object data) {
+    public Object visit(ASTnum_func_func_anon_exp node, Object data) {
 		// two daughters:  param_list  func_block
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		ArrayList<ParamSlot> pal = (ArrayList<ParamSlot>) stack.pop() ;
@@ -6312,14 +6312,14 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
    	public Object visit(ASTnet_func_exp node, Object data) {
-		// daughter should be net_func_id or net_func_lambda_exp or
+		// daughter should be net_func_id or net_func_anon_exp or
 		// net_func_func_call
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue object on the stack
 		return data ;
 	}
 	public Object visit(ASTvoid_func_exp node, Object data) {
-		// daughter should be void_func_id or void_func_lambda_exp or
+		// daughter should be void_func_id or void_func_anon_exp or
 		// void_func_func_call
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue object on the stack
@@ -6356,7 +6356,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			throw new UndefinedIdException("Undefined void_func_id: " + void_func_id) ;
 		}
     }
-    public Object visit(ASTnet_func_lambda_exp node, Object data) {
+    public Object visit(ASTnet_func_anon_exp node, Object data) {
 		// two daughters: param_list, func_block
 		// collect them into a new FuncValue object 
 		//		and push it on the stack
@@ -6370,7 +6370,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 								 (ASTfunc_block) node.jjtGetChild(1))) ;
 		return data ;
     }
-    public Object visit(ASTvoid_func_lambda_exp node, Object data) {
+    public Object visit(ASTvoid_func_anon_exp node, Object data) {
 		// two daughters: param_list func_block
 		// collect them into a FuncValue object and push it on the stack
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -6494,17 +6494,17 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnet_func_func_exp node, Object data) {
-		// daughter should be net_func_func_id or net_func_func_lambda_exp
+		// daughter should be net_func_func_id or net_func_func_anon_exp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		return data ;
     }
     public Object visit(ASTvoid_func_func_exp node, Object data) {
 		// daughter should be void_func_func_id 
-		//		or void_func_func_lambda_exp
+		//		or void_func_func_anon_exp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		return data ;
     }
-    public Object visit(ASTnet_func_func_lambda_exp node, Object data) {
+    public Object visit(ASTnet_func_func_anon_exp node, Object data) {
 		// two daughters: param_list func_block
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		ArrayList<ParamSlot> pal = (ArrayList<ParamSlot>) stack.pop() ;
@@ -6513,7 +6513,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 								 (ASTfunc_block) node.jjtGetChild(1))) ;
 		return data ;
     }
-	public Object visit(ASTvoid_func_func_lambda_exp node, Object data) {
+	public Object visit(ASTvoid_func_func_anon_exp node, Object data) {
 		// two daughters: param_list func_block
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		ArrayList<ParamSlot> pal = (ArrayList<ParamSlot>) stack.pop() ;
@@ -6590,7 +6590,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//
 		//  N.B. net_list_func_exp could be 
 		//       net_list_func_id     e.g. $@&myfunc  OR
-		//       net_list_func_lambda_exp    e.g. $&lambda(...){...}
+		//       net_list_func_anon_exp    e.g. $&lambda(...){...}
 		//  so net_list_func_exp needs to be evaluated 
 
 		// Evaluate daughter 0, the net_list_func_exp
@@ -6689,7 +6689,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 		return data ;
     }
-    public Object visit(ASTnet_list_func_lambda_exp node, Object data) {
+    public Object visit(ASTnet_list_func_anon_exp node, Object data) {
 		// two daughters: param_list, func_block
 		// collect them into a new FuncValue object 
 		//		and push it on the stack
@@ -6703,7 +6703,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 								 (ASTfunc_block) node.jjtGetChild(1))) ;
 		return data ;
     }
-    public Object visit(ASTnet_list_func_func_lambda_exp node, Object data) {
+    public Object visit(ASTnet_list_func_func_anon_exp node, Object data) {
 		// two daughters: param_list, func_block
 		// collect them into a new FuncValue object 
 		//		and push it on the stack
@@ -6717,7 +6717,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 								 (ASTfunc_block) node.jjtGetChild(1))) ;
 		return data ;
     }
-    public Object visit(ASTnum_list_func_func_lambda_exp node, Object data) {
+    public Object visit(ASTnum_list_func_func_anon_exp node, Object data) {
 		// two daughters: param_list, func_block
 		// collect them into a new FuncValue object 
 		//		and push it on the stack
@@ -6804,7 +6804,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//
 		//  N.B. num_list_func_exp could be 
 		//       num_list_func_id     e.g. #@&myfunc  OR
-		//       num_list_func_lambda_exp    e.g. #&lambda(...){...}
+		//       num_list_func_anon_exp    e.g. #&lambda(...){...}
 		//  so num_list_func_exp needs to be evaluated 
 
 		// Evaluate daughter 0, the num_list_func_exp
@@ -6919,7 +6919,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 		return data ;
     }
-    public Object visit(ASTnum_list_func_lambda_exp node, Object data) {
+    public Object visit(ASTnum_list_func_anon_exp node, Object data) {
 		// two daughters: param_list, func_block
 		// collect them into a new FuncValue object 
 		//		and push it on the stack
