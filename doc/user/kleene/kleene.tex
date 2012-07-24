@@ -29,9 +29,14 @@
 
 \usepackage[outerbars]{changebar}
 % supports \cbstart and \cbend, also the changebar environment
+% N.B. that changebars don't seem to work well over page breaks
+%
+% \begin{samepage}
 % \begin{changebar}
 % ...
 % \end{changebar}
+% \end{samepage
+%
 % also \cbdelete{...}
 
 \usepackage[normalem]{ulem}
@@ -82,16 +87,16 @@
 
 \title{The \Kleene{} Language\\
 for Weighted Finite-State Programming:\\
-{\Large User Documentation}}
+{\Large User Documentation, Version 0.9.2.0}}
 
 \author{Kenneth R. Beesley\\
-Text Analytics, \acro{sap} Labs\\
+\acro{sap} Labs\\
 P.O.~Box 540475\\
 North Salt Lake\\
 Utah 84054, USA\\
 \texttt{ken.beesley@sap.com}}
 
-\date{7 December 2010}
+\date{23 July 2012}
 
 \begin{document}
 %\begin{frontmatter}
@@ -354,7 +359,7 @@ inherently delimited, making them also of highest precedence.
 \hline
 \verb!<0.5> <0.01>! &  weights\\
 \hline
-\verb!$&myfunction!(\textit{args} \ldots) & call to a function returning a network\\
+\verb!$^myfunction!(\textit{args} \ldots) & call to a function returning a network\\
 %\hline
 %\verb!$@mynetarray![\emph{n}] & reference to an element of an array of networks\\
 \hline
@@ -367,7 +372,7 @@ sigils\footnote{\url{http://en.wikipedia/org/wiki/Sigil_(computer_programming)}}
 to distinguish identifiers like \verb!$abc! from simple concatenations of symbols 
 like \verb!abc!.  A prefixed
 \verb!$! marks a variable name with a finite-state network value; a prefixed
-\verb!$&! marks the
+\verb!$^! marks the
 name of a function that returns a network value; and a prefixed \verb!$@! marks the name of
 a list of networks.
 
@@ -380,8 +385,8 @@ a list of networks.
 \hline
 \verb!$abc! & a variable named \verb!$abc! \\
 \hline
-\verb!$&abc!(\ldots{}\textit{args}\ldots{}) & a function named
-\verb!$&abc! that returns a network value\\
+\verb!$^abc!(\ldots{}\textit{args}\ldots{}) & a function named
+\verb!$^abc! that returns a network value\\
 \hline
 \end{tabular}
 \end{center}
@@ -737,17 +742,17 @@ pre-defined functions, including
 
 \begin{description}
 \item[]
-\verb!$&invert!(\textit{regexp})
+\verb!$^invert!(\textit{regexp})
 \item[]
-\verb!$&reverse!(\textit{regexp})
+\verb!$^reverse!(\textit{regexp})
 \item[]
-\verb!$&inputside!(\textit{regexp}) or \verb!$&upperside!(\textit{regexp}) 
+\verb!$^inputside!(\textit{regexp}) or \verb!$^upperside!(\textit{regexp}) 
 \item[]
-\verb!$&outputside!(\textit{regexp}) or \verb!$&lowerside!(\textit{regexp}) 
+\verb!$^outputside!(\textit{regexp}) or \verb!$^lowerside!(\textit{regexp}) 
 \item[]
-\verb!$&rmWeight!(\textit{regexp})
+\verb!$^rmWeight!(\textit{regexp})
 \item[]
-\verb!$&copy!(\textit{regexp}) 
+\verb!$^copy!(\textit{regexp}) 
 \end{description}
 
 \noindent
@@ -756,7 +761,7 @@ expression and can, just like a variable having a network value,
 appear as an operand inside a larger regular expression.  Note that
 
 \begin{Verbatim}[fontsize=\small]
-$var2 = $&copy($var1) ;
+$var2 = $^copy($var1) ;
 \end{Verbatim}
 
 \noindent
@@ -766,7 +771,7 @@ These functions do not destroy or modify their arguments, thus
 
 \begin{Verbatim}[fontsize=\small]
 $arg = (dog):(chien) ;
-$new = $&lowerside($arg) ;
+$new = $^lowerside($arg) ;
 \end{Verbatim}
 
 \noindent
@@ -778,13 +783,13 @@ defined:
 
 \begin{description}
 \item[]
-\verb!$&invert!!(\emph{regexp})
+\verb!$^invert!!(\emph{regexp})
 \item[]
-\verb!$&inputside!!(\emph{regexp}) or \verb!$&upperside!!(\emph{regexp}) 
+\verb!$^inputside!!(\emph{regexp}) or \verb!$^upperside!!(\emph{regexp}) 
 \item[]
-\verb!$&outputside!!(\emph{regexp}) or \verb!$&lowerside!!(\emph{regexp}) 
+\verb!$^outputside!!(\emph{regexp}) or \verb!$^lowerside!!(\emph{regexp}) 
 \item[]
-\verb!$&rmWeight!!(\emph{regexp})
+\verb!$^rmWeight!!(\emph{regexp})
 \end{description}
 
 \noindent
@@ -795,7 +800,7 @@ destructive.}  After executing the following example
 
 \begin{Verbatim}[fontsize=\small]
 $arg = (dog):(chien) ;
-$new = $&invert!($arg) ;
+$new = $^invert!($arg) ;
 \end{Verbatim}
 
 \noindent
@@ -825,30 +830,29 @@ Priority union with \emph{output-side} priority is also potentially useful.
 In \Kleene{} these functions can be defined as
 
 \begin{Verbatim}[fontsize=\small]
-$&priority_union_input($q, $r) {
-	return $q | (~$&inputside($q) _o_ $r) ;
+$^priority_union_input($q, $r) {
+	return $q | (~$^inputside($q) _o_ $r) ;
 }
 
-$&priority_union_output($q, $r) {
-	return $q | ($r _o_ ~$&outputside($q)) ;
+$^priority_union_output($q, $r) {
+	return $q | ($r _o_ ~$^outputside($q)) ;
 }
 \end{Verbatim}
 
 \noindent
 Such function \emph{definitions} are equivalent to the following function
 \emph{assignments}, involving anonymous functions, which most users will find less
-friendly.\footnote{An anonymous function written \verb!$&($q, $r)! takes two network
-arguments and returns a network value.  For Lisp and Python programmers who are used to
-the terminology of ``lambda expressions'' rather than anonymous functions, 
-the equivalent syntax \verb!$&lambda($q, $r)! is also supported in \Kleene{}.}
+friendly.\footnote{An anonymous function written \verb!$^($q, $r)! takes two network
+arguments and returns a network value.  Lisp and Python programmers
+will recognize anonymous functions as ``lambda expressions.''}
 
 \begin{Verbatim}[fontsize=\small]
-$&priority_union_input = $&($q, $r) {
-	return $q | (~$&inputside($q) _o_ $r) ;
+$^priority_union_input = $^($q, $r) {
+	return $q | (~$^inputside($q) _o_ $r) ;
 } ;
 
-$&priority_union_output = $&($q, $r) {
-	return $q | ($r _o_ ~$&outputside($q)) ;
+$^priority_union_output = $^($q, $r) {
+	return $q | ($r _o_ ~$^outputside($q)) ;
 } ;
 \end{Verbatim}
 
@@ -883,7 +887,7 @@ $corrections = (
 |   (think):(thought)
 ) ('[Verb]' '[Past]'):"" ;
 
-$english = $&priority_union_input($corrections, 
+$english = $^priority_union_input($corrections, 
                                   $productive_english) ;
 \end{Verbatim}
 
@@ -897,7 +901,7 @@ the input-side language of \verb!Q _o_ R! may be a proper subset of I.
 That is, one or more of the original input strings of Q may not be accepted by the 
 composition.  The Lenient Composition of transducers Q and R accepts exactly the 
 same input language as Q.  The
-following definition of \verb!$&lenient_composition_input()! is
+following definition of \verb!$^lenient_composition_input()! is
 appropriate for the examples in Karttunen's regular formalization of Optimality Theory
 \cite{karttunen:1998}, where the \verb!$base!
 transducer encodes a lexicon, and the \verb!$filter! transducer
@@ -906,8 +910,8 @@ encodes an optimality rule or filter being composed
 the lexicon.
 
 \begin{Verbatim}[fontsize=\small]
-$&lenient_composition_input($base, $filter) {
-    return $&priority_union_input($base _o_ $filter, $base) ;
+$^lenient_composition_input($base, $filter) {
+    return $^priority_union_input($base _o_ $filter, $base) ;
 }
 \end{Verbatim}
 
@@ -915,11 +919,11 @@ $&lenient_composition_input($base, $filter) {
 When, conversely, the rule or filter is being
 composed ``on top of'' the lexicon, and the desire is to
 preserve the output language of the lexicon, then the following
-function \verb!$&lenient_composition_output! is appropriate.
+function \verb!$^lenient_composition_output! is appropriate.
 
 \begin{Verbatim}[fontsize=\small]
-$&lenient_composition_output($filter, $base) {
-    return $&priority_union_output($filter _o_ $base, $base) ;
+$^lenient_composition_output($filter, $base) {
+    return $^priority_union_output($filter _o_ $base, $base) ;
 }
 \end{Verbatim}
 
@@ -939,7 +943,7 @@ The formal parameters of the function are bound, in the new frame's local
 symbol table, to the passed-in argument values,\footnote{When a finite-state
 network is passed as an argument, no copy is performed, and the local
 parameter becomes an alias for the original network.  If it is
-necessary to pass a copy, the explicit \$\&copy() function can be used
+necessary to pass a copy, the explicit \$\^copy() function can be used
 in the argument list.}  and any variables introduced in
 the body of the function are also stored in the local symbol
 table.  References to free (non-local) variables are resolved
@@ -956,22 +960,22 @@ as in the following example:
 
 \begin{Verbatim}[fontsize=\small]
 // a function that returns a function that returns a network
-$&&append_suffix($suff) {
-	return $&($a) { return $a $suff ;	} ;
+$^^append_suffix($suff) {
+	return $^($a) { return $a $suff ;	} ;
 }
 
-$&append_ing = $&&append_suffix(ing) ;
-$&append_espVend = $&&append_suffix(as|is|os|us|u|i) ;
+$^append_ing = $^^append_suffix(ing) ;
+$^append_espVend = $^^append_suffix(as|is|os|us|u|i) ;
 
-$net1 = $&append_ing(walk|talk) ;
-$net2 = $&append_espVend(pens|dir) ;
+$net1 = $^append_ing(walk|talk) ;
+$net2 = $^append_espVend(pens|dir) ;
 \end{Verbatim}
 
 \noindent
-The function \verb!$&append_ing! just concatenates \verb!ing! to
+The function \verb!$^append_ing! just concatenates \verb!ing! to
 its network argument, so \verb!$net1! will be set to a network that
 encodes the language containing \str{walking} and \str{talking}.
-The function \verb!$&append_espVend! is designed to model the
+The function \verb!$^append_espVend! is designed to model the
 suffixation of Esperanto verb endings to verb roots, and
 \verb!$net2! is set to a network that encodes the language
 containing \str{pensas}, \str{pensis}, \str{pensos},
@@ -997,14 +1001,14 @@ the following example, \$a and \$b are required parameters, and \$c and
 \$d are optional parameters.
 
 \begin{Verbatim}[fontsize=\small]
-$&myfunc($a, $b, $c = abc, $d = xyz) {
+$^myfunc($a, $b, $c = abc, $d = xyz) {
 	return $a $b $c $d ;
 }
 \end{Verbatim}
 
 \noindent
 In the parameter list, required parameters must precede optional parameters.
-If a call to \$\&myfunc() does not supply values for the optional
+If a call to \$\^myfunc() does not supply values for the optional
 parameters, here \$c and \$d, they are bound to the default values indicated
 in the function definition.
 
@@ -1015,7 +1019,7 @@ The following call contains two positional arguments and one named
 argument:
 
 \begin{Verbatim}[fontsize=\small]
-$net = $&myfunc(a*b+c?, [a-z]{3,6}, $d = ing) ;
+$net = $^myfunc(a*b+c?, [a-z]{3,6}, $d = ing) ;
 \end{Verbatim}
 
 \noindent
@@ -1046,7 +1050,7 @@ often, more readable.  Consider the following definition of a function
 with three required parameters:
 
 \begin{Verbatim}[fontsize=\small]
-$&func($prefix, $root, $suffix) {
+$^func($prefix, $root, $suffix) {
 	return $prefix $root $suffix ;
 }
 \end{Verbatim}
@@ -1055,15 +1059,15 @@ $&func($prefix, $root, $suffix) {
 This function can be called with three positional arguments,
 
 \begin{Verbatim}[fontsize=\small]
-$net = $&func(re, work, ing) ;
+$net = $^func(re, work, ing) ;
 \end{Verbatim}
 
 \noindent
 or with named arguments in any order:
 
 \begin{Verbatim}[fontsize=\small]
-$net1 = $&func($root=think, $prefix="", $suffix=ing) ;
-$net2 = $&func($prefix=un, $suffix=ing, $root=do) ;
+$net1 = $^func($root=think, $prefix="", $suffix=ing) ;
+$net2 = $^func($prefix=un, $suffix=ing, $root=do) ;
 \end{Verbatim}
 
 \noindent
@@ -1111,7 +1115,7 @@ symbol table.} but are not evaluated until the entire grammar is built
 into a network via a call to the built-in function
 
 \vspace{0.5cm}
-\verb!$&start(!\emph{\$>StartProduction}\verb!)!
+\verb!$^start(!\emph{\$>StartProduction}\verb!)!
 \vspace{0.5cm}
 
 \noindent
@@ -1126,7 +1130,7 @@ $>Noun = o $>Plur ;
 $>Plur = j? $>Case ;
 $>Case = n? ;
 
-$net = $&start($>Root) ;
+$net = $^start($>Root) ;
 \end{Verbatim}
 
 \noindent
@@ -1174,18 +1178,18 @@ at production parse-time.
 
 \paragraph{The Implied Grammar.}
 
-The built-in \verb!$&start()! function takes the identifier of a single
+The built-in \verb!$^start()! function takes the identifier of a single
 production as its argument, and treats the start state of this production as the
 start state of the resulting network.  The overall implied grammar is the set
 including the
 starting production, any productions referred to by the starting
 production, and, 
 recursively, any productions referred to by the referred-to productions.
-The call to \verb!$&start()! fails if any referred-to production in the
+The call to \verb!$^start()! fails if any referred-to production in the
 implied grammar is
 not yet defined.
 
-If the call to \verb!$&start()! succeeds, it returns a network value.  The
+If the call to \verb!$^start()! succeeds, it returns a network value.  The
 productions are not consumed during compilation, but remain available for
 potential reuse.  While productions can be defined at any time and in any
 place, it is often convenient to encapsulate an entire right-linear grammar
@@ -1193,22 +1197,22 @@ in a function, which can be called and then deleted when no longer
 needed.
 
 \begin{Verbatim}[fontsize=\small]
-$&esperanto_noun_function() {
+$^esperanto_noun_function() {
 	$>Root = (kat|hund|elefant|dom) ( $>Root | $>AugDim ) ;
 	$>AugDim = ( eg | et )? $>Noun ;
 	$>Noun = o $>Plur ;
 	$>Plur = j? $>Case ;
 	$>Case = n? ;
 
-	return $&start($>Root) ;
+	return $^start($>Root) ;
 }
 
-$esp_nouns = $&esperanto_noun_function() ;
-delete $&esperanto_noun_function ;
+$esp_nouns = $^esperanto_noun_function() ;
+delete $^esperanto_noun_function ;
 \end{Verbatim}
 
 Deletion of the function severs the reference link between the function
-identifier \verb!$&esperanto_noun_function! and the underlying object that
+identifier \verb!$^esperanto_noun_function! and the underlying object that
 represents the function, allowing the memory tied up by that object to be
 reclaimed.\footnote{The symbol tables and their objects are implemented in
 Java, and objects are automatically garbage collected when there are no
@@ -1220,9 +1224,9 @@ section~\ref{sec:codeblock} on page~\pageref{sec:codeblock}.
 
 \begin{quote}
 \textbf{Note to myself}:   Make it clear that the productions can be defined in any order, as long as they
-are all available when \verb!$&start()! is called. Similarly,
+are all available when \verb!$^start()! is called. Similarly,
 productions can refer to functions that have not yet been defined,
-as long as those functions are available when \verb!$&start()! is
+as long as those functions are available when \verb!$^start()! is
 called.  Contrast
 regular-expression assignments, which must be fully evaluatable at the
 moment they are parsed, with right-linear grammars, where
@@ -1289,7 +1293,7 @@ new frame, and any variables created in the block are also local.
 
 
 \begin{Verbatim}[fontsize=\small]
-$&func($a, $b) {
+$^func($a, $b) {
     // parameters $a and $b are local
     $foo = $a $b ;    // $foo is local
     return $foo ;
@@ -1310,7 +1314,7 @@ Note that the blocks of code in \texttt{if-elsif-else} statements and \texttt{wh
 loops are not evaluated inside a new frame/scope.
 
 \begin{Verbatim}[fontsize=\small]
-if (#&numStates($fst) < 30) {
+if (#^numStates($fst) < 30) {
     // this block is not executed in a new frame
     draw $fst ;
 } else {
@@ -1359,7 +1363,7 @@ called repeatedly to union a number of arguments into \verb!$result!.
 $result = ~.* ; // point A, $result set to the empty language
                 // the empty language could also be denoted 
                 //     as a-a, etc.
-&func($fst) {
+^func($fst) {
     external $result ;
     $result = $result | $fst ;  // point B: 
                                 // changes $result at point A
@@ -1885,7 +1889,7 @@ and inverting it before the composition.
 
 
 \begin{Verbatim}[fontsize=\small]
-$result = $&invert(s -> z / [aeiou] _ [aeiou]) _o_ $fst ;
+$result = $^invert(s -> z / [aeiou] _ [aeiou]) _o_ $fst ;
 \end{Verbatim}
 
 \noindent 
@@ -1901,7 +1905,7 @@ While \Kleene{} is designed primarily for creating and manipulating
 finite-state networks, it does support arithmetic expressions, variables
 that hold arithmetic values, functions that return arithmetic values,
 etc.  Variables with an arithmetic value are marked with a \# sigil,
-functions that return an arithmetic value with \#\&, etc.  Wherever a
+functions that return an arithmetic value with \#\^, etc.  Wherever a
 simple integer or float can appear in \Kleene{} syntax, including
 numbered iterations like \verb!a{2,4}! and weights like \verb!<0.1>!, an
 arbitrarily complex arithmetic expression can appear, e.g.\@ 
@@ -1968,8 +1972,8 @@ The primary arithmetic expressions are the following:
 \hline
 \verb!#n #count #foo! & names of variables denoting an arithmetic value\\
 \hline
-\verb!#&abs(#numexp)! \verb!#&arcCount($regexp)!
-\verb!#&stateCount($regexp)! \verb!#&myfunction(!\emph{args}\verb!)! & names of functions returning an arithmetic value\\
+\verb!#^abs(#numexp)! \verb!#^arcCount($regexp)!
+\verb!#^stateCount($regexp)! \verb!#^myfunction(!\emph{args}\verb!)! & names of functions returning an arithmetic value\\
 %\hline
 %\verb!#@arr[1]! & arithmetic array reference\\
 \hline
@@ -2022,19 +2026,19 @@ The following arithmetic-valued functions are supported.
 \noindent
 \begin{tabular}{|l|}
 \hline
-\verb!#&pathCount($fst)! \\
-\verb!#&stateCount($fst)! \\
-\verb!#&arcCount($fst)! \\
-\verb!#&arity($fst)! \\
+\verb!#^pathCount($fst)! \\
+\verb!#^stateCount($fst)! \\
+\verb!#^arcCount($fst)! \\
+\verb!#^arity($fst)! \\
 \hline
-\verb!#&abs(#num)! \\
-\verb!#&ceil(#num)! \\
-\verb!#&floor(#num)! \\
-\verb!#&round(#num)! \\
+\verb!#^abs(#num)! \\
+\verb!#^ceil(#num)! \\
+\verb!#^floor(#num)! \\
+\verb!#^round(#num)! \\
 \hline
-\verb!#&long(#num)! or \verb!#&int(#num)! \\
-\verb!#&double(#num)! or \verb!#&float(#num)! \\
-\verb!#&rint(#num)! \\
+\verb!#^long(#num)! or \verb!#^int(#num)! \\
+\verb!#^double(#num)! or \verb!#^float(#num)! \\
+\verb!#^rint(#num)! \\
 \hline
 \end{tabular}
 
@@ -2125,11 +2129,11 @@ following pre-defined functions.  Note that index counting starts at 0
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb!$&head($@list)! & Returns the zeroth net element of the argument list\\
+\verb!$^head($@list)! & Returns the zeroth net element of the argument list\\
 \hline
-\verb!$&getLast($@list)! & Returns the last net element of the argument list\\
+\verb!$^getLast($@list)! & Returns the last net element of the argument list\\
 \hline
-\verb!$&get($@list, #n)! & Returns the nth net element of the argument list\\
+\verb!$^get($@list, #n)! & Returns the nth net element of the argument list\\
 \hline
 \end{tabular}
 
@@ -2141,7 +2145,7 @@ e.g.
 
 \begin{Verbatim}[fontsize=\small]
 $@mylist = $@(a, b, c, d) ;
-$net = $&head($@mylist) ;
+$net = $^head($@mylist) ;
 \end{Verbatim}
 
 \noindent
@@ -2154,11 +2158,11 @@ Parallel functions are defined for number-lists:
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb!#&head(#@list)! & Returns the zeroth number element of the argument list\\
+\verb!#^head(#@list)! & Returns the zeroth number element of the argument list\\
 \hline
-\verb!#&getLast(#@list)! & Returns the last number element of the argument list\\
+\verb!#^getLast(#@list)! & Returns the last number element of the argument list\\
 \hline
-\verb!#&get(#@list, #n)! & Returns the nth number element of the argument list\\
+\verb!#^get(#@list, #n)! & Returns the nth number element of the argument list\\
 \hline
 \end{tabular}
 
@@ -2172,12 +2176,12 @@ elements of the argument list.  These operations are non-destructive.
 \noindent
 \begin{tabular}{|l|p{4.5cm}|}
 \hline
-\verb!$@&copy($@list)! & Returns a shallow copy of the argument net-list\\
+\verb!$@^copy($@list)! & Returns a shallow copy of the argument net-list\\
 \hline
-\verb!$@&tail($@list)! & Returns a new list containing all but the first element of the
+\verb!$@^tail($@list)! & Returns a new list containing all but the first element of the
 argument net-list\\
 \hline
-\verb!$@&getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
+\verb!$@^getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
 indicated elements of the argument net-list\\
 \hline
 \end{tabular}
@@ -2187,12 +2191,12 @@ indicated elements of the argument net-list\\
 \noindent
 \begin{tabular}{|l|p{4.5cm}|}
 \hline
-\verb!#@&copy(#@list)! & Returns a shallow copy of the argument number-list\\
+\verb!#@^copy(#@list)! & Returns a shallow copy of the argument number-list\\
 \hline
-\verb!#@&tail(#@list)! & Returns a new list containing all but the first element of the
+\verb!#@^tail(#@list)! & Returns a new list containing all but the first element of the
 argument number-list\\
 \hline
-\verb!#@&getSlice(#@list, #n, #r:#s, ...)! & Returns a new list containing the
+\verb!#@^getSlice(#@list, #n, #r:#s, ...)! & Returns a new list containing the
 indicated elements of the argument number-list\\
 \hline
 \end{tabular}
@@ -2203,7 +2207,7 @@ indicated elements of the argument number-list\\
 The statement
 
 \begin{Verbatim}[fontsize=\small]
-$@tailList = $@&tail($@(a, b, c)) ;
+$@tailList = $@^tail($@(a, b, c)) ;
 \end{Verbatim}
 
 \noindent
@@ -2212,7 +2216,7 @@ Haskell and Scala, the \texttt{head} and \texttt{tail} functions throw an
 exception if the argument is an empty list.  The call
 
 \begin{Verbatim}[fontsize=\small]
-$@newList = $@&getSlice($@list, 2, 4, 7:10) ;
+$@newList = $@^getSlice($@list, 2, 4, 7:10) ;
 \end{Verbatim}
 
 \noindent
@@ -2230,11 +2234,11 @@ Kleene, destructive function names are marked with a final \verb+!+.
 \noindent
 \begin{tabular}{|l|p{6cm}|}
 \hline
-\verb+$&pop!($@list)+ & Removes and returns the zeroth element of a net-list\\
+\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a net-list\\
 \hline
-\verb+$&removeLast!($@list)+ & Removes and returns the last element of a net-list\\
+\verb+$^removeLast!($@list)+ & Removes and returns the last element of a net-list\\
 \hline
-\verb+$&remove!($@list, #n)+ & Removes and returns the nth element of a net-list\\
+\verb+$^remove!($@list, #n)+ & Removes and returns the nth element of a net-list\\
 \hline
 \end{tabular}
 
@@ -2243,19 +2247,19 @@ Kleene, destructive function names are marked with a final \verb+!+.
 \noindent
 \begin{tabular}{|l|p{6cm}|}
 \hline
-\verb+#&pop!(#@list)+ & Removes and returns the zeroth element of a number-list\\
+\verb+#^pop!(#@list)+ & Removes and returns the zeroth element of a number-list\\
 \hline
-\verb+#&removeLast!(#@list)+ & Removes and returns the last element of a number-list\\
+\verb+#^removeLast!(#@list)+ & Removes and returns the last element of a number-list\\
 \hline
-\verb+#&remove!(#@list, #n)+ & Removes and returns the nth element of a number-list\\
+\verb+#^remove!(#@list, #n)+ & Removes and returns the nth element of a number-list\\
 \hline
 \end{tabular}
 
 \vspace{.5cm}
 
-The alias \verb+$&pop_back!($@list)+ is pre-defined for
-\verb+$&removeLast!($@list)+, and  \verb+#&pop_back!(#@list)+ is
-pre-defined as an alias for \verb+#&removeLast!(#@list)+.
+The alias \verb+$^pop_back!($@list)+ is pre-defined for
+\verb+$^removeLast!($@list)+, and  \verb+#^pop_back!(#@list)+ is
+pre-defined as an alias for \verb+#^removeLast!(#@list)+.
 
 The following functions add elements destructively to a list, changing
 the list, and returning the changed list.
@@ -2265,13 +2269,13 @@ the list, and returning the changed list.
 \noindent
 \begin{tabular}{|l|p{6.5cm}|}
 \hline
-\verb+$@&push!($fst, $@list)+ & Push \verb!$fst! on the front of the net-list, and return the
+\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the net-list, and return the
 modified list\\
 \hline
-\verb+$@&add!($@list, $fst)+ & Add \verb!$fst! on the end of the net-list, and return the modified
+\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the net-list, and return the modified
 list\\
 \hline
-\verb+$@&addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
+\verb+$@^addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
 the net-list, and return the
 modified list\\
 \hline
@@ -2282,13 +2286,13 @@ modified list\\
 \noindent
 \begin{tabular}{|l|p{6.5cm}|}
 \hline
-\verb+#@&push!(#num, #@list)+ & Push \verb!#num! on the front of the number-list, and return the
+\verb+#@^push!(#num, #@list)+ & Push \verb!#num! on the front of the number-list, and return the
 modified list\\
 \hline
-\verb+#@&add!(#@list, #num)+ & Add \verb!#num! on the end of the number-list, and return the modified
+\verb+#@^add!(#@list, #num)+ & Add \verb!#num! on the end of the number-list, and return the modified
 list\\
 \hline
-\verb+#@&addAt!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index of
+\verb+#@^addAt!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index of
 the number-list, and return the
 modified list\\
 \hline
@@ -2296,13 +2300,13 @@ modified list\\
 
 \vspace{.5cm}
 
-The alias \verb+$@&push_back!($@list, $fst)+ is pre-defined for the function
-\verb+$@&add!($@list, $fst)+, and \verb+#@&push_back!(#@list, #num)+ is pre-defined as an
-alias for \verb+#@&add!(#@list, #num)+.
+The alias \verb+$@^push_back!($@list, $fst)+ is pre-defined for the function
+\verb+$@^add!($@list, $fst)+, and \verb+#@^push_back!(#@list, #num)+ is pre-defined as an
+alias for \verb+#@^add!(#@list, #num)+.
 
-The \verb+$@&set!($@list, #n, $fst)+ function and the parallel function for
+The \verb+$@^set!($@list, #n, $fst)+ function and the parallel function for
 number-lists
-\verb+#@&set!(#@list, #n, #num)+ reset the list value at index
+\verb+#@^set!(#@list, #n, #num)+ reset the list value at index
 \verb!#n! to \verb!$fst! and \verb!$num!, respectively, and return the modified list.
 
 \vspace{.5cm}
@@ -2310,10 +2314,10 @@ number-lists
 \noindent
 \begin{tabular}{|l|p{5.5cm}|}
 \hline
-\verb+$@&set!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index, and return the
+\verb+$@^set!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index, and return the
 modified list\\
 \hline
-\verb+#@&set!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index, and return the
+\verb+#@^set!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index, and return the
 modified list\\
 \hline
 \end{tabular}
@@ -2322,103 +2326,64 @@ modified list\\
 
 \paragraph{Functions Joining the Elements of a List.}
 
-\begin{samepage}
-\begin{changebar}
-N.B.\@ the order of arguments to \verb!$&reduceLeft()! has been changed.
-
-The function \sout{\$\&reduceLeft(\$@list, \$\&bin)}
-\verb!$&reduceLeft($&bin, $@list)!  
-
-\end{changebar}
-\end{samepage}
-
-\noindent
-takes as arguments a binary function
-\verb!$&bin! that takes two network arguments and a list of networks
+The function 
+\verb!$^reduceLeft($^bin, $@list)! takes as arguments a binary function
+\verb!$^bin! that takes two network arguments and a list of networks
 \verb!$@list!; and it returns a network value.
-\sout{\$\&reduceLeft(\$@list, \$\&bin)} 
-\verb!$&reduceLeft($&bin, $@list)!  
+\verb!$^reduceLeft($^bin, $@list)!  
 applies the passed-in binary function to combine the members of
 the list from left to right and returns the result.  The behavior is best
 seen in the following example, where a list of networks is reduced first
 by concatenation and then by composition.
 
 \begin{samepage}
-\begin{changebar}
-
 \begin{Verbatim}[fontsize=\small]
-$&concat($x, $y)  { return $x $y; }
-$&compose($x, $y) { return $x _o_ $y ; }
+$^concat($x, $y)  { return $x $y; }
+$^compose($x, $y) { return $x _o_ $y ; }
 
 $@list = $@(a:b, b:c, c:d) ;
 
-$catnet = $&reduceLeft($&concat, $@list) ;
+$catnet = $^reduceLeft($^concat, $@list) ;
 // $catnet encodes the relation  a:b b:c c:d
 
-$compnet = $&reduceLeft($&compose, $@list) ;
+$compnet = $^reduceLeft($^compose, $@list) ;
 // $compnet encodes the relation a:d
 \end{Verbatim}
 
 \noindent
-\sout{\$\&joinLeft()}
-\verb!$&foldLeft()! is currently defined as an alias for \verb!$&reduceLeft()!.
-
-\end{changebar}
+\verb!$^foldLeft()! is currently defined as an alias for \verb!$^reduceLeft()!.
 \end{samepage}
 
-\begin{samepage}
-\begin{changebar}
-
-N.B. the order of the arguments to \verb!#&reduceLeft()! has been
-changed.
-
 Similarly, the function 
-\sout{\#\&reduceLeft(\#@list, \#\&bin)}
-\verb!#&reduceLeft(#&bin, #@list)! 
+\verb!#^reduceLeft(#^bin, #@list)! 
 takes as arguments 
-a binary function \verb!#&bin! and
+a binary function \verb!#^bin! and
 a list of numbers \verb!#@list!,
 and it returns a number value.  In
 the following example, a list of numbers is reduced first by addition and then by
 multiplication.
 
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
-
 \begin{Verbatim}[fontsize=\small]
-#&add(#x, #y)  { return #x + #y ; }
-#&mult(#x, #y) { return #x * #y ; }
+#^add(#x, #y)  { return #x + #y ; }
+#^mult(#x, #y) { return #x * #y ; }
 
 #@list = #@(1, 2, 3, 4) ;
 
-#sum = #&reduceLeft(#&add, #@list) ;
+#sum = #^reduceLeft(#^add, #@list) ;
 // #sum has the value 10
 
-#product = #&reduceLeft(#&mult, #@list) ;
+#product = #^reduceLeft(#^mult, #@list) ;
 // #product has the value 24
 \end{Verbatim}
 
 \noindent
-\sout{\#\&joinLeft()} 
-\verb!#&foldLeft()! 
-is currently defined as an alias for \verb!#&reduceLeft()!.
-
-\end{changebar}
-\end{samepage}
+\verb!#^foldLeft()! 
+is currently defined as an alias for \verb!#^reduceLeft()!.
 
 \paragraph{Functions Returning the Map of a List.}
 
-\begin{samepage}
-\begin{changebar}
-
-N.B. the order of the arguments to \verb!$@&map()! and \verb!#@&map()!
-has been changed.
-
-The \sout{\$@\&map(\$@list, \$\&mon)} \verb!$@&map($&mon, $@list)!
-applies the single-argument function \verb!$&mon! to each element of
+The \sout{\$@\^map(\$@list, \$\^mon)} \verb!$@^map($^mon, $@list)!
+applies the single-argument function \verb!$^mon! to each element of
 \verb!$@list! and returns a list of the returned values.  The arguments
 can be anonymous.
 
@@ -2426,60 +2391,49 @@ can be anonymous.
 $@inList = $@(a, b, c, d) ;
 
 // called with an anonymous function
-$@outList = $@&map($&($fst){ return $fst $fst ; }, $@inList) ;
+$@outList = $@^map($^($fst){ return $fst $fst ; }, $@inList) ;
 
 // $@outList will be $@(aa, bb, cc, dd)
 
 // called with an anonymous function and an anonymous list
-$@outList = $@&map($&($fst){ return $fst $fst ; }, 
+$@outList = $@^map($^($fst){ return $fst $fst ; }, 
                    $@(a, b, c, d)) ;
 \end{Verbatim}
 
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
-
-Similarly, the \sout{\#@\&map(\#@list, \#\&mon)} 
-\verb!#@&map(#&mon, #@list)!  applies the single-argument 
-function \verb!#&mon! to each
+Similarly, the \sout{\#@\^map(\#@list, \#\^mon)} 
+\verb!#@^map(#^mon, #@list)!  applies the single-argument 
+function \verb!#^mon! to each
 element of \verb!#@list! and returns a list of the returned values.  The
 arguments can be anonymous.
 
 \begin{Verbatim}[fontsize=\small]
 #@inList = #@(0, 1, 2, 3) ;
 
-#@outList = #@&map(#&(#n){ return #n + #n ; }, #@inList) ;
+#@outList = #@^map(#^(#n){ return #n + #n ; }, #@inList) ;
 
 // #@outList will be $@(0, 2, 4, 6)
 \end{Verbatim}
 
-\end{changebar}
-\end{samepage}
-
 \paragraph{Functions Returning the Sigma of a Network.}
 
-The \verb+$@&getSigma!($fst)+ function returns the sigma of the argument
+The \verb+$@^getSigma!($fst)+ function returns the sigma of the argument
 network as a list of networks, each one consisting of a start state and a final
 state, linked by one arc labeled with a symbol from the sigma.  Special symbols
 used only internally in Kleene are excluded from the sigma.
 
-The parallel \verb+#@&getSigma!($fst)+ function returns the sigma of the argument
+The parallel \verb+#@^getSigma!($fst)+ function returns the sigma of the argument
 network as a list of integers.
 
 \begin{Verbatim}[fontsize=\small]
 $net = abc ;
 
-$@list = $@&getSigma($fst) ;
-#@list = #@&getSigma($fst) ;
+$@list = $@^getSigma($fst) ;
+#@list = #@^getSigma($fst) ;
 \end{Verbatim}
-
 
 \paragraph{Functions Returning the Size of a List.}
 
-
-The \verb+#&size(+\textit{list}\verb!)! function takes a list argument,
+The \verb+#^size(+\textit{list}\verb!)! function takes a list argument,
 either a network-list or a number-list, and returns the
 size as an integer.\footnote{Kleene does not, in general, support function
 overloading, wherein multiple functions of the same name are distinguished
@@ -2489,12 +2443,12 @@ wired into the parser and specially interpreted to accept an argument of either 
 type.}
 
 \begin{Verbatim}[fontsize=\small]
-#n = #&size(#@(1, 2, 3, 4)) ;
+#n = #^size(#@(1, 2, 3, 4)) ;
 
-#m = #&size($@(a, b, c, d, e, f)) ;
+#m = #^size($@(a, b, c, d, e, f)) ;
 \end{Verbatim}
 
-The \verb!#&isEmpty(!\emph{list}\verb!)! function takes a list argument and
+The \verb!#^isEmpty(!\emph{list}\verb!)! function takes a list argument and
 returns 1 (true) if the list is empty and 0 (false) otherwise.
 
 \subsubsection{Iteration through Members of a List}
@@ -2524,7 +2478,7 @@ As a more concrete example, consider
 \begin{Verbatim}[fontsize=\small]
 $net = abc ;
 
-foreach (#cpv in #@&getSigma($fst)) info #cpv ;
+foreach (#cpv in #@^getSigma($fst)) info #cpv ;
 // output:
 // Long value: 98
 // Long value: 99
@@ -2554,15 +2508,15 @@ Users can define their own functions that take lists as arguments, and functions
 that return lists, e.g.\@
 
 \begin{Verbatim}[fontsize=\small]
-$@&reverse($@list) {
+$@^reverse($@list) {
     $@result = $@() ;  // an empty list
     foreach ($net in $@list) {
-        $@result = $@&push!($net, $@result) ;
+        $@result = $@^push!($net, $@result) ;
     }
     return $@result ;
 }
 
-$@reversedList = $@&reverse($@(a, b, c)) ;
+$@reversedList = $@^reverse($@(a, b, c)) ;
 \end{Verbatim}
 
 
@@ -2572,7 +2526,7 @@ $@reversedList = $@&reverse($@(a, b, c)) ;
 KRB:  This section is work-in-progress.
 
 Although the current implementation of lists provides access functions like
-\verb!$&get($@list, #n)!, to retrieve a value at a specified index, 
+\verb!$^get($@list, #n)!, to retrieve a value at a specified index, 
 some users might prefer to use postfixed indices in
 square brackets or parentheses, as in most implementations of arrays.
 
@@ -2622,53 +2576,27 @@ reviewed.  We need to think again about the sigil for void functions.
 
 \subsubsection{Void Functions with Names}
 
-Void functions return no value, and their names are currently 
-prefixed with the plain \verb!&!
+Void functions return no value, and their names are
+prefixed with the plain \verb!^!
 sigil.  Such functions can be used to abbreviate and generalize a
 sequence of Kleene commands.
 
 \begin{Verbatim}[fontsize=\small]
-&inputSigma($net) {
-	$input = $&inputProj($net) ;
+^inputSigma($net) {
+	$input = $^inputProj($net) ;
 	sigma $input ;
 	draw $input ;
 }
 
 // invocation of the defined void function
-&inputSigma(abc) ;
+^inputSigma(abc) ;
 \end{Verbatim}
 
 \subsubsection{Anonymous Void Functions}
 
-An anonymous void function currently looks like
-\verb!&lambda(!\ldots\emph{args}\ldots\verb!)!.  There was an attempt
-to allow the shorter version without \texttt{lambda}, i.e.\@
-\verb!&(!\ldots\emph{args}\ldots\verb!)!.  However, this inadvertently
-created a syntactic ambiguity in examples like
-
-\begin{Verbatim}[fontsize=\small]
-$net = $foo &(a) ;
-
-// or
-
-$net = $foo & (a) ;
-\end{Verbatim}
-
-\noindent
-where the \verb!&(!, without or without spaces, is incorrectly tokenized
-as the name of an anonymous void function.  The same problem occurred with
-anonymous void-void functions.  So for now, the \texttt{lambda} is once
-again required:  \verb!&lambda()! and \verb!&&lambda()!.
-
-In the case of anonymous net-valued and number-valued anonymous functions,
-the simplification of \verb!$&lambda()! to \verb!#&()!, and
-\verb!#&lambda()! to \verb!#&()!, causes no ambiguity.  Both forms are
-still supported.  The problem arose only with the simplification of
-\verb!&lambda()! to \verb!&()!, and \verb!&&lambda()! to \verb!&&()!.
-
-It may be possible to solve the problem with a new sigil to mark void
-functions, perhaps \verb!`&! and \verb!`&&! or \verb!%&! and \verb!%&&!.
-Suggestions would be welcome.
+An anonymous void function looks like
+\verb!^(!\ldots\emph{args}\ldots\verb!)!, with the \verb!^! sigil
+marking a function that has no return value. 
 
 \subsection{Other Statements}
 
@@ -2684,15 +2612,15 @@ following functions (though \Kleene{} already provides the convenient
 \verb!{!\emph{n}\verb!}! postfix operator):
 
 \begin{Verbatim}[fontsize=\small]
-$&iterate_by_recursion($net, #count) {
+$^iterate_by_recursion($net, #count) {
     if (#count > 0) {
-        return $net $&iterate_by_recursion($net, #count - 1) ;
+        return $net $^iterate_by_recursion($net, #count - 1) ;
     } else {
         return "" ;
     }
 }
 
-$&iterate_by_loop($net, #count) {
+$^iterate_by_loop($net, #count) {
     $result = "" ;
     while (#count > 0) {
         $result = $result $net ;
@@ -2770,9 +2698,6 @@ source "/Users/beesley/kleene/scripts/testscript.kl" ;
 source "myscript.kl", "UTF-8" ;
 \end{Verbatim}
 
-\begin{samepage}
-\begin{changebar}
-
 By default, Kleene will attempt to read the script file using the default
 encoding of your operating system, as perceived by Java. In Java,
 the default encoding of the operating system is returned by
@@ -2783,12 +2708,9 @@ menu that brings up a window that allows you to browse for the source file and
 to indicate the encoding.  The encoding will be pre-set to the default encoding
 of the operating system, but it can be changed if necessary.
 
-\end{changebar}
-\end{samepage}
-
 \paragraph{XML Input/Output.}
 
-A network can be written to file in Kleene's \sout{Unicode-friendly}
+A network can be written to file in Kleene's 
 \acro{xml} language using the \texttt{writeXML} command,
 which takes as arguments a regular expression representing the network to be
 written, and a second regular expression indicating the file-path:
@@ -2798,9 +2720,6 @@ writeXML $net, "/Users/beesley/kleene/xml/net.xml" ;
 writeXML (dog|cat|elephant)s? , 
          "/Users/beesley/kleene/xml/animals.xml" ;
 \end{Verbatim}
-
-\begin{samepage}
-\begin{changebar}
 
 By default, the file is written in Unicode \acro{utf-8}, which is the
 official default encoding for all \acro{xml} files.\footnote{The
@@ -2828,23 +2747,17 @@ right-clicking on a network icon and selecting the \verb!writeXML!
 item.  The file selection window allows you to select the encoding,
 which is pre-set to the recommended \acro{utf-8}.
 
-\end{changebar}
-\end{samepage}
-
-The built-in function \texttt{\$\&readXML} reads from a Kleene \acro{xml} file and returns an Fst.
+The built-in function \texttt{\$\^readXML} reads from a Kleene \acro{xml} file and returns an Fst.
 
 \begin{Verbatim}[fontsize=\small]
 // to read file net.xml in the current directory
-$newnet = $&readXML("net.xml") ;
+$newnet = $^readXML("net.xml") ;
 
 // a full pathname can be specified
-$newnet = $&readXML("/Users/beesley/kleene/xml/net.xml") ;
+$newnet = $^readXML("/Users/beesley/kleene/xml/net.xml") ;
 \end{Verbatim}
 
-\begin{samepage}
-\begin{changebar}
-
-Before release 0.9.0.25, the \verb!$&readXML()! function allowed a second
+Before release 0.9.0.25, the \verb!$^readXML()! function allowed a second
 argument to specify the encoding of the \acro{xml} file, but this second
 argument is neither needed nor appropriate. The encoding of an
 \acro{xml} file is always 1) specified by an overt \texttt{encoding} in
@@ -2854,29 +2767,17 @@ The reading of \acro{xml} files is now done using the \acro{rome} library's
 \texttt{XmlReader} class, which knows how to detect the encoding of an
 \acro{xml} file.
 
-\end{changebar}
-\end{samepage}
-
 \paragraph{\acro{dot} Output}
 
 Networks can be written to file in the GraphViz \verb!dot!
 format\footnote{\url{http://www.graphviz.org}} using the
 \texttt{writeDOT} command, which is similar to the \texttt{writeXML} command.
 
-\begin{samepage}
-\begin{changebar}
-
 \begin{Verbatim}[fontsize=\small]
 writeDOT $net, "/Users/beesley/kleene/xml/net.xml" ;
 writeDOT (dog|cat|elephant)s? , 
          "/Users/beesley/kleene/xml/animals.xml" ;
 \end{Verbatim}
-
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
 
 By default, the file will be written to file in the \acro{utf-8}
 encoding.  A different encoding can be specified in an optional third
@@ -2892,9 +2793,6 @@ The file selection window allows you to select the encoding, which is
 pre-set to the recommended \acro{utf-8}.  \acro{dot} output is used in the
 background when you invoke the \acro{draw} command, which can also be
 generated by right-clicking on the network's icon.
-
-\end{changebar}
-\end{samepage}
 
 \paragraph{Interactive Testing in the \acro{gui}.}
 
@@ -2924,15 +2822,9 @@ side of the composed network is extracted as the result.  If the
 result language is reasonably finite, the individual strings are
 displayed in the terminal window.
 
-\begin{samepage}
-\begin{changebar}
-
 When the network being tested contains \acro{other} (unknown) characters,
 the output may be unintuitive; see Appendix~\ref{app:test} for more
 details.
-
-\end{changebar}
-\end{samepage}
 
 \subsubsection{Memory Management}
 
@@ -3119,17 +3011,17 @@ larger, such as nouns or even noun phrases in a natural language, and
 multiple copies could easily cause the final network to become very
 large, or even too large to compute.
 
-Kleene currently supports a wired-in function \verb!$&sub($s)! that
+Kleene currently supports a wired-in function \verb!$^sub($s)! that
 programmers can use to denote a reference to a subnetwork \verb!$s!.\footnote{I'm
-not tied to \verb!$&sub($s)! and would be comfortable with alternatives such
-as \verb!$&ref($s)! or \verb!$&push($s)!, or even some special syntax like
+not tied to \verb!$^sub($s)! and would be comfortable with alternatives such
+as \verb!$^ref($s)! or \verb!$^push($s)!, or even some special syntax like
 \verb!>$s<! or \verb!>>$s!.} 
 
 To continue with our trivial example, 
 
 \begin{Verbatim}[fontsize=\small]
 $vowel = [aeiou] ;
-$rtn = k $&sub($vowel) t $&sub($vowel) b $&sub($vowel) ;
+$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
 \end{Verbatim}
 
 \noindent
@@ -3155,7 +3047,7 @@ To maximize compatibility with the off-the-shelf OpenFst
 representing a reference to a subnetwork must currently appear on the
 \emph{output} side of an arc.  In Kleene, multichar symbol names
 representing a call to a subnetwork \verb!$s! are spelled \verb!__$s!,
-with two initial underscores, and the syntax \verb!$&sub($s)!  currently
+with two initial underscores, and the syntax \verb!$^sub($s)!  currently
 yields the following network.
 
 % see images/README for converting .ps files to .pdf and cropping them
@@ -3169,7 +3061,7 @@ the input side.  Of course, in the real network, the labels are really
 just integers, 0 for epsilon, and some arbitrary value from the Private
 Use Area for the multichar symbol.
 
-Kleene programmers should use the wired-in \verb!$&sub()! function to
+Kleene programmers should use the wired-in \verb!$^sub()! function to
 denote references to subnetworks and should not try to specify special
 symbols like \verb!__$s! directly.  For example, the following statement
 is illegal and will cause an exception to be thrown.
@@ -3179,13 +3071,13 @@ $rtn = "":'__$foo' ;    // raises an exception
 \end{Verbatim}
 
 \noindent
-The use of \verb!$&sub()! at the programming level will also make it easy
+The use of \verb!$^sub()! at the programming level will also make it easy
 for Kleene to adapt to any changes to \acro{rtn} representations that
 might be made in the underlying OpenFst library.
 
 \subsubsection{Embedding Subnetworks in an OpenFst \acro{rtn}}
 
-The \verb!$&embedRtnSubnets($rtn)! function takes an OpenFst \acro{rtn}
+The \verb!$^embedRtnSubnets($rtn)! function takes an OpenFst \acro{rtn}
 argument, i.e.\@ a network that contains OpenFst-format references to
 subnetworks, and returns a network that consists of the original network
 unioned with a prefixed copy of each referred-to subnetwork.  For each
@@ -3196,7 +3088,7 @@ from the following code
 \begin{Verbatim}[fontsize=\small]
 $p = p ;
 $q = q ;
-$rtn = a $&sub($p) b $&sub($q) ;
+$rtn = a $^sub($p) b $^sub($q) ;
 \end{Verbatim}
 
 \noindent
@@ -3208,10 +3100,10 @@ the result \verb!$rtn! is this network containing two references to subnetworks
 
 \noindent
 but the three referred-to networks remain separate.  After the following
-call to \verb!$&embedRtnSubnets($rtn)!, 
+call to \verb!$^embedRtnSubnets($rtn)!, 
 
 \begin{Verbatim}[fontsize=\small]
-$embedded = $&embedRtnSubnets($rtn) ;
+$embedded = $^embedRtnSubnets($rtn) ;
 \end{Verbatim}
 
 
@@ -3236,10 +3128,10 @@ In some cases, it may also be useful to take an OpenFst \acro{rtn} and replace
 each reference to a subnetwork with an actual copy of that subnetwork,
 expanding the \acro{rtn} into a full normal network.  This is mathematically and
 computationally possible only if the \acro{rtn} is regular.  Using the same
-\verb!$rtn! example, a call to \verb!$&expandRtn()!
+\verb!$rtn! example, a call to \verb!$^expandRtn()!
 
 \begin{Verbatim}[fontsize=\small]
-$expanded = $&expandRtn($rtn) ;
+$expanded = $^expandRtn($rtn) ;
 \end{Verbatim}
 
 \noindent
@@ -3257,10 +3149,10 @@ original.
 If the \acro{rtn} contains cyclic references to subnetworks, it is
 context-free in power (i.e.\@ no longer regular in power), and its
 expansion would result in an infinite network.  The
-\verb!$&expandRtn($rtn)! function checks for cyclic references and throws
+\verb!$^expandRtn($rtn)! function checks for cyclic references and throws
 an exception if the \verb!$rtn! is not regular.\footnote{In the OpenFst
 library, the \verb!ReplaceFst()! operation provides a convenient method
-that checks for cyclic references, and \verb!$&expandRtn()! invokes this
+that checks for cyclic references, and \verb!$^expandRtn()! invokes this
 method.}
 
 \section{\acro{sap} \acro{rtn} Support}
@@ -3362,10 +3254,10 @@ multiple copies of such a subnetwork could easily
 cause the final network to become very large, or even too large to
 compute.
 
-Kleene currently supports a wired-in function \verb!$&sub($s)! that
+Kleene currently supports a wired-in function \verb!$^sub($s)! that
 programmers can use to denote a reference to a subnetwork.\footnote{I'm
-not tied to the spelling \verb!$&sub($s)! and would be comfortable with
-alternatives such as \verb!$&ref($s)! or \verb!$&push($s)!, or even some
+not tied to the spelling \verb!$^sub($s)! and would be comfortable with
+alternatives such as \verb!$^ref($s)! or \verb!$^push($s)!, or even some
 special syntax like \verb!>$s<! or \verb!>>$s!.}  To continue with our
 trivial example, 
 
@@ -3373,7 +3265,7 @@ trivial example,
 source "PatternDefs.kl" ;
 
 $vowel = [aeiou] ;
-$rtn = k $&sub($vowel) t $&sub($vowel) b $&sub($vowel) ;
+$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
 \end{Verbatim}
 
 \noindent
@@ -3386,7 +3278,7 @@ As shown in this example, the \acro{sap} pattern writer should source the
 script \verb!PatternDefs.kl!, one way or another, before creating any
 networks intended for use with the \acro{sap} \acro{rtn} runtime
 code.\footnote{If \verb!PatternDefs.kl! is not sourced, the calls to
-\verb!$&sub()! will create references to subnetworks that are not
+\verb!$^sub()! will create references to subnetworks that are not
 compatible with the \acro{sap} runtime code but, rather, are compatible
 with the native support for \acro{rtn}s provided by OpenFst (see
 \ref{sec:openfstrtn}).}
@@ -3410,7 +3302,7 @@ internally, is just an integer.  The identity network label
 \verb!'$s':'$s'! tells the \acro{sap} runtime code to perform a simple
 ``push'' to subnetwork \verb!$s!, to match \verb!$s! against the input,
 and to produce the output of \verb!$s!, which may be an acceptor or a
-transducer.  The Kleene syntax \verb!$&sub($s)!, \verb!'$sub'!, or
+transducer.  The Kleene syntax \verb!$^sub($s)!, \verb!'$sub'!, or
 \verb!'$sub':'$sub'! results in an arc label \verb!'$s':'$s'!.
 
 The \acro{sap} \acro{rtn} runtime code can also match a subnetwork
@@ -3429,7 +3321,7 @@ performed inside the \acro{sap} \acro{rtn} runtime code.
 Using real code examples, under \acro{sap} \acro{rtn} conventions, the syntax
 
 \begin{Verbatim}[fontsize=\small]
-$rtn = $&sub($s) ;
+$rtn = $^sub($s) ;
 \end{Verbatim}
 
 \noindent
@@ -3445,11 +3337,11 @@ using the normal Kleene syntax for multichar symbols.
 
 
 To specify an input/upper-side reference to \verb!$s!, with mapping to
-epsilon, the syntax is \verb!$&sub($s):""!, \verb!$&sub($s):$eps!,
+epsilon, the syntax is \verb!$^sub($s):""!, \verb!$^sub($s):$eps!,
 \verb!'$sub':""!, \verb!'$sub':$eps!, etc.
 
 \begin{Verbatim}[fontsize=\small]
-$rtn = $&sub($s):$eps ;
+$rtn = $^sub($s):$eps ;
 \end{Verbatim}
 
 \acro{sap} references to subnetwork can be either simple identity
@@ -3465,7 +3357,7 @@ $badrtn2 = x:'$sub' ;  // illegal
 
 \subsubsection{Embedding Subnetworks in an \acro{sap} \acro{rtn}}
 
-The \verb!$&embedRtnSubnets($rtn)! function takes an \acro{sap}
+The \verb!$^embedRtnSubnets($rtn)! function takes an \acro{sap}
 \acro{rtn} argument, i.e.\@ a network that contains \acro{sap}-format
 references to subnetworks, and returns a network that consists of the
 original network unioned with a prefixed copy of each referred-to
@@ -3476,7 +3368,7 @@ of the special symbol \verb!__SUBNETWORKS! followed by the special symbol
 \begin{Verbatim}[fontsize=\small]
 $p = p ;
 $q = q ;
-$rtn = a $&sub($p) b $&sub($q) ;
+$rtn = a $^sub($p) b $^sub($q) ;
 \end{Verbatim}
 
 \noindent
@@ -3488,10 +3380,10 @@ the result \verb!$rtn! is this network containing two references to subnetworks
 
 \noindent
 but the three referred-to networks remain separate.  After the following
-call to \verb!$&embedRtnSubnets($rtn)!, 
+call to \verb!$^embedRtnSubnets($rtn)!, 
 
 \begin{Verbatim}[fontsize=\small]
-$embedded = $&embedRtnSubnets($rtn) ;
+$embedded = $^embedRtnSubnets($rtn) ;
 \end{Verbatim}
 
 
@@ -3516,7 +3408,7 @@ When the references are mapped to epsilon,
 \begin{Verbatim}[fontsize=\small]
 $p = p ;
 $q = q ;
-$rtn = a $&sub($p):$eps b $&sub($q):$eps ;
+$rtn = a $^sub($p):$eps b $^sub($q):$eps ;
 \end{Verbatim}
 
 \noindent
@@ -3530,7 +3422,7 @@ However, when the referred-to networks are embedded, the embedded networks and t
 prefixes are the same as before.
 
 \begin{Verbatim}[fontsize=\small]
-$embedded = $&embedRtnSubnets($rtn) ;
+$embedded = $^embedRtnSubnets($rtn) ;
 \end{Verbatim}
 
 
@@ -3540,7 +3432,7 @@ $embedded = $&embedRtnSubnets($rtn) ;
 
 An embedded network is effectively a ``final'' network, and
 programmers should avoid subjecting it to some operations like
-\verb!$&reverse()!, which will create an unusable result.
+\verb!$^reverse()!, which will create an unusable result.
 
 \subsubsection{Expanding an \acro{sap} \acro{rtn} into a Full Normal Network}
 
@@ -3638,7 +3530,7 @@ subtraction & - & Illegal \\
 \hline
 intersection & \verb!&! & Illegal \\
 \hline
-shortestPath & \verb!$&shortestPath(!\ldots\verb!)! & Illegal \\
+shortestPath & \verb!$^shortestPath(!\ldots\verb!)! & Illegal \\
 \hline
 \end{tabular}
 
@@ -3649,23 +3541,17 @@ When Kleene detects that an illegal operation is being attempted on one or more
 \acro{rtn} arguments, it throws a runtime exception.
 
 
-The \verb!$&shortestPath($fst, #nshortest=1)! function returns the
+The \verb!$^shortestPath($fst, #nshortest=1)! function returns the
 network containing the nshortest ``best'' paths from the input
 \verb!$fst!.\footnote{The terminology and behavior of
-\verb!$&shortestPath($fst, #nshortest=1)! is taken from the
+\verb!$^shortestPath($fst, #nshortest=1)! is taken from the
 \verb!ShortestPath()! function of the underlying OpenFst library.}  
-
-\begin{samepage}
-\begin{changebar}
 
 Under the Tropical Semiring, wherein weights are costs, the best paths
 have the lowest costs.  By default, the second argument has the value of
 1.  If the input network contains m lowest-cost paths of the same weight,
 and \texttt{nshortest} is less than m, only \texttt{nshortest} paths,
 chosen at random, will be returned.  
-
-\end{changebar}
-\end{samepage}
 
 \paragraph{Cautions on Operations.}
 
@@ -3681,24 +3567,24 @@ they should be used with caution.
 \textbf{Operation} & \textbf{Caution} \\
 \hline
 \hline
-\verb!$&determinize()! & useful but not strictly correct at the symbol level \\
+\verb!$^determinize()! & useful but not strictly correct at the symbol level \\
 \hline
-\verb!$&minimize()! & useful but not strictly correct at the symbol level \\
+\verb!$^minimize()! & useful but not strictly correct at the symbol level \\
 \hline
-\verb!$&rmEpsilon()! & useful but not strictly correct at the symbol level \\
+\verb!$^rmEpsilon()! & useful but not strictly correct at the symbol level \\
 \hline
 \hline
-\verb!$&rmWeight()! & legal, but the user should also process subnetworks \\
+\verb!$^rmWeight()! & legal, but the user should also process subnetworks \\
 \hline
-\verb!$&reverse()! & legal, but the user should also process subnetworks \\
+\verb!$^reverse()! & legal, but the user should also process subnetworks \\
 \hline
-\verb!$&substSymbol()! & legal, but the user should also process subnetworks \\
+\verb!$^substSymbol()! & legal, but the user should also process subnetworks \\
 \hline
-\verb!$&invert()! & legal, but the user should also process subnetworks \\
+\verb!$^invert()! & legal, but the user should also process subnetworks \\
 \hline
-\verb!$&inputside()! & legal, but the user should also process subnetworks \\
+\verb!$^inputside()! & legal, but the user should also process subnetworks \\
 \hline
-\verb!$&outputside()! & legal, but the user should also process subnetworks \\
+\verb!$^outputside()! & legal, but the user should also process subnetworks \\
 \hline
 \end{tabular}
 
@@ -3711,11 +3597,11 @@ in appropriate ways.  For example, for an \acro{rtn} defined as
 
 \begin{Verbatim}[fontsize=\small]
 $rtn = a <0.1> b <0.2> '$sub' c <0.3> ;
-$urtn = $&rmWeight($rtn) ;
+$urtn = $^rmWeight($rtn) ;
 \end{Verbatim}
 
 \noindent
-the call to \verb!$&rmWeight()! is legal and potentially useful, but the
+the call to \verb!$^rmWeight()! is legal and potentially useful, but the
 referred-to subnetwork \verb!$sub! may be referred
 to by multiple \acro{rtn}s, or may not even be defined yet, so it cannot be
 un-weighted automatically along with the main \verb!$rtn!.  For more
@@ -3793,9 +3679,6 @@ $ javac FindDefaultEncoding.java
 $ java FindDefaultEncoding
 \end{Verbatim}
 
-\begin{samepage}
-\begin{changebar}
-
 On \acro{os x} even if the locale has been set to some specified
 encoding, such as \acro{utf-8}, the call to
 \verb!System.getProperty("file.encoding")! will still, unfortunately,
@@ -3812,9 +3695,6 @@ encoding.
 $ javac FindDefaultEncoding.java
 $ java -Dfile.encoding=UTF-8 FindDefaultEncoding
 \end{Verbatim}
-
-\end{changebar}
-\end{samepage}
 
 \subsubsection{Running Scripts in Any Standard Encoding}
 
@@ -4492,21 +4372,21 @@ algorithm, which is called routinely on newly created networks.
 Also defined in basic.kl are the following convenience functions:
 
 \begin{Verbatim}[fontsize=\small]
-&setOptimize(#bool)
+^setOptimize(#bool)
 	which sets #KLEENEdeterminize, #KLEENEminimize and
 	#KLEENErmepsilon to the passed in #bool value, 
 	
 e.g.
-&setOptimize(#false) ;
+^setOptimize(#false) ;
 \end{Verbatim}
 
 \noindent
 also
 
 \begin{Verbatim}[fontsize=\small]
-&setDeterminize(#bool) ;
-&setMinimize(#bool) ;
-&setRmepsilon(#bool) ;
+^setDeterminize(#bool) ;
+^setMinimize(#bool) ;
+^setRmepsilon(#bool) ;
 \end{Verbatim}
 
 The global variables \verb!#KLEENEdeterminize!, \verb!#KLEENEminimize!
@@ -4524,47 +4404,35 @@ functions are for use when the default optimization has been turned off.
 The non-destructive functions are
 
 \begin{Verbatim}[fontsize=\small]
-$&optimize(regexp)
-$&rmEpsilon(regexp)
-$&determinize(regexp)
-$&minimize(regexp)
+$^optimize(regexp)
+$^rmEpsilon(regexp)
+$^determinize(regexp)
+$^minimize(regexp)
 \end{Verbatim}
-
-\begin{samepage}
-\begin{changebar}
 
 \begin{Verbatim}[fontsize=\small]
-$&synchronize(regexp)
+$^synchronize(regexp)
 \end{Verbatim}
-
-\end{changebar}
-\end{samepage}
 
 \noindent
 and the destructive versions are
 
 \begin{Verbatim}[fontsize=\small]
-$&optimize!(regexp)
-$&rmEpsilon!(regexp)
-$&determinize!(regexp)
-$&minimize!(regexp)
+$^optimize!(regexp)
+$^rmEpsilon!(regexp)
+$^determinize!(regexp)
+$^minimize!(regexp)
 \end{Verbatim}
-
-\begin{samepage}
-\begin{changebar}
 
 \begin{Verbatim}[fontsize=\small]
-$&synchronize!(regexp)
+$^synchronize!(regexp)
 \end{Verbatim}
 
-\end{changebar}
-\end{samepage}
-
 \noindent
-The \verb!$&optimize()! and \verb/$&optimize!()/ functions cause---where
+The \verb!$^optimize()! and \verb/$^optimize!()/ functions cause---where
 mathematically safe---determinization, minimization and epsilon-removal to
-be invoked.  More specific functions such as \verb!$&determinize()! and
-\verb/$&determinize!()/ are also performed only when the operation is
+be invoked.  More specific functions such as \verb!$^determinize()! and
+\verb/$^determinize!()/ are also performed only when the operation is
 mathematically safe.
 
 Kleene also supplies the following statements, which take one or more
@@ -4578,16 +4446,13 @@ minimize $a, $b, ... ;
 rmEpsilon $a, $b, ... ;
 \end{alltt}
 
-\begin{samepage}
-\begin{changebar}
-
 \begin{alltt}
 synchronize $a, $b, ... ;
 \end{alltt}
 
-Just as the \texttt{rmEpsilon} command and the \verb!$&rmEpsilon()!
+Just as the \texttt{rmEpsilon} command and the \verb!$^rmEpsilon()!
 function remove two-sided \verb!$eps:$eps! arcs, the \texttt{synchronize}
-command and the \verb!$&synchronize()! function return networks with a
+command and the \verb!$^synchronize()! function return networks with a
 minimal number of one-sided epsilon arcs.  For example, if the input
 network contains a four-arc path with the four labels \verb!a:$eps!,
 \verb!$eps:b!, \verb!c:$eps! and \verb!$eps:d!, in that sequence, the
@@ -4600,9 +4465,6 @@ networks can be synchronized only if the cycles (loops) themselves have
 equal input and output lengths, i.e.\@ only if the cycles do not contain
 one-sided epsilons.  KRB:  I'm not sure yet how to test a cyclic network to
 make sure that the loops are consistent with this restriction.
-
-\end{changebar}
-\end{samepage}
 
 \newpage
 
@@ -4761,9 +4623,6 @@ in text, and so they do not cause the same problem.\footnote{The
 
 \label{app:test}
 
-\begin{samepage}
-\begin{changebar}
-
 In the Kleene \acro{gui}, using the \texttt{test} window, you can type in
 individual strings for generation or analysis, and see the output string
 or strings displayed in the terminal window.  When testing networks
@@ -4774,12 +4633,6 @@ The first step is to understand that the \texttt{test} function implements
 the formal algorithm for applying a network to an input string.  For
 generation using \verb!$testFst!
 
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
-
 \begin{enumerate}
 \item
 The input string is built into a one-path network; think of it as \verb!$input!.
@@ -4788,20 +4641,15 @@ The input network is composed ``on top of'' the \verb!$testFst!, i.e.\@
 \verb!($input _o_ $testFst!)
 \item
 Then the output side (also known as the lower side) of the composition is extracted, i.e.\@
-\verb!$&lowerside($input _o_ $testFst)!.  The result is an acceptor. 
+\verb!$^lowerside($input _o_ $testFst)!.  The result is an acceptor. 
 \item
 Then, if the result acceptor is not empty, and the number of paths is finite, the strings are listed in the
 terminal window.
 \end{enumerate}
 
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
 \noindent
 Similarly for analysis, the result acceptor is computed as 
-\verb!$&upperside($testFst _o_ $input)!.
+\verb!$^upperside($testFst _o_ $input)!.
 
 The second important point is that if the network being tested contains
 \acro{other\_nonid}, then any output strings containing unknown characters
@@ -4813,17 +4661,11 @@ automatically converted to \acro{other\_id}.
 \begin{Verbatim}[fontsize=\small]
 $testFst = .:. ;
 draw $testFst ;
-$generationresult = $&lowerside(z _o_ $testFst) ;
+$generationresult = $^lowerside(z _o_ $testFst) ;
 draw $result ;
 
 test $testFst ;	// and enter z on top for generation
 \end{Verbatim}
-
-\end{changebar}
-\end{samepage}
-
-\begin{samepage}
-\begin{changebar}
 
 \noindent
 In this example, the \verb!$testFst! network will contain both
@@ -4847,60 +4689,55 @@ application, and the results will be different.  In the future, the
 Kleene \texttt{test} facility may offer a choice between the current
 formal method and alternative methods used in runtime code.
 
-\end{changebar}
-\end{samepage}
-
 \newpage
 
 \section{Built-in Net-valued Functions}
 
 \begin{tabular}{|l|}
 \hline
-\verb!$&copy($fst)! \\
+\verb!$^copy($fst)! \\
 \hline
-\verb!$&reverse($fst)! \\
-\verb!$&invert($fst)!  \\
-\verb+$&invert!($fst)+  \\
-\verb!$&inputside($fst)!  or \verb!$&inputProject($fst)!  or \verb!$&upperside($fst)! \\
-\verb+$&inputside!($fst)+  or \verb+$&inputProject!($fst)+  or \verb+$&upperside!($fst)+ \\
-\verb!$&outputside($fst)! or \verb!$&outputProject($fst)! or \verb!$&lowerside($fst)! \\
-\verb+$&outputside!($fst)+ or \verb+$&outputProject!($fst)+ or \verb+$&lowerside!($fst)+ \\
-\sout{\$\&shortestPath(\$fst)} \\
-\verb!$&shortestPath($fst, #nshortest=1)!\\
+\verb!$^reverse($fst)! \\
+\verb!$^invert($fst)!  \\
+\verb+$^invert!($fst)+  \\
+\verb!$^inputside($fst)!  or \verb!$^inputProject($fst)!  or \verb!$^upperside($fst)! \\
+\verb+$^inputside!($fst)+  or \verb+$^inputProject!($fst)+  or \verb+$^upperside!($fst)+ \\
+\verb!$^outputside($fst)! or \verb!$^outputProject($fst)! or \verb!$^lowerside($fst)! \\
+\verb+$^outputside!($fst)+ or \verb+$^outputProject!($fst)+ or \verb+$^lowerside!($fst)+ \\
+\verb!$^shortestPath($fst, #nshortest=1)!\\
 \hline
-\verb!$&toString(#num)! \\
-\verb!$&implode($fst)! \\
-\verb!$&explode($fst)! \\
+\verb!$^toString(#num)! \\
+\verb!$^implode($fst)! \\
+\verb!$^explode($fst)! \\
 \hline
-\sout{\$\&readXML(\$filepath, \$encoding="UTF-8")} \\
-\verb!$&readXML($filepath)! \\
+\verb!$^readXML($filepath)! \\
 \hline
-\verb!$&rmWeight($fst)!\\
+\verb!$^rmWeight($fst)!\\
 \hline
-\verb!$&ignore($base, $fluff)! \\
-\verb!$&contains($fst)! \\
+\verb!$^ignore($base, $fluff)! \\
+\verb!$^contains($fst)! \\
 \hline
-\verb!$&substSymbol($fst, $old, $new)!\\
-\verb/$&substSymbol!($fst, $old, $new)/\\
+\verb!$^substSymbol($fst, $old, $new)!\\
+\verb/$^substSymbol!($fst, $old, $new)/\\
 \hline
-\verb!$&priority_union_input($net1, $net2)! \\
-\verb!$&priority_union_output($net1, $net2)! \\
-\verb!$&lenient_composition_input($base, $filter)! \\
-\verb!$&lenient_composition_output($filter, $base)! \\
+\verb!$^priority_union_input($net1, $net2)! \\
+\verb!$^priority_union_output($net1, $net2)! \\
+\verb!$^lenient_composition_input($base, $filter)! \\
+\verb!$^lenient_composition_output($filter, $base)! \\
 \hline
-\verb!$&optimize($fst)! \\
-\verb/$&optimize!($fst)/ \\
-\verb!$&determinize($fst)! \\
-\verb/$&determinize!($fst)/ \\
-\verb!$&minimize($fst)! \\
-\verb/$&minimize!($fst)/ \\
-\verb!$&rmEpsilon($fst)! \\
-\verb/$&rmEpsilon!($fst)/ \\
-\verb!$&synchronize($fst)! \\
-\verb/$&synchronize!($fst)/ \\
+\verb!$^optimize($fst)! \\
+\verb/$^optimize!($fst)/ \\
+\verb!$^determinize($fst)! \\
+\verb/$^determinize!($fst)/ \\
+\verb!$^minimize($fst)! \\
+\verb/$^minimize!($fst)/ \\
+\verb!$^rmEpsilon($fst)! \\
+\verb/$^rmEpsilon!($fst)/ \\
+\verb!$^synchronize($fst)! \\
+\verb/$^synchronize!($fst)/ \\
 \hline
-\verb/$&closeSigma($fst, $base="")/\\
-\verb/$&closeSigma!($fst, $base="")/\\
+\verb/$^closeSigma($fst, $base="")/\\
+\verb/$^closeSigma!($fst, $base="")/\\
 \hline
 \end{tabular}
 
@@ -4912,32 +4749,30 @@ formal method and alternative methods used in runtime code.
 
 \begin{tabular}{|l|}
 \hline
-\verb!$@&copy($@list)! \\
+\verb!$@^copy($@list)! \\
 \hline
-\verb!$&head($@list)! \\
-\verb!$&getLast($@list)! \\
-\verb!$&get($@list, #n)! \\
-\verb!$@&getSlice($@list, #n, #r:#s, ...)! \\
-\verb!$@&tail($@list)! \\
+\verb!$^head($@list)! \\
+\verb!$^getLast($@list)! \\
+\verb!$^get($@list, #n)! \\
+\verb!$@^getSlice($@list, #n, #r:#s, ...)! \\
+\verb!$@^tail($@list)! \\
 \hline
-\verb+$&pop!($@list)+ \\
-\verb+$&removeLast!($@list)+ \\
-\verb+$&remove!($@list, #n)+ \\
+\verb+$^pop!($@list)+ \\
+\verb+$^removeLast!($@list)+ \\
+\verb+$^remove!($@list, #n)+ \\
 \hline
-\verb+$@&push!($fst, $@list)+ \\
-\verb+$@&add!($@list, $fst)+ \\
-\verb+$@&addAt!($@list, #n, $fst)+ \\
+\verb+$@^push!($fst, $@list)+ \\
+\verb+$@^add!($@list, $fst)+ \\
+\verb+$@^addAt!($@list, #n, $fst)+ \\
 \hline
-\verb!$@&set($@list, #n, $fst)! \\
+\verb!$@^set($@list, #n, $fst)! \\
 \hline
-\verb!#&size($@list)! \\
-\verb!$@&getSigma($fst)! \\
+\verb!#^size($@list)! \\
+\verb!$@^getSigma($fst)! \\
 \hline
-\sout{\$\&reduceLeft(\$@list, \$\&bin)} \\
-\verb!$&reduceLeft($&bin, $@list)! \\
+\verb!$^reduceLeft($^bin, $@list)! \\
 \hline
-\sout{\$\@\&map(\$@list, \$\&mon)} \\
-\verb!$@&map($&mon, $@list)! \\
+\verb!$@^map($^mon, $@list)! \\
 \hline
 \end{tabular}
 
@@ -4945,32 +4780,30 @@ formal method and alternative methods used in runtime code.
 
 \begin{tabular}{|l|}
 \hline
-\verb!#@&copy(#@list)! \\
+\verb!#@^copy(#@list)! \\
 \hline
-\verb!#&head(#@list)! \\
-\verb!#&getLast(#@list)! \\
-\verb!#&get(#@list, #n)! \\
-\verb!#@&getSlice(#@list, #n, #r:#s, ...)! \\
-\verb!#@&tail(#@list)! \\
+\verb!#^head(#@list)! \\
+\verb!#^getLast(#@list)! \\
+\verb!#^get(#@list, #n)! \\
+\verb!#@^getSlice(#@list, #n, #r:#s, ...)! \\
+\verb!#@^tail(#@list)! \\
 \hline
-\verb+#&pop!(#@list)+ \\
-\verb+#&removeLast!(#@list)+ \\
-\verb+#&remove!(#@list, #n)+ \\
+\verb+#^pop!(#@list)+ \\
+\verb+#^removeLast!(#@list)+ \\
+\verb+#^remove!(#@list, #n)+ \\
 \hline
-\verb+#@&push!(#num, #@list)+ \\
-\verb+#@&add!(#@list, #num)+ \\
-\verb+#@&addAt!(#@list, #n, #num)+ \\
+\verb+#@^push!(#num, #@list)+ \\
+\verb+#@^add!(#@list, #num)+ \\
+\verb+#@^addAt!(#@list, #n, #num)+ \\
 \hline
-\verb!#@&set(#@list, #n, #num)! \\
+\verb!#@^set(#@list, #n, #num)! \\
 \hline
-\verb!#&size(#@list)! \\
-\verb!#@&getSigma($fst)! \\
+\verb!#^size(#@list)! \\
+\verb!#@^getSigma($fst)! \\
 \hline
-\sout{\#\&reduceLeft(\#@list, \#\&bin)} \\
-\verb!#&reduceLeft(#&bin, #@list)! \\
+\verb!#^reduceLeft(#^bin, #@list)! \\
 \hline
-\sout{\#@\&map(\#@list, \#\&mon)} \\
-\verb!#@&map(#&mon, #@list)! \\
+\verb!#@^map(#^mon, #@list)! \\
 \hline
 
 \end{tabular}
@@ -4987,7 +4820,7 @@ variants.  The \verb!$proj! argument must have the value \texttt{input}
 
 \begin{Verbatim}[fontsize=\small]
 $foo = (abc):(def) ;
-$bar = $&uc($foo, output) ; // or $&uc($foo, "output")
+$bar = $^uc($foo, output) ; // or $^uc($foo, "output")
 \end{Verbatim}
 
 \noindent
@@ -4999,30 +4832,30 @@ sets \verb!$bar! to a version of \verb!$foo! that has ``DEF'' rather than
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb/$&uc($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
-\verb/$&uc!($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
-\verb/$&lc($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
-\verb/$&lc!($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
+\verb/$^uc($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
+\verb/$^uc!($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
+\verb/$^lc($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
+\verb/$^lc!($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
 \hline
-\verb/$&init_uc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
-\verb/$&init_uc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
-\verb/$&init_lc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
-\verb/$&init_lc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
+\verb/$^init_uc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
+\verb/$^init_uc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
+\verb/$^init_lc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
+\verb/$^init_lc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
 \hline
-\verb/$&opt_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
-\verb/$&opt_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
-\verb/$&opt_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
-\verb/$&opt_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
+\verb/$^opt_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
+\verb/$^opt_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
+\verb/$^opt_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
+\verb/$^opt_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
 \hline
-\verb/$&opt_init_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
-\verb/$&opt_init_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
-\verb/$&opt_init_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
-\verb/$&opt_init_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
+\verb/$^opt_init_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
+\verb/$^opt_init_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
+\verb/$^opt_init_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
+\verb/$^opt_init_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
 \hline
-\verb/$&opt_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
-\verb/$&opt_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
-\verb/$&opt_init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
-\verb/$&opt_init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^opt_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^opt_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^opt_init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^opt_init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
 \hline
 \end{tabular}
 
@@ -5037,10 +4870,10 @@ abbreviated names are also provided for convenience.
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb/$&ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
-\verb/$&ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
-\verb/$&init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
-\verb/$&init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
 \hline
 \end{tabular}
 
@@ -5077,8 +4910,8 @@ the size of the network would be infinite.}
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb/$&opt_di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
-\verb/$&opt_di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^opt_di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^opt_di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
 \hline
 \end{tabular}
 
@@ -5092,8 +4925,8 @@ For convenience, the following shorter aliases are pre-defined.
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb/$&di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
-\verb/$&di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
 \hline
 \end{tabular}
 
@@ -5124,19 +4957,19 @@ Diacritical Marks.}
 
 \begin{tabular}{|l|}
 \hline
-\verb!#&pathCount($fst)! \\
-\verb!#&stateCount($fst)! \\
-\verb!#&arcCount($fst)! \\
-\verb!#&arity($fst)! \\
+\verb!#^pathCount($fst)! \\
+\verb!#^stateCount($fst)! \\
+\verb!#^arcCount($fst)! \\
+\verb!#^arity($fst)! \\
 \hline
-\verb!#&abs(#num)! \\
-\verb!#&ceil(#num)! \\
-\verb!#&floor(#num)! \\
-\verb!#&round(#num)! \\
+\verb!#^abs(#num)! \\
+\verb!#^ceil(#num)! \\
+\verb!#^floor(#num)! \\
+\verb!#^round(#num)! \\
 \hline
-\verb!#&long(#num)! or \verb!#&int(#num)! \\
-\verb!#&double(#num)! or \verb!#&float(#num)! \\
-\verb!#&rint(#num)! \\
+\verb!#^long(#num)! or \verb!#^int(#num)! \\
+\verb!#^double(#num)! or \verb!#^float(#num)! \\
+\verb!#^rint(#num)! \\
 \hline
 \end{tabular}
 

@@ -1,6 +1,13 @@
 
 		Kleene Version Notes
 
+2012-07-21
+	On branch 'circumfix' changed function sigil from & to ^.
+	Old "lambda" functions are now "anon(ymous)" functions.
+	This breaks backward compatibility from 0.9.1.1.
+	Changed version numbers in the code preparatory to creating
+	0.9.2.0
+
 2012-07-20
 
 0.9.1.1  release number, pushed to github
