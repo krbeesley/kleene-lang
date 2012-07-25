@@ -1,6 +1,11 @@
 
 		Kleene Version Notes
 
+2012-07-25
+	Release v0.9.2.1
+	with some fixes to function calls from the GUI
+	version for Mans Hulden
+
 2012-07-21
 	On branch 'circumfix' changed function sigil from & to ^.
 	Old "lambda" functions are now "anon(ymous)" functions.

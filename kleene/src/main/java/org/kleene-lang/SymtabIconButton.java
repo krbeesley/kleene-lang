@@ -77,11 +77,11 @@ class SymtabIconButton extends JButton {
 		// popup = new JPopupMenu() ;
 
 		// There are different popup menus for different objects
-	    if (name.startsWith("$&&"))
+	    if (name.startsWith("$^^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
-		else if (name.startsWith("$&"))
+		else if (name.startsWith("$^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
-		else if (name.startsWith("$@&"))
+		else if (name.startsWith("$@^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
 		else if (name.startsWith("$@"))
 			popup = getSymtabArrayButtonPopupMenu() ;
@@ -90,14 +90,14 @@ class SymtabIconButton extends JButton {
 		else if (name.startsWith("$"))
 			popup = getSymtabFstButtonPopupMenu() ;
 
-		else if (name.startsWith("&"))			// void function
+		else if (name.startsWith("^"))			// void function
 			popup = getSymtabFuncButtonPopupMenu() ;
 
-		else if (name.startsWith("#&&"))
+		else if (name.startsWith("#^^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
-		else if (name.startsWith("#&"))
+		else if (name.startsWith("#^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
-		else if (name.startsWith("#@&"))
+		else if (name.startsWith("#@^"))
 			popup = getSymtabFuncButtonPopupMenu() ;
 		else if (name.startsWith("#@"))
 			popup = getSymtabArrayButtonPopupMenu() ;
@@ -254,7 +254,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem invertItem = new JMenuItem("invert") ;
 		invertItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&invert!(" + iconName + ") ;") ;
+				terminal.processInput(iconName + " = " + "$^invert!(" + iconName + ") ;") ;
 			}
 		}) ;
 		pm.add(invertItem) ;
@@ -262,7 +262,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem reverseItem = new JMenuItem("reverse") ;
 		reverseItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&reverse(" + iconName + ") ;") ;
+				terminal.processInput(iconName + " = " + "$^reverse(" + iconName + ") ;") ;
 			}
 		}) ;
 		pm.add(reverseItem) ;
@@ -270,7 +270,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem inputProjItem = new JMenuItem("inputProjection (upperside)") ;
 		inputProjItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&inputProject!(" + iconName + ") ;") ;
+				terminal.processInput(iconName + " = " + "$^inputProject!(" + iconName + ") ;") ;
 			}
 		}) ;
 		pm.add(inputProjItem) ;
@@ -278,7 +278,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem outputProjItem = new JMenuItem("outputProjection (lowerside)") ;
 		outputProjItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&outputProject!(" + iconName + ") ;") ;
+				terminal.processInput(iconName + " = " + "$^outputProject!(" + iconName + ") ;") ;
 			}
 		});
 		pm.add(outputProjItem) ;
@@ -286,7 +286,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem rmWeightItem = new JMenuItem("rmWeight") ;
 		rmWeightItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&rmWeight!(" + iconName + ") ;") ;
+				terminal.processInput(iconName + " = " + "$^rmWeight!(" + iconName + ") ;") ;
 			}
 		});
 		pm.add(rmWeightItem) ;
@@ -294,7 +294,7 @@ class SymtabIconButton extends JButton {
 		JMenuItem closeSigmaItem = new JMenuItem("closeSigma") ;
 		closeSigmaItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput(iconName + " = " + "$&closeSigma!(" + iconName + ", \"\") ;") ;
+				terminal.processInput(iconName + " = " + "$^closeSigma!(" + iconName + ", \"\") ;") ;
 			}
 		});
 		pm.add(closeSigmaItem) ;
@@ -407,7 +407,7 @@ class SymtabIconButton extends JButton {
 		return pm ;
 	}
 
-	// return popup menu suitable for a function, e.g. $&sum
+	// return popup menu suitable for a function, e.g. $^sum
 	private JPopupMenu getSymtabFuncButtonPopupMenu() {
 		JPopupMenu pm = new JPopupMenu() ;
 

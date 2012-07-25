@@ -106,6 +106,13 @@ public class FstDotWriter {
 		String fi = "" ;
 		String we = "" ; 
 		if (is_start) {
+			try {
+				// create a Start indication for the start state
+				out.write("Start [shape=plaintext] ;\n") ;
+				out.write("Start -> " + state_id + " [arrowhead=normal, arrowtail=dot] ;\n") ;
+			} catch (IOException e) {
+				e.printStackTrace() ;
+			}
 			st = " , style=bold" ;
 		}
 		if (is_final) {
@@ -113,7 +120,14 @@ public class FstDotWriter {
 			we = "/" + weight ;
 		}
 		try {
-			out.write(state_id + " [label = \"" + state_id + we + "\"" + st + fi + "] ;\n") ;
+			out.write(state_id 
+					  + " [label = \"" 
+					  + state_id 
+					  + we 
+					  + "\"" 
+					  + st 
+					  + fi 
+					  + "] ;\n") ;
 		} catch (IOException e) {
 			e.printStackTrace() ;
 		}
@@ -124,6 +138,14 @@ public class FstDotWriter {
 		String st = "" ;
 		String fi = "" ;
 		if (is_start) {
+			try {
+				// create a Start indication for the start state
+				out.write("Start [shape=plaintext] ;\n") ;
+				out.write("Start -> " + state_id + " [arrowhead=normal, arrowtail=dot] ;\n") ;
+			} catch (IOException e) {
+				e.printStackTrace() ;
+			}
+
 			st = " , style=bold" ;
 		}
 		if (is_final) {

@@ -363,10 +363,13 @@ public class OpenFstLibraryWrapper
 	private boolean isTrivialRtnRefCrossproduct(Fst a, Fst b) {
 		// called only when a and b are already known to be SAP RTNs
 		// return true if like '$foo':'$foo'
-		if (IsAcceptor(a) && IsAcceptor(b) && 
-			NumStates(a) == 2 && NumStates(b) == 2 &&
-			NumArcs(a) == 1 && NumArcs(b) == 1 &&
-			GetSingleArcLabel(a) == GetSingleArcLabel(b)) {
+		if (IsAcceptor(a) 
+			&& IsAcceptor(b) 
+			&& NumStates(a) == 2 
+			&& NumStates(b) == 2 
+			&& NumArcs(a) == 1 
+			&& NumArcs(b) == 1 
+			&& GetSingleArcLabel(a) == GetSingleArcLabel(b)) {
 			return true ;
 		}
 		return false ;
@@ -808,9 +811,10 @@ public class OpenFstLibraryWrapper
 	// ************************************************************
 	
 	public boolean IsEmptyStringLanguageFst(Fst fst) {
-		if (numStatesNative(fst.getFstPtr()) == 1 &&
-			numArcsNative(fst.getFstPtr()) == 0 &&
-			fst.getSigma().size() == 0) {
+		if (numStatesNative(fst.getFstPtr()) == 1 
+			&& numArcsNative(fst.getFstPtr()) == 0 
+			&& fst.getSigma().size() == 0) 
+		{
 			return true ;
 		} else {
 			return false ;
@@ -1570,7 +1574,7 @@ public class OpenFstLibraryWrapper
 
 	// called when user enters
 	// optimize $a, $b, $c ;
-	// or the functions $&optimize($a) or $&optimize!($a)
+	// or the functions $^optimize($a) or $^optimize!($a)
 	// forces the optimization even if the user has turned
 	// off #KLEENEdeterminize, #KLEENEminimize, #KLEENErmepsilon
 	public void OptimizeInPlaceForce(Fst a) {

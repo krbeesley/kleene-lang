@@ -111,7 +111,7 @@ public class OpenFstLibraryChecker {
 		// the two arguments must be acceptors, epsilon-free
 		// they can be weighted
 		if ((!lib.IsAcceptor(a)) || (!lib.IsAcceptor(b))) {
-			throw new KleeneArgException("Arguments to #&equivalent() must denote languages, not relations.") ;
+			throw new KleeneArgException("Arguments to #^equivalent() must denote languages, not relations.") ;
 		}
 		// They are acceptors, so if they're not epsilon-free, they can be
 		// made epsilon-free.
@@ -184,7 +184,7 @@ public class OpenFstLibraryChecker {
 
 	public void MinimizeInPlace(Fst a) {
 		if (!lib.IsIDeterministic(a)) {
-			throw new FstPropertyException("The network argument to $&minimize() must be deterministic.") ;
+			throw new FstPropertyException("The network argument to $^minimize() must be deterministic.") ;
 		}
 	}
 
@@ -212,7 +212,7 @@ public class OpenFstLibraryChecker {
 		// equal to the length of the output of c.
 		// I'm not quite sure how to test for this right now.
 		if (lib.IsCyclic(a)) {
-			throw new FstPropertyException("The network argument to $&synchronize() must be acyclic.") ;
+			throw new FstPropertyException("The network argument to $^synchronize() must be acyclic.") ;
 		}
 	}
 

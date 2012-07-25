@@ -630,7 +630,7 @@ public class Kleene {
 		KleeneGuiConstants.VERSION_NUMBER + 
 		" " +
 		"Copyright \u00A9 " + KleeneGuiConstants.COPYRIGHT_YEAR_RANGE 
-		+ " Business Objects Americas (SAP Labs). " + 
+		+ " SAP AG. " + 
 		"All rights reserved.", 
 		"images/splash/artpremier.jpg", gui, 4000) ;
     }

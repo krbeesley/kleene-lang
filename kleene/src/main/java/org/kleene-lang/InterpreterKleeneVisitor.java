@@ -289,7 +289,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	Fst interpRule(boolean rightArrow, boolean obligatory) {
 		// For one stand-alone or multiple parallel-compiled rules.
 		// Parallel rules are inside a call to
-		// $&__parallel(a -> b / l _ r, ...)
+		// $^__parallel(a -> b / l _ r, ...)
 
 		// Hulden's algorithm for compiling rules, and especially 
 		// parallel rules, does not allow straightforward compositionality.  
@@ -890,14 +890,14 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	private boolean typeMatch(String id, Object obj) {
 		// check longer prefixes first
 
-		if (id.startsWith("$&&") && obj instanceof FuncValue) 
+		if (id.startsWith("$^^") && obj instanceof FuncValue) 
 			return true ;
-		else if (id.startsWith("$&") && obj instanceof FuncValue)
+		else if (id.startsWith("$^") && obj instanceof FuncValue)
 			return true ;
 
-		else if (id.startsWith("$@&&") && obj instanceof FuncValue)
+		else if (id.startsWith("$@^^") && obj instanceof FuncValue)
 			return true ;
-		else if (id.startsWith("$@&") && obj instanceof FuncValue)
+		else if (id.startsWith("$@^") && obj instanceof FuncValue)
 			return true ;
 		else if (id.startsWith("$@") && obj instanceof NetList)
 			return true ;
@@ -905,22 +905,22 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		else if (id.startsWith("$") && obj instanceof Fst)
 			return true ;
 
-		else if (id.startsWith("#&&") && obj instanceof FuncValue)
+		else if (id.startsWith("#^^") && obj instanceof FuncValue)
 			return true ;
-		else if (id.startsWith("#&") && obj instanceof FuncValue)
+		else if (id.startsWith("#^") && obj instanceof FuncValue)
 			return true ;
 
-		else if (id.startsWith("#@&&") && obj instanceof FuncValue)
+		else if (id.startsWith("#@^^") && obj instanceof FuncValue)
 		 	return true ;
-		else if (id.startsWith("#@&") && obj instanceof FuncValue)
+		else if (id.startsWith("#@^") && obj instanceof FuncValue)
 			return true ;
 		else if (id.startsWith("#@") && obj instanceof NumList)
 			return true ;
 	
 		// void and voidvoid functions
-		else if (id.startsWith("&&") && obj instanceof FuncValue)
+		else if (id.startsWith("^^") && obj instanceof FuncValue)
 			return true ;
-		else if (id.startsWith("&") && obj instanceof FuncValue)
+		else if (id.startsWith("^") && obj instanceof FuncValue)
 			return true ;
 
 		else if (id.startsWith("#") && ((obj instanceof Long) || (obj instanceof Double)))
@@ -1096,7 +1096,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTif_else_block node, Object data) {
 		// these blocks seen in if-else statements
 		// see ASTloop_block for the blocks in while and until
-		// see ASTfunc_block for the blocks seen in function/lambda definitions
+		// see ASTfunc_block for the blocks seen in function definitions
 		// see ASTstand_alone_block for block-grouped statements
 		int childCount = node.jjtGetNumChildren() ;
 		for (int i = 0 ; i < childCount ; i++) {
@@ -1115,7 +1115,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTloop_block node, Object data) {
 		// these blocks seen in while and until statements
 		// see ASTblock for the blocks in if-then
-		// see ASTfunc_block for the blocks seen in function/lambda 
+		// see ASTfunc_block for the blocks seen in function 
 		// definitions
 
 		int childCount = node.jjtGetNumChildren() ;
@@ -1355,7 +1355,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// A special temporary value; arcs labeled with negative
 		// labels will be turned into eps:eps arcs, and repointed to
-		// the start state of the target Fst, (via call to the $&start()
+		// the start state of the target Fst, (via call to the $^start()
 		// function; see rrGrammarConnect in kleeneopenfst.cc
 
 		// create a two-state, one arc Fst with a 
@@ -1418,9 +1418,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTnet_func_assignment node, Object data) {
 		// For a function "assignment", involving an equal sign, and
 		//		returning a net (Fst) value, e.g.
-		// $&myfunc = $lambda($a, $b) { return $a | $b ; }
+		// $^myfunc = $^($a, $b) { return $a | $b ; }
 		// or
-		// $&yourfunc = $&myfunc ; // creates an alias
+		// $^yourfunc = $^myfunc ; // creates an alias
 
 		String func_id = ((ASTnet_func_id)node.jjtGetChild(0)).getImage() ;
 		node.jjtGetChild(1).jjtAccept(this, data) ;
@@ -1438,9 +1438,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTnet_list_func_assignment node, Object data) {
 		// For a function "assignment", involving an equal sign, and
 		//		returning a net list value, e.g.
-		// $@&myfunc = $@&lambda($a, $b) { return $a | $b ; }
+		// $@^myfunc = $@^($a, $b) { return $a | $b ; }
 		// or
-		// $@&yourfunc = $@&myfunc ; // creates an alias
+		// $@^yourfunc = $@^myfunc ; // creates an alias
 
 		String func_id = ((ASTnet_list_func_id)node.jjtGetChild(0)).getImage() ;
 		node.jjtGetChild(1).jjtAccept(this, data) ;
@@ -1458,9 +1458,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTnum_list_func_assignment node, Object data) {
 		// For a function "assignment", involving an equal sign, and
 		//		returning a num list value, e.g.
-		// #@&myfunc = #@&lambda($a, $b) { return $a | $b ; }
+		// #@^myfunc = #@^($a, $b) { return $a | $b ; }
 		// or
-		// #@&yourfunc = #@&myfunc ; // creates an alias
+		// #@^yourfunc = #@^myfunc ; // creates an alias
 
 		String func_id = ((ASTnum_list_func_id)node.jjtGetChild(0)).getImage() ;
 		node.jjtGetChild(1).jjtAccept(this, data) ;
@@ -1492,7 +1492,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     }
     public Object visit(ASTnet_func_definition node, Object data) {
 		// For a net function "definition", e.g.
-		// Syntax:  $&myfunc($a, $b...) {  }
+		// Syntax:  $^myfunc($a, $b...) {  }
 		// three daughters in the AST
 		//    net_func_id
 		//    param_list  (with 0,1 or 2 daughters)
@@ -1523,7 +1523,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     }
     public Object visit(ASTnet_list_func_definition node, Object data) {
 		// For a net arr function "definition", e.g.
-		// Syntax:  $@&myfunc($a, $b...) {  }
+		// Syntax:  $@^myfunc($a, $b...) {  }
 		// three daughters in the AST
 		//    net_list_func_id
 		//    param_list  (with 0,1 or 2 daughters)
@@ -1554,7 +1554,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     }
     public Object visit(ASTnum_list_func_definition node, Object data) {
 		// For a num arr function "definition", e.g.
-		// Syntax:  #@&myfunc(1, 2...) {  }
+		// Syntax:  #@^myfunc(1, 2...) {  }
 		// three daughters in the AST
 		//    num_list_func_id
 		//    param_list  (with 0,1 or 2 daughters)
@@ -1585,7 +1585,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     }
     public Object visit(ASTvoid_func_definition node, Object data) {
 		// for a void function "definition", e.g.
-		// &myfunc (#num) { info #num ; }
+		// ^myfunc (#num) { info #num ; }
 		// three daughters in the AST, now look like
 		//    void_func_id
 		//    param_list  (with 0,1 or 2 daughters)
@@ -1690,7 +1690,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTnet_func_func_id node, Object data) {
 		// This method is called for net_func_func_id on the right-hand-side,
 		// so it needs to successfully look up the value (or throw
-		// an exception); for an assignment, e.g. $&&func() =
+		// an exception); for an assignment, e.g. $^^func() =
 		// this visit method is not called for the LHS id
 		String net_func_func_id = node.getImage() ;
 		Object obj = env.get(net_func_func_id) ;
@@ -1705,7 +1705,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTnet_list_func_func_id node, Object data) {
 		// This method is called for net_list_func_func_id on the right-hand-side,
 		// so it needs to successfully look up the value (or throw
-		// an exception); for an assignment, e.g. $@&&func() =
+		// an exception); for an assignment, e.g. $@^^func() =
 		// this visit method is not called for the LHS id
 		String net_list_func_func_id = node.getImage() ;
 		Object obj = env.get(net_list_func_func_id) ;
@@ -1720,7 +1720,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
     public Object visit(ASTvoid_func_func_id node, Object data) {
 		// this is called for void_func_func_id on the right-hand-side,
 		// so it needs to successfully look up the value (or throw
-		// an exception); for an assignment, e.g. &&func() =
+		// an exception); for an assignment, e.g. ^^func() =
 		// this visit method is not called for the LHS id
 		String void_func_func_id = node.getImage() ;
 		Object obj = env.get(void_func_func_id) ;
@@ -2485,10 +2485,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_func_call node, Object data) {
-		//  E.g. #&add(1,2) or 
-		//       #&lambda(...){...}(1,2)
+		//  E.g. #^add(1,2) or 
+		//       #^(...){...}(1,2)
 		//  two daughters:  num_func_exp  arg_list
-		//  the num_func_exp could be num_func_id or a lambda exp,
+		//  the num_func_exp could be num_func_id or an anon function,
 		//  so need to evaluate it to get the value
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// It should leave a FuncValue object on the stack
@@ -2570,10 +2570,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnum_func_func_call node, Object data) {
-		//  E.g. #&&increment_by(1) or 
-		//       #&&lambda(...){...}(1)
+		//  E.g. #^^increment_by(1) or 
+		//       #^^(...){...}(1)
 		//  two daughters:  num_func_func_exp  arg_list
-		//  the num_func_func_exp could be num_func_func_id or a lambda exp,
+		//  the num_func_func_exp could be num_func_func_id or an 
+		//  anon function,
 		//  so need to evaluate it to get the value
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue on the stack
@@ -2627,10 +2628,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnum_list_func_func_call node, Object data) {
-		//  E.g. #@&&name(1) or 
-		//       #@&&lambda(...){...}(1)
+		//  E.g. #@^^name(1) or 
+		//       #@^^(...){...}(1)
 		//  two daughters:  num_list_func_func_exp  arg_list
-		//  the num_list_func_func_exp could be num_list_func_func_id or a lambda exp,
+		//  the num_list_func_func_exp could be num_list_func_func_id or
+		//  an anonymous function,
 		//  so need to evaluate it to get the function value
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue on the stack
@@ -2684,10 +2686,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnet_list_func_func_call node, Object data) {
-		//  E.g. $@&&name(1) or 
-		//       $@&&lambda(...){...}(1)
+		//  E.g. $@^^name(1) or 
+		//       $@^^(...){...}(1)
 		//  two daughters:  net_list_func_func_exp  arg_list
-		//  the net_list_func_func_exp could be net_list_func_func_id or a lambda exp,
+		//  the net_list_func_func_exp could be net_list_func_func_id or 
+		//  an anonymous function,
 		//  so need to evaluate it to get the function value
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue on the stack
@@ -2890,7 +2893,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// If compiling a set of parallel rules, then interpretation of
 		// the overall rule, from the various bits, will need to be done
-		// at a higher level, that of the $&__parallel() function
+		// at a higher level, that of the $^__parallel() function
 
 		// But if we aren't dealing with parallel rules, then we need to
 		// push an Integer (value 1) to indicate that there is just one
@@ -2974,7 +2977,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// If compiling a set of parallel rules, then interpretation of
 		// the overall rule, from the various bits, will need to be done
-		// at a higher level, that of the $&__parallel() function
+		// at a higher level, that of the $^__parallel() function
 
 		// But if we aren't dealing with parallel rules, then we need to
 		// push an Integer (value 1) to indicate that there is just one
@@ -3053,7 +3056,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// If compiling a set of parallel rules, then interpretation of
 		// the overall rule, from the various bits, will need to be done
-		// at a higher level, that of the $&__parallel() function
+		// at a higher level, that of the $^__parallel() function
 
 		// But if we aren't dealing with parallel rules, then we need to
 		// push an Integer (value 1) to indicate that there is just one
@@ -3133,7 +3136,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// If compiling a set of parallel rules, then interpretation of
 		// the overall rule, from the various bits, will need to be done
-		// at a higher level, that of the $&__parallel() function
+		// at a higher level, that of the $^__parallel() function
 
 		// But if we aren't dealing with parallel rules, then we need to
 		// push an Integer (value 1) to indicate that there is just one
@@ -3903,9 +3906,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnet_func_call node, Object data) {
-		// Usual Syntax:  $&myunion(a, b)    has an Fst value
-		//  e.g. $&myunion($a, $b)   $&myfunc($a, $b, $c=abc, $d=def) or
-		//  $&myfunc($a = a*b+, $b = [a-m]+) 
+		// Usual Syntax:  $^myunion(a, b)    has an Fst value
+		//  e.g. $^myunion($a, $b)   $^myfunc($a, $b, $c=abc, $d=def) or
+		//  $^myfunc($a = a*b+, $b = [a-m]+) 
 		//
 		//  net_func_call always has two daughters:
 		//
@@ -3914,9 +3917,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//      arg_list
 		//
 		//  N.B. net_func_exp could be 
-		//       net_func_id     e.g. $&myfunc  OR
-		//       $&lambda exp    e.g. $&lambda(...){...}   OR
-		//       net_func_func_call e.g.  $&&func(...)
+		//       net_func_id     e.g. $^myfunc  OR
+		//       $^ exp    e.g. $^(...){...}   OR
+		//       net_func_func_call e.g.  $^^func(...)
 		//  so net_func_exp needs to be evaluated 
 		//  (will leave a FuncValue object on the stack)
 
@@ -3999,9 +4002,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTvoid_func_call node, Object data) {
-		//  e.g. &myfoo($a, $b)   
-		//       &myfunc($a, $b, $c=abc, $d=def) or
-		//  &myfunc($a = a*b+, $b = [a-m]+) 
+		//  e.g. ^myfoo($a, $b)   
+		//       ^myfunc($a, $b, $c=abc, $d=def) or
+		//  ^myfunc($a = a*b+, $b = [a-m]+) 
 		//
 		//  void_func_call
 		//      void_func_exp  
@@ -4009,7 +4012,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//
 		//  N.B. void_func_exp could be 
 		//       void_func_id     or
-		//       &lambda exp    or
+		//       ^ exp
 		//       void_func_func_call
 		//  so it needs to be evaluated
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -4082,8 +4085,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
 	public Object visit(ASTnet_reverse_func_call node, Object data) {
-		// just $&__reverse($arg)  built-in, 
-		// 		wrapped as $&reverse($arg)
+		// just $^__reverse($arg)  built-in, 
+		// 		wrapped as $^reverse($arg)
 		// one daughter, syntactically constrained
 		//		ASTregexp
 
@@ -4097,8 +4100,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_shortestPath_func_call node, Object data) {
-		// just $&__shortestPath($arg, #nshortest)  built-in, 
-		//     wrapped as $&shortestPath($arg, #nshortest=1)
+		// just $^__shortestPath($arg, #nshortest)  built-in, 
+		//     wrapped as $^shortestPath($arg, #nshortest=1)
 		// two daughters: ASTregexp  ASTnumexp (constrained by the parser)
 		node.childrenAccept(this, data) ;
 		// top Object on the stack should be a Long (perhaps Double)
@@ -4121,7 +4124,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_invert_func_call node, Object data) {
-		// just $&__invert($arg)  built-in, wrapped as $&invert($arg)
+		// just $^__invert($arg)  built-in, wrapped as $^invert($arg)
 		// just one daughter: ASTregexp (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4137,7 +4140,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_invert_dest_func_call node, Object data) {
-		// just $&__invert!($arg)  built-in, wrapped as $&invert!($arg)
+		// just $^__invert!($arg)  built-in, wrapped as $^invert!($arg)
 		// just one daughter: ASTregexp (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4150,7 +4153,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_optimize_func_call node, Object data) {
-		// just $&__optimize($arg)  built-in, wrapped as $&optimize($arg)
+		// just $^__optimize($arg)  built-in, wrapped as $^optimize($arg)
 		// just one daughter: ASTregexp (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4168,7 +4171,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_optimize_dest_func_call node, Object data) {
-		// just $&__optimize!($arg)  built-in, wrapped as $&optimize!($arg)
+		// just $^__optimize!($arg)  built-in, wrapped as $^optimize!($arg)
 		// just one daughter: ASTregexp (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4183,8 +4186,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	public Object visit(ASTnet_rmepsilon_func_call node, Object data) {
 		// the function call is not destructive (i.e. returns a new net
 		// if the argument is from a symbol table)
-		// just $&__rmEpsilon($arg)  built-in, wrapped as $&rmepsilon and
-		// $&rmEpsilon
+		// just $^__rmEpsilon($arg)  built-in, wrapped as $^rmepsilon and
+		// $^rmEpsilon
 		// just one daughter: ASTregexp (constrained by the parser)
 		// N.B. this Kleene function does not work in place for a network
 		//   that comes from the symbol table (and so has a name, or alias
@@ -4202,8 +4205,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_rmepsilon_dest_func_call node, Object data) {
 		// the function call is destructive (i.e. works in place)
-		// just $&__rmEpsilon!($arg)  built-in, wrapped as $&rmepsilon! and
-		// $&rmEpsilon!
+		// just $^__rmEpsilon!($arg)  built-in, wrapped as $^rmepsilon! and
+		// $^rmEpsilon!
 		// just one daughter: ASTregexp (constrained by the parser)
 		// N.B. this Kleene function does not work in place for a network
 		//   that comes from the symbol table (and so has a name, or alias
@@ -4217,7 +4220,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
  	public Object visit(ASTnet_determinize_func_call node, Object data) {
 		// not destructive
-		// just $&__determinize($arg) built-in, wrapped as $&determinize()
+		// just $^__determinize($arg) built-in, wrapped as $^determinize()
 		// just one daughter: ASTregexp  (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4236,7 +4239,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
  	public Object visit(ASTnet_determinize_dest_func_call node, Object data) {
 		// destructive
-		// just $&__determinize!($arg) built-in, wrapped as $&determinize!()
+		// just $^__determinize!($arg) built-in, wrapped as $^determinize!()
 		// just one daughter: ASTregexp  (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4248,7 +4251,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_minimize_func_call node, Object data) {
 		// this function call is not destructive, (i.e. returns a new net)
-		// just $&__minimize($arg)  built-in, wrapped as $&minimize()
+		// just $^__minimize($arg)  built-in, wrapped as $^minimize()
 		// just one daughter: ASTregexp (constrained by the parser)
 		// N.B. the OpenFst Minimize() works in place (destructive),
 		//   so if the input comes from the symbol table (and so has
@@ -4268,7 +4271,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_minimize_dest_func_call node, Object data) {
 		// destructive, (i.e. works in place)
-		// just $&__minimize!($arg)  built-in, wrapped as $&minimize!()
+		// just $^__minimize!($arg)  built-in, wrapped as $^minimize!()
 		// just one daughter: ASTregexp (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4281,7 +4284,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
  	public Object visit(ASTnet_synchronize_func_call node, Object data) {
 		// not destructive
-		// just $&__synchronize($arg) built-in, wrapped as $&synchronize()
+		// just $^__synchronize($arg) built-in, wrapped as $^synchronize()
 		// just one daughter: ASTregexp  (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4296,7 +4299,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
  	public Object visit(ASTnet_synchronize_dest_func_call node, Object data) {
 		// destructive
-		// just $&__synchronize!($arg) built-in, wrapped as $&synchronize!()
+		// just $^__synchronize!($arg) built-in, wrapped as $^synchronize!()
 		// just one daughter: ASTregexp  (constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4307,7 +4310,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_diac_func_call node, Object data) {
-		// built-in $&__diac(), wrapped various ways in predefined.kl
+		// built-in $^__diac(), wrapped various ways in predefined.kl
 		// 3 args (syntactically constrained)
 
 		//	0.  destructive	numexp() boolean
@@ -4357,7 +4360,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_case_func_call node, Object data) {
-		// built-in $&__case(), wrapped various ways in predefined.kl
+		// built-in $^__case(), wrapped various ways in predefined.kl
 		// 7 args (syntactically constrained)
 
 		//	0.  destructive	numexp() boolean
@@ -4432,8 +4435,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 
 	public Object visit(ASTnet_inputproj_dest_func_call node, Object data) {
-		// syntax is the $&__inputproj!($arg)  built-in
-		// 		wrapped as $&inputproj!($arg)
+		// syntax is the $^__inputproj!($arg)  built-in
+		// 		wrapped as $^inputproj!($arg)
 		// one daughter, syntactically constrained
 		//		ASTregexp
 		
@@ -4447,7 +4450,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_inputproj_func_call node, Object data) {
-		// syntax is the $&__inputproj($arg)  built-in
+		// syntax is the $^__inputproj($arg)  built-in
 		// one daughter, syntactically constrained
 		//		ASTregexp
 	
@@ -4462,8 +4465,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_outputproj_dest_func_call node, Object data) {
-		// syntax is the $&__outputproj!($arg)  built-in
-		// 		wrapped as $&outputproj!($arg)
+		// syntax is the $^__outputproj!($arg)  built-in
+		// 		wrapped as $^outputproj!($arg)
 		// one daughter, syntactically constrained
 		//		ASTregexp
 	
@@ -4477,8 +4480,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_outputproj_func_call node, Object data) {
-		// syntax is the $&__outputproj($arg)  built-in
-		// 		wrapped as $&outputproj($arg)
+		// syntax is the $^__outputproj($arg)  built-in
+		// 		wrapped as $^outputproj($arg)
 		// one daughter, syntactically constrained
 		//		ASTregexp
 	
@@ -4494,8 +4497,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_close_sigma_func_call node, Object data) {
 		// this function call is not destructive (i.e. returns a new net)
-		// just $&__closeSigma($fst, $base)  built-in, wrapped as
-		// $&closeSigma($fst, $base="")
+		// just $^__closeSigma($fst, $base)  built-in, wrapped as
+		// $^closeSigma($fst, $base="")
 		// See also ASTnet_close_sigma_dest_func_call
 		// two daughters: (constrained by the parser)
 		//		regexp
@@ -4519,8 +4522,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_close_sigma_dest_func_call node, Object data) {
 		// this function call is destructive (i.e. always operated on the arg in place
-		// just $&__closeSigma!($fst, $base)  built-in, wrapped as
-		// $&closeSigma!($fst, $base="")
+		// just $^__closeSigma!($fst, $base)  built-in, wrapped as
+		// $^closeSigma!($fst, $base="")
 		// See also ASTnet_close_sigma_func_call
 		// two daughters: (constrained by the parser)
 		//		regexp
@@ -4538,8 +4541,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_copy_func_call node, Object data) {
-		// just $&__copy($arg)  built-in
-		// wrapped as $&copy($arg) in predefined.kl
+		// just $^__copy($arg)  built-in
+		// wrapped as $^copy($arg) in predefined.kl
 		// should be just one daughter: arg_list
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4549,8 +4552,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_rm_weight_dest_func_call node, Object data) {
-		// just $&__rmWeight!($arg)  built-in
-		// wrapped as $&rmWeight!($fst) in predefined.kl
+		// just $^__rmWeight!($arg)  built-in
+		// wrapped as $^rmWeight!($fst) in predefined.kl
 		// one daughter, syntactically constrained
 		//		ASTregexp
 	
@@ -4564,8 +4567,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_rm_weight_func_call node, Object data) {
-		// just $&__rmWeight($arg)  built-in
-		// wrapped as $&rmWeight($fst) in predefined.kl
+		// just $^__rmWeight($arg)  built-in
+		// wrapped as $^rmWeight($fst) in predefined.kl
 		// one daughter, syntactically constrained
 		//		ASTregexp
 	
@@ -4581,8 +4584,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_subst_symbol_dest_func_call node, Object data) {
-		// just $&__substSymbol!($net, $old, $new)
-		// wrapped as $&substSymbol!() in predefined.kl
+		// just $^__substSymbol!($net, $old, $new)
+		// wrapped as $^substSymbol!() in predefined.kl
 		// exactly three daughters (syntactically constrained)
 
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -4642,8 +4645,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 
 	public Object visit(ASTnet_subst_symbol_func_call node, Object data) {
-		// just $&__substSymbol($net, $old, $new)
-		// wrapped as $&substSymbol() in predefined.kl
+		// just $^__substSymbol($net, $old, $new)
+		// wrapped as $^substSymbol() in predefined.kl
 		// exactly three daughters (syntactically constrained)
 
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -4707,9 +4710,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_read_xml_call node, Object data) {
-		// just $&__readXML($filepath)  built-in
-		// wrapped with $&readXML($filepath)
-		// just one daughter for $&__readXML() (syntactically
+		// just $^__readXML($filepath)  built-in
+		// wrapped with $^readXML($filepath)
+		// just one daughter for $^__readXML() (syntactically
 		// constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4726,16 +4729,16 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		} catch (Exception e) {
 			// catch the hard Exception and
 			// throw a RuntimeException here, so that Kleene can recover
-			throw new FuncCallException("Problem in $&readXML() reading indicated file.") ;
+			throw new FuncCallException("Problem in $^readXML() reading indicated file.") ;
 		}
 
 		stack.push(resultFst) ;
 		return data ;
 	} 
 	public Object visit(ASTnet_start_func_call node, Object data) {
-		// syntax:   $&start($>foo)   a built-in function-like regexp
+		// syntax:   $^start($>foo)   a built-in function-like regexp
 		// Not really implemented as a function, cannot be aliased, i.e.
-		// $&debut = $&start  is not legal
+		// $^debut = $^start  is not legal
 		// The value of the statement, if successful, is an Fst.
 
 		// just one daughter: ASTrrprod_id, which includes the name
@@ -4744,7 +4747,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// Don't evaluate daughter.  Just retrieve the image.
 		String rrprod_id = ((ASTrrprod_id)node.jjtGetChild(0)).getImage() ;
 
-		// The rrprod_id argument to $&start() will be the root of the 
+		// The rrprod_id argument to $^start() will be the root of the 
 		//		right-linear grammar,
 		// but rrprod_id may refer to other productions, which may, 
 		//		in turn, refer
@@ -4882,7 +4885,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTlng_pathcount_func_call node, Object data) {
-		// just #&__pathCount($arg)  built-in, wrapped as #&pathCount($arg)
+		// just #^__pathCount($arg)  built-in, wrapped as #^pathCount($arg)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4893,7 +4896,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTlng_statecount_func_call node, Object data) {
-		// just #&__stateCount($arg)  built-in, wrapped as #&stateCount($arg)
+		// just #^__stateCount($arg)  built-in, wrapped as #^stateCount($arg)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4904,7 +4907,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTlng_arccount_func_call node, Object data) {
-		// just #&__arcCount($arg)  built-in, wrapped as #&arcCount($arg)
+		// just #^__arcCount($arg)  built-in, wrapped as #^arcCount($arg)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4915,7 +4918,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTlng_arity_func_call node, Object data) {
-		// just #&__arity($arg)  built-in, wrapped as #&arity($arg)
+		// just #^__arity($arg)  built-in, wrapped as #^arity($arg)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4929,7 +4932,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	// boolean
 	public Object visit(ASTlng_is_rtn_func_call node, Object data) {
-		// just #&__isRtn($arg)  built-in, wrapped as #&isRtn($arg)
+		// just #^__isRtn($arg)  built-in, wrapped as #^isRtn($arg)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4942,7 +4945,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTlng_is_cyclic_func_call node, Object data) {
-		// just #&__isCyclic($net)  built-in, wrapped as #&isCyclic($net)
+		// just #^__isCyclic($net)  built-in, wrapped as #^isCyclic($net)
 		// should be just one daughter: arg_list with one net
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
@@ -4957,7 +4960,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 /*
 	public Object visit(ASTlng_equivalent_func_call node, Object data) {
-		// just #&__equivalent($a, $b, #num)  built-in, wrapped as #&equivalent()
+		// just #^__equivalent($a, $b, #num)  built-in, wrapped as #^equivalent()
 		// should be just three daughters, syntactically constrained
 		node.childrenAccept(this, data) ;
 
@@ -4983,7 +4986,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 */
 
 	public Object visit(ASTnum_abs_func_call node, Object data) {
-		// just #&__abs(numexp) built-in
+		// just #^__abs(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -4999,7 +5002,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTnet_to_string_func_call node, Object data) {
 		// convert a number (Long or Float) to a string
-		// just $&__toString(numexp) built-in
+		// just $^__toString(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -5031,7 +5034,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTnet_implode_func_call node, Object data) {
-		// The $&__implode(regexp) built-in, wrapped as $&implode(),
+		// The $^__implode(regexp) built-in, wrapped as $^implode(),
 		// implodes a single string of characters into a single symbol, 
 		// typically a multichar symbol,
 		//    and return a network with one arc, labeled with that symbol
@@ -5055,7 +5058,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTnet_explode_func_call node, Object data) {
-		// just #&__explode(regexp) built-in
+		// just #^__explode(regexp) built-in
 		// take a two-state, one arc acceptor, get the label 
 		//    on the one arc
 		//    (an int, typically mapping to a multichar name), 
@@ -5093,7 +5096,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTnet_get_func_call node, Object data) {
-		// $&__get($@arr, 0) wrapped as $&get($@arr, 0)
+		// $^__get($@arr, 0) wrapped as $^get($@arr, 0)
 		// two daughters
 		//		net_list_exp
 		//		numexp
@@ -5112,7 +5115,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = netList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to $&get(): " +
+			throw new KleeneArgException("Illegal index to $^get(): " +
 			index) ;
 		}
 
@@ -5121,7 +5124,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_getlast_func_call node, Object data) {
-		// $&__getLast($@arr) wrapped as $&getLast($@arr)
+		// $^__getLast($@arr) wrapped as $^getLast($@arr)
 		// two daughters
 		//		net_list_exp
 
@@ -5138,7 +5141,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_get_func_call node, Object data) {
-		// #&__get(#@arr, 0) wrapped as #&get(#@arr, 0)
+		// #^__get(#@arr, 0) wrapped as #^get(#@arr, 0)
 		// two daughters
 		//		num_list_exp
 		//		numexp
@@ -5157,7 +5160,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = numList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to #&get(): " + index) ;
+			throw new KleeneArgException("Illegal index to #^get(): " + index) ;
 		}
 
 		Object element = numList.get(index) ;  // Long or Double
@@ -5165,7 +5168,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_getlast_func_call node, Object data) {
-		// #&__getLast(#@arr) wrapped as #&getLast(#@arr)
+		// #^__getLast(#@arr) wrapped as #^getLast(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5182,7 +5185,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_head_func_call node, Object data) {
-		// $&__head($@arr) wrapped as $&head($@arr)
+		// $^__head($@arr) wrapped as $^head($@arr)
 		// one daughter
 		//		net_list_exp
 
@@ -5199,7 +5202,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_head_func_call node, Object data) {
-		// #&__head(#@arr) wrapped as #&head(#@arr)
+		// #^__head(#@arr) wrapped as #^head(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5215,7 +5218,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_pop_dest_func_call node, Object data) {
-		// $&__pop!($@arr) wrapped as $&pop!($@arr)
+		// $^__pop!($@arr) wrapped as $^pop!($@arr)
 		// one daughter
 		//		net_list_exp
 
@@ -5231,7 +5234,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_remove_dest_func_call node, Object data) {
-		// $&__remove!($@arr, #index)
+		// $^__remove!($@arr, #index)
 		// two daughters
 		//		net_list_exp
 		//		numexp
@@ -5253,7 +5256,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to $&remove!(): "
+			throw new KleeneArgException("Illegal index to $^remove!(): "
 			+ index) ;
 		}
 
@@ -5263,7 +5266,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_removelast_dest_func_call node, Object data) {
-		// $&__removeLast!($@arr)
+		// $^__removeLast!($@arr)
 		// one daughter
 		//		net_list_exp
 
@@ -5283,7 +5286,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_pop_dest_func_call node, Object data) {
-		// #&__pop!(#@arr) wrapped as #&pop!(#@arr)
+		// #^__pop!(#@arr) wrapped as #^pop!(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5299,7 +5302,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_remove_dest_func_call node, Object data) {
-		// #&__remove!(#@arr, #index)
+		// #^__remove!(#@arr, #index)
 		// two daughters
 		//		num_list_exp
 		//		numexp
@@ -5321,7 +5324,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to #&remove!(): "
+			throw new KleeneArgException("Illegal index to #^remove!(): "
 			+ index) ;
 		}
 
@@ -5331,7 +5334,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_removelast_dest_func_call node, Object data) {
-		// #&__removeLast!(#@arr)
+		// #^__removeLast!(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5357,7 +5360,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_get_slice_func_call node, Object data) {
-		// $&getSlice($@arr, 0, 3, 5:8), cannot be aliased
+		// $^getSlice($@arr, 0, 3, 5:8), cannot be aliased
 		// 	because it has a variable number of arguments
 		// at least two daughters
 		//		net_list_exp
@@ -5419,7 +5422,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_get_slice_func_call node, Object data) {
-		// #&getSlice(#@arr, 0, 3, 5:8), cannot be aliased
+		// #^getSlice(#@arr, 0, 3, 5:8), cannot be aliased
 		// 	because it has a variable number of arguments
 		// at least two daughters
 		//		num_list_exp
@@ -5494,7 +5497,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_push_dest_func_call node, Object data) {
-		// $&__push!($fst, $@arr)
+		// $^__push!($fst, $@arr)
 		// two daughters
 		//		regexp
 		//		net_list_exp
@@ -5513,7 +5516,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_push_dest_func_call node, Object data) {
-		// #&__push!(#num, #@arr)
+		// #^__push!(#num, #@arr)
 		// two daughters
 		//		numexp
 		//		num_list_exp
@@ -5536,7 +5539,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_add_dest_func_call node, Object data) {
-		// $&__add!($@arr, $fst)
+		// $^__add!($@arr, $fst)
 		// two daughters
 		//		net_list_exp
 		//		regexp
@@ -5555,7 +5558,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_add_dest_func_call node, Object data) {
-		// #&__add!(#@arr, #num)
+		// #^__add!(#@arr, #num)
 		// two daughters
 		//		num_list_exp
 		//		numexp
@@ -5578,7 +5581,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_addat_dest_func_call node, Object data) {
-		// $&__add!($@arr, #index, $fst)
+		// $^__add!($@arr, #index, $fst)
 		// three daughters
 		//		net_list_exp
 		//		numexp
@@ -5604,7 +5607,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index > size) {
-			throw new KleeneArgException("Illegal index to $@&addAt!(): "
+			throw new KleeneArgException("Illegal index to $@^addAt!(): "
 			+ index) ;
 		}
 
@@ -5614,7 +5617,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_addat_dest_func_call node, Object data) {
-		// #&__add!(#@arr, #index, #num)
+		// #^__add!(#@arr, #index, #num)
 		// three daughters
 		//		num_list_exp
 		//		numexp
@@ -5640,7 +5643,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index > size) {
-			throw new KleeneArgException("Illegal index to #@&addAt!(): "
+			throw new KleeneArgException("Illegal index to #@^addAt!(): "
 			+ index) ;
 		}
 
@@ -5654,7 +5657,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_set_dest_func_call node, Object data) {
-		// $&__set!($@arr, #index, $fst)
+		// $^__set!($@arr, #index, $fst)
 		// three daughters
 		//		net_list_exp
 		//		numexp
@@ -5680,7 +5683,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to $@&set!(): "
+			throw new KleeneArgException("Illegal index to $@^set!(): "
 			+ index) ;
 		}
 
@@ -5690,7 +5693,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_set_dest_func_call node, Object data) {
-		// #&__set!(#@arr, #index, #num)
+		// #^__set!(#@arr, #index, #num)
 		// three daughters
 		//		num_list_exp
 		//		numexp
@@ -5716,7 +5719,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		int size = resultList.size() ;
 		if (index < 0 || index >= size) {
-			throw new KleeneArgException("Illegal index to #@&set!(): "
+			throw new KleeneArgException("Illegal index to #@^set!(): "
 			+ index) ;
 		}
 
@@ -5730,7 +5733,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_tail_func_call node, Object data) {
-		// $&__tail($@arr)
+		// $^__tail($@arr)
 		// one daughter
 		//		net_list_exp
 
@@ -5756,7 +5759,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_copy_func_call node, Object data) {
-		// $&__copy($@arr)
+		// $^__copy($@arr)
 		// one daughter
 		//		net_list_exp
 
@@ -5776,7 +5779,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_tail_func_call node, Object data) {
-		// #&__tail(#@arr)
+		// #^__tail(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5809,7 +5812,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_copy_func_call node, Object data) {
-		// #&__copy(#@arr)
+		// #^__copy(#@arr)
 		// one daughter
 		//		num_list_exp
 
@@ -5836,7 +5839,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnet_list_get_sigma_func_call node, Object data) {
-		// $@&__getSigma($fst)
+		// $@^__getSigma($fst)
 		// one daughter
 		//		regexp
 		// return the sigma as an array of nets, one for each symbol in
@@ -5866,7 +5869,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
 	}
 	public Object visit(ASTnum_list_get_sigma_func_call node, Object data) {
-		// #@&__getSigma($fst)
+		// #@^__getSigma($fst)
 		// one daughter
 		//		regexp
 		// return the sigma as an array of Integer, one for each symbol in
@@ -5907,7 +5910,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//lib.FstDump(netNameFst) ;
 
 		String net_id = lib.GetSingleString(netNameFst, 
-			"Argument to $&getNet() must denote a language of one string") ;
+			"Argument to $^getNet() must denote a language of one string") ;
 
 		if (net_id.length() == 0) {
 			throw new KleeneArgException("Second arg to info (filepath) must denote a non-empty string") ;
@@ -5947,7 +5950,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		// In SapRtnConventions, a reference to a subnet $foo is
 		// an arc labeled '$foo':'$foo' (the user can also manually
-		// encode $&sub($foo):$eps, which indicates, to the runtime
+		// encode $^sub($foo):$eps, which indicates, to the runtime
 		// code, a mapping to epsilon)
 
 		String specialCharPrefix = "" ;
@@ -6095,10 +6098,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 	public Object visit(ASTnet_expand_rtn_func_call node, Object data) {
 
-		// syntax  $&expandRtn(regexp)
+		// syntax  $^expandRtn(regexp)
 
 		if (lib.isSapRtnConventions()) {
-			throw new KleeneInterpreterException("$&expandRtn() is not yet implemented under SapRtnConventions") ;
+			throw new KleeneInterpreterException("$^expandRtn() is not yet implemented under SapRtnConventions") ;
 		}
 
 		// evaluate the one argument, a regexp, 
@@ -6168,7 +6171,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 
 	public Object visit(ASTdbl_ceil_func_call node, Object data) {
-		// just #&__ceil(numexp) built-in
+		// just #^__ceil(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6183,7 +6186,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTdbl_floor_func_call node, Object data) {
-		// just #&__floor(numexp) built-in
+		// just #^__floor(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6198,7 +6201,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTlng_round_func_call node, Object data) {
-		// just #&__round(numexp) built-in
+		// just #^__round(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6214,7 +6217,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTlng_long_func_call node, Object data) {
 		// basically a cast to Long
-		// just #&__long(numexp) built-in, wrapped as #&long() and $&int()
+		// just #^__long(numexp) built-in, wrapped as #^long() and $^int()
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6229,7 +6232,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTlng_size_func_call node, Object data) {
-		// just #&size(exp) wired-in
+		// just #^size(exp) wired-in
 
 		// one daughter
 		//		NetList  or NumList
@@ -6246,7 +6249,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			NumList numList = (NumList)list ;
 			size = new Long((long)(numList.size())) ;
 		} else {
-			throw new KleeneArgException("Type problem with argument to $&size") ;
+			throw new KleeneArgException("Type problem with argument to $^size") ;
 		}
 
 		stack.push(size) ;
@@ -6266,7 +6269,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		} else if (list instanceof NumList) {
 			size = (long)(((NumList)list).size()) ;
 		} else {
-			throw new KleeneArgException("Type problem with argument to $&isEmpty") ;
+			throw new KleeneArgException("Type problem with argument to $^isEmpty") ;
 		}
 
 		if (size == 0L) {
@@ -6281,8 +6284,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
 	public Object visit(ASTdbl_double_func_call node, Object data) {
 		// basically a cast to Double
-		// just #&__double(numexp) built-in, 
-		//		wrapped as #&double() and #&float()
+		// just #^__double(numexp) built-in, 
+		//		wrapped as #^double() and #^float()
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6297,7 +6300,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data;
 	}
 	public Object visit(ASTdbl_rint_func_call node, Object data) {
-		// just #&__rint(numexp) built-in
+		// just #^__rint(numexp) built-in
 		// should be just one daughter: arg_list with one numexp
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves a Long or Double object on the stack
@@ -6329,7 +6332,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// this is called for net_func_id on the right-hand-side,
 		// so it needs to successfully look up the FuncValue value 
 		// (or throw
-		// an exception); for an assignment, e.g. $&func =
+		// an exception); for an assignment, e.g. $^func =
 		// this visit method is not called
 		String net_func_id = node.getImage() ;
 		// value from environment should be a FuncValue object
@@ -6344,7 +6347,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	public Object visit(ASTvoid_func_id node, Object data) {
 		// this is called for void_func_id on the right-hand-side,
 		// so it needs to successfully look up the value (or throw
-		// an exception); for an assignment, e.g. &func() =
+		// an exception); for an assignment, e.g. ^func() =
 		// this visit method is not called
 		String void_func_id = node.getImage() ;
 		// value from environment should be a FuncValue object
@@ -6381,11 +6384,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnet_func_func_call node, Object data) {
-		//  e.g. $&&add_suff(ing) or
-		//       $&&lambda(....){...}(ing)
+		//  e.g. $^^add_suff(ing) or
+		//       $^^(....){...}(ing)
 		//  two daughters:  net_func_func_exp  arg_list
 		//  N.B. net_func_func_exp could be net_func_func_id or a 
-		//		lambda exp,
+		//	an anonymous function,
 		//  so it needs to be evaluated
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue object on the stack
@@ -6438,11 +6441,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTvoid_func_func_call node, Object data) {
-		//  e.g. &&add_suff(ing) or
-		//       &&lambda(....){...}(ing)
+		//  e.g. ^^add_suff(ing) or
+		//       ^^(....){...}(ing)
 		//  two daughters:  void_func_func_exp  arg_list
 		//  N.B. void_func_func_exp could be void_func_func_id or 
-		//		a lambda exp,
+		//	an anonymous function,
 		//  so it needs to be evaluated
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// should leave a FuncValue object on the stack
@@ -6582,15 +6585,15 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnet_list_func_call node, Object data) {
-		// Usual Syntax:  $@&myunion(a, b)    has a NetList value
+		// Usual Syntax:  $@^myunion(a, b)    has a NetList value
 		//
 		//  net_list_func_call always has two daughters:
 		//      net_list_func_exp  
 		//      arg_list
 		//
 		//  N.B. net_list_func_exp could be 
-		//       net_list_func_id     e.g. $@&myfunc  OR
-		//       net_list_func_anon_exp    e.g. $&lambda(...){...}
+		//       net_list_func_id     e.g. $@^myfunc  OR
+		//       net_list_func_anon_exp    e.g. $^(...){...}
 		//  so net_list_func_exp needs to be evaluated 
 
 		// Evaluate daughter 0, the net_list_func_exp
@@ -6677,7 +6680,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// this is called for net_list_func_id on the right-hand-side,
 		// so it needs to successfully look up the FuncValue value 
 		// (or throw
-		// an exception); for an assignment, e.g. $@&func =
+		// an exception); for an assignment, e.g. $@^func =
 		// this visit method is not called on the LHS
 		String net_list_func_id = node.getImage() ;
 		// value from environment should be a FuncValue object
@@ -6796,15 +6799,15 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTnum_list_func_call node, Object data) {
-		// Usual Syntax:  #@&__tail(#@arr)    has a NumList value
+		// Usual Syntax:  #@^__tail(#@arr)    has a NumList value
 		//
 		//  num_list_func_call always has two daughters:
 		//      num_list_func_exp  
 		//      arg_list
 		//
 		//  N.B. num_list_func_exp could be 
-		//       num_list_func_id     e.g. #@&myfunc  OR
-		//       num_list_func_anon_exp    e.g. #&lambda(...){...}
+		//       num_list_func_id     e.g. #@^myfunc  OR
+		//       num_list_func_anon_exp    e.g. #^(...){...}
 		//  so num_list_func_exp needs to be evaluated 
 
 		// Evaluate daughter 0, the num_list_func_exp
@@ -6891,7 +6894,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// this is called for num_list_func_id on the right-hand-side,
 		// so it needs to successfully look up the FuncValue value 
 		// (or throw
-		// an exception); for an assignment, e.g. #@&func =
+		// an exception); for an assignment, e.g. #@^func =
 		// this visit method is not called on the LHS
 		String num_list_func_id = node.getImage() ;
 		// value from environment should be a FuncValue object
@@ -6907,7 +6910,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// this is called for num_list_func_func_id on the right-hand-side,
 		// so it needs to successfully look up the FuncValue value 
 		// (or throw
-		// an exception); for an assignment, e.g. #@&func =
+		// an exception); for an assignment, e.g. #@^func =
 		// this visit method is not called on the LHS
 		String num_list_func_func_id = node.getImage() ;
 		// value from environment should be a FuncValue object

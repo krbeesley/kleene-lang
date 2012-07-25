@@ -847,11 +847,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   public Object visit(ASTnet_start_func_call node, Object data) {
-	  // $>foo = a b $&start($>foo) c d ;  causes a recursion problem
-	  // so don't allow $&start($>anything) inside the RHS of a
+	  // $>foo = a b $^start($>foo) c d ;  causes a recursion problem
+	  // so don't allow $^start($>anything) inside the RHS of a
 	  // production
 	  if (true)
-	  	throw new RrRefException("Illegal call to $&start() inside the RHS of a production.") ;
+	  	throw new RrRefException("Illegal call to $^start() inside the RHS of a production.") ;
 	  // perhaps be able to catch this in the parsing itself?
 	  else
 	  	return data ;
