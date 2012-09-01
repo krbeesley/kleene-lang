@@ -522,7 +522,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		if (lib.IsAcceptor(fst)) {
 			// looks like an acceptor to OpenFst
 			if (!fst.getContainsOther()) {
-				// simple case
+				// simple case, does NOT contain OTHER
 				arityStr = "Acceptor, " ;
 			} else if (lib.IsSemanticAcceptor(fst)) {
 				arityStr = "Acceptor, " ;
@@ -4332,7 +4332,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		Fst projFst = (Fst) stack.pop() ;
 
 		String projString = lib.GetSingleString(projFst, 
-			"Last arg to convertCase must denote a language of one string: input, upper, output, lower or both").trim().toLowerCase() ;
+			"Last arg to convertCase must denote a language of exactly one string: input, upper, output, lower or both").trim().toLowerCase() ;
 
 		boolean input = false ;
 		boolean output = false ;
@@ -4400,7 +4400,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		Fst projFst = (Fst) stack.pop() ;
 
 		String projString = lib.GetSingleString(projFst, 
-		"Last arg to convertCase must denote a language of one string: input, upper, output, lower, or both").trim().toLowerCase() ;
+		"Last arg to convertCase must denote a language of exactly one string: input, upper, output, lower, or both").trim().toLowerCase() ;
 
 		boolean input = false ;
 		boolean output = false ;
@@ -4619,7 +4619,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		int oldCpv ;
 		int newCpv ;
 
-		if (lib.IsEmptyStringLanguageFst(newSymFst)) {
+		if (lib.IsEmptyStringLanguage(newSymFst)) {
 			// epsilon special case
 			// the Fst denotes the empty-string language
 			// in OpenFst, 0 is wired in as the int value of epsilon
@@ -4686,7 +4686,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		int oldCpv ;
 		int newCpv ;
 
-		if (lib.IsEmptyStringLanguageFst(newSymFst)) {
+		if (lib.IsEmptyStringLanguage(newSymFst)) {
 			// epsilon special case
 			// the Fst denotes the empty-string language
 			newCpv = lib.Epsilon ;
@@ -4718,7 +4718,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// leaves an Fst object on the stack
 		Fst pathFst = (Fst) stack.pop() ;
 
-		String userTyped = lib.GetSingleString(pathFst, "First arg to readXML must denote a language of one string, denoting a file path") ;
+		String userTyped = lib.GetSingleString(pathFst, "First arg to readXML must denote a language of exactly one string, denoting a file path") ;
 
 		String fullpath = getFullpath(userTyped) ;
 
@@ -4930,7 +4930,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			stack.push(new Long(2)) ;
 		return data ;
 	}
-	// boolean
+
+	// boolean functions
+	
 	public Object visit(ASTlng_is_rtn_func_call node, Object data) {
 		// just #^__isRtn($arg)  built-in, wrapped as #^isRtn($arg)
 		// should be just one daughter: arg_list with one net
@@ -4957,6 +4959,178 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			stack.push(new Long(0)) ;
 		return data ;
 	}
+	public Object visit(ASTlng_is_acceptor_func_call node, Object data) {
+		// just #^__isAcceptor($net)  built-in, wrapped as #^isAcceptor($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsSemanticAcceptor(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+	public Object visit(ASTlng_is_transducer_func_call node, Object data) {
+		// just #^__isTransducer($net)  built-in, wrapped as #^isTransducer($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (!(lib.IsSemanticAcceptor(fst)))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_weighted_func_call node, Object data) {
+		// just #^__isWeighted($net)  built-in, wrapped as #^isWeighted($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsWeighted(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_ideterministic_func_call node, Object data) {
+		// just #^__isIDeterministic($net)  built-in, wrapped as #^isIDeterministic($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsIDeterministic(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_odeterministic_func_call node, Object data) {
+		// just #^__isODeterministic($net)  built-in, wrapped as #^isODeterministic($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsODeterministic(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_epsilonfree_func_call node, Object data) {
+		// just #^__isEpsilonFree($net)  built-in, wrapped as #^isEpsilonFree($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsEpsilonFree(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_empty_language_func_call node, Object data) {
+		// just #^__isEmptyLanguage($net)  built-in, wrapped as #^isEmptyLanguage($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsEmptyLanguage(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_empty_string_language_func_call node, Object data) {
+		// just #^__isEmptyStringLanguage($net) built-in, wrapped as #^isEmptyStringLanguage($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsEmptyStringLanguage(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_contains_empty_string_func_call node, Object data) {
+		// just #^__containsEmptyString($net) built-in, wrapped as #^containsEmptyString($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.ContainsEmptyString(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_is_string_func_call node, Object data) {
+		// just #^__isString($net)  built-in, wrapped as #^isString($net) and
+		// 										  	     #^isSingleStringLanguage($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsString(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+	public Object visit(ASTlng_contains_other_func_call node, Object data) {
+		// just #^__containsOther($net)  built-in, wrapped as #^containsOther($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (fst.getContainsOther())
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+
+
+/*	not needed?  see definition in predefined.kl
+	public Object visit(ASTlng_is_universal_language_func_call node, Object data) {
+		// just #^__isUniversalLanguage($net)  built-in, wrapped as #^isUniversalLanguage($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		// IsUniversalLanguage doesn't exist yet
+		if (lib.IsUniversalLanguage(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+*/
+
 
 /*
 	public Object visit(ASTlng_equivalent_func_call node, Object data) {
@@ -5043,7 +5217,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		Fst fstOrig = (Fst) stack.pop() ;
 
-		String str = lib.GetSingleString(fstOrig, "Arg to implode must denote a language of one string.") ;
+		String str = lib.GetSingleString(fstOrig, "Arg to implode must denote a language of exactly one string.") ;
 
 		if (str.length() == 0) {
 			throw new KleeneArgException("Argument to implode must denote a language of one non-empty string.") ;
@@ -5910,7 +6084,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		//lib.FstDump(netNameFst) ;
 
 		String net_id = lib.GetSingleString(netNameFst, 
-			"Argument to $^getNet() must denote a language of one string") ;
+			"Argument to $^getNet() must denote a language of exactly one string") ;
 
 		if (net_id.length() == 0) {
 			throw new KleeneArgException("Second arg to info (filepath) must denote a non-empty string") ;
@@ -7835,10 +8009,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst filePathFst = (Fst)(stack.pop()) ;
 
-			filePath = lib.GetSingleString(filePathFst, "Second arg to info (filepath) must denote a language of one string.") ;
+			filePath = lib.GetSingleString(filePathFst, "Second arg to info (filepath) must denote a language of exactly one string.") ;
 
 			if (filePath.length() == 0) {
-				throw new KleeneArgException("Second arg to info (filepath) must denote a non-empty string") ;
+				throw new KleeneArgException("Second arg to info (filepath) must denote a language of exactly one non-empty string") ;
 			}
 
 		}
@@ -7849,7 +8023,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(2).jjtAccept(this, data) ;
 			Fst encodingFst = (Fst)(stack.pop()) ;
 
-			encoding = lib.GetSingleString(encodingFst, "Third arg to info (encoding) must denote a language of one string.") ;
+			encoding = lib.GetSingleString(encodingFst, "Third arg to info (encoding) must denote a language of exactly one string.") ;
 
 			if (encoding.length() == 0) {
 				throw new KleeneArgException("Third arg to info (encoding) must denote a non-empty string") ;
@@ -7944,7 +8118,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				node.jjtGetChild(1).jjtAccept(this, data) ;
 				Fst pathFst = (Fst)(stack.pop()) ;
 
-				title = lib.GetSingleString(pathFst, "Second arg to test must denote a language of one string.") ;
+				title = lib.GetSingleString(pathFst, "Second arg to test must denote a language of exactly one string.") ;
 			} else {
 				title = "Anonymous Fst" ;
 			}
@@ -8001,6 +8175,44 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 		return data ;  
 	}
+	public Object visit(ASTassert_statement node, Object data) {
+		// daughters:
+		// 		numexp()		// boolean, required
+		// 		regexp()		// optional, should denote a single-string language
+
+		// evaluate the numexp(), interpret as boolean (true or false)
+		// if not true, then throw an AssertException
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		if (!lib.isTrue(stack.pop())) {
+			String msg = "" ;
+			if (node.jjtGetNumChildren() == 2) {
+				node.jjtGetChild(1).jjtAccept(this, data) ;
+				Fst msgFst = (Fst)(stack.pop()) ;
+				msg = lib.GetSingleString(msgFst, "Second arg to assert() must denote a language of exactly one string") ;
+			}
+			throw new AssertException(msg) ;
+		}
+		return data ;
+	}
+	public Object visit(ASTrequire_statement node, Object data) {
+		// daughters:
+		// 		numexp()		// boolean, required
+		// 		regexp()		// optional, should denote a single-string language
+
+		// evaluate the numexp(), interpret as boolean (true or false)
+		// if not true, then throw an AssertException
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		if (!lib.isTrue(stack.pop())) {
+			String msg = "" ;
+			if (node.jjtGetNumChildren() == 2) {
+				node.jjtGetChild(1).jjtAccept(this, data) ;
+				Fst msgFst = (Fst)(stack.pop()) ;
+				msg = lib.GetSingleString(msgFst, "Second arg to require() must denote a language of exactly one string") ;
+			}
+			throw new RequireException(msg) ;
+		}
+		return data ;
+	}
 	public Object visit(ASTprint_statement node, Object data) {
 		// the first required daughter, an ASTregexp; this is the 
 		//		net to list
@@ -8019,7 +8231,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst sepFst = (Fst)(stack.pop()) ;
 
-			sepString = lib.GetSingleString(sepFst, "Second arg to print must denote a language of one string.") ;
+			sepString = lib.GetSingleString(sepFst, "Second arg to print must denote a language of exactly one string.") ;
 		} 
 
 		int displayLimit = 100 ;
@@ -8077,7 +8289,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		try {
 			String excMsg = lib.GetSingleString(fst, 
-			"The message to an exception statement must denote a single string.") ;
+			"The message to an exception statement must denote a language of exactly one string.") ;
 			throw new KleeneInterpreterException(excMsg) ;
 		} catch (Exception exc) {
 			exc.printStackTrace() ;
@@ -8158,7 +8370,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst sepFst = (Fst)(stack.pop()) ;
 
-			sepString = lib.GetSingleString(sepFst, "Second arg to print must denote a language of one string.") ;
+			sepString = lib.GetSingleString(sepFst, "Second arg to print must denote a language of exactly one string.") ;
 		} 
 
 		int displayLimit = 100 ;
@@ -8232,10 +8444,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		Fst tempFst = (Fst)(stack.pop()) ;
 
 		String inputFilePath = lib.GetSingleString(tempFst, 
-			"Second arg to testTokensTextFile must denote a language of one string.") ;
+			"Second arg to testTokensTextFile must denote a language of exactly one string.") ;
 
 		if (inputFilePath.length() == 0) {
-			throw new KleeneArgException("Second arg to testTokensTextFile must denote one non-empty string") ;
+			throw new KleeneArgException("Second arg to testTokensTextFile must denote a language of exactly one non-empty string") ;
 		}
 
 		// 2.  encoding of the input file
@@ -8243,7 +8455,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(2).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String inputFileEncoding = lib.GetSingleString(tempFst, "Third arg to testTokensTextFile must denote a language of one string.") ;
+		String inputFileEncoding = lib.GetSingleString(tempFst, "Third arg to testTokensTextFile must denote a language of exactly one string.") ;
 
 		if (inputFileEncoding.length() == 0) {
 			throw new KleeneArgException("Third arg to testTokensTextFile must denote one non-empty string") ;
@@ -8254,7 +8466,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(3).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputFilePath= lib.GetSingleString(tempFst, "Fourth arg to testTokensTextFile must denote a language of one string.") ;
+		String outputFilePath= lib.GetSingleString(tempFst, "Fourth arg to testTokensTextFile must denote a language of exactly one string.") ;
 
 		if (outputFilePath.length() == 0) {
 			throw new KleeneArgException("Fourth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8265,7 +8477,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(4).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputFileEncoding = lib.GetSingleString(tempFst, "Fifth arg to testTokensTextFile must denote a language of one string.") ;
+		String outputFileEncoding = lib.GetSingleString(tempFst, "Fifth arg to testTokensTextFile must denote a language of exactly one string.") ;
 
 		if (outputFileEncoding.length() == 0) {
 			throw new KleeneArgException("Fifth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8278,7 +8490,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(5).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String rootElmtName = lib.GetSingleString(tempFst, "Sixth arg to testTokensTextFile must denote a language of one string.") ;
+		String rootElmtName = lib.GetSingleString(tempFst, "Sixth arg to testTokensTextFile must denote a language of exactly one string.") ;
 
 		if (rootElmtName.length() == 0) {
 			throw new KleeneArgException("Sixth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8289,7 +8501,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(6).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String tokenElmtName = lib.GetSingleString(tempFst, "Seventh arg to testTokensTextFile must denote a language of one string.") ;
+		String tokenElmtName = lib.GetSingleString(tempFst, "Seventh arg to testTokensTextFile must denote a language of exactly one string.") ;
 		
 		if (tokenElmtName.length() == 0) {
 			throw new KleeneArgException("Seventh arg to testTokensTextFile must denote one non-empty string") ;
@@ -8300,7 +8512,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(7).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String inputElmtName = lib.GetSingleString(tempFst, "Eighth arg to testTokensTextFile must denote a language of one string.") ;
+		String inputElmtName = lib.GetSingleString(tempFst, "Eighth arg to testTokensTextFile must denote a language of exactly one string.") ;
 		
 		if (inputElmtName.length() == 0) {
 			throw new KleeneArgException("Eighth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8311,7 +8523,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(8).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputsElmtName = lib.GetSingleString(tempFst, "Ninth arg to testTokensTextFile must denote a language of one string.") ;
+		String outputsElmtName = lib.GetSingleString(tempFst, "Ninth arg to testTokensTextFile must denote a language of exactly one string.") ;
 		
 		if (outputsElmtName.length() == 0) {
 			throw new KleeneArgException("Ninth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8322,7 +8534,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(9).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputElmtName = lib.GetSingleString(tempFst, "Tenth arg to testTokensTextFile must denote a language of one string.") ;
+		String outputElmtName = lib.GetSingleString(tempFst, "Tenth arg to testTokensTextFile must denote a language of exactly one string.") ;
 		
 		if (outputElmtName.length() == 0) {
 			throw new KleeneArgException("Tenth arg to testTokensTextFile must denote one non-empty string") ;
@@ -8333,7 +8545,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(10).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String weightAttrName = lib.GetSingleString(tempFst, "Eleventh arg to testTokensTextFile must denote a language of one string.") ;
+		String weightAttrName = lib.GetSingleString(tempFst, "Eleventh arg to testTokensTextFile must denote a language of exactly one string.") ;
 		
 		if (weightAttrName.length() == 0) {
 			throw new KleeneArgException("Eleventh arg to testTokensTextFile must denote one non-empty string") ;
@@ -8505,10 +8717,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(1).jjtAccept(this, data) ;
 		Fst tempFst = (Fst)(stack.pop()) ;
 
-		String inputFilePath = lib.GetSingleString(tempFst, "Second arg to testTokensXMLFile must denote a language of one string.") ;
+		String inputFilePath = lib.GetSingleString(tempFst, "Second arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (inputFilePath.length() == 0) {
-			throw new KleeneArgException("Second arg to testTokensXMLFile must denote one non-empty string") ;
+			throw new KleeneArgException("Second arg to testTokensXMLFile must denote exactly one non-empty string") ;
 		}
 
 		// 2. argument supplying the name of the element holding
@@ -8522,7 +8734,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(2).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String srcInputElmtName = lib.GetSingleString(tempFst, "Third arg to testTokensXMLFile must denote a language of one string.") ;
+		String srcInputElmtName = lib.GetSingleString(tempFst, "Third arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (srcInputElmtName.length() == 0) {
 			throw new KleeneArgException("Third arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8533,7 +8745,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(3).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputFilePath = lib.GetSingleString(tempFst, "Fourth arg to testTokensXMLFile must denote a language of one string.") ;
+		String outputFilePath = lib.GetSingleString(tempFst, "Fourth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (outputFilePath.length() == 0) {
 			throw new KleeneArgException("Fourth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8544,7 +8756,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(4).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputFileEncoding = lib.GetSingleString(tempFst, "Fifth arg to testTokensXMLFile must denote a language of one string.") ;
+		String outputFileEncoding = lib.GetSingleString(tempFst, "Fifth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (outputFileEncoding.length() == 0) {
 			throw new KleeneArgException("Fifth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8557,7 +8769,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(5).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String rootElmtName = lib.GetSingleString(tempFst, "Sixth arg to testTokensXMLFile must denote a language of one string.") ;
+		String rootElmtName = lib.GetSingleString(tempFst, "Sixth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (rootElmtName.length() == 0) {
 			throw new KleeneArgException("Sixth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8568,7 +8780,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(6).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String tokenElmtName = lib.GetSingleString(tempFst, "Seventh arg to testTokensXMLFile must denote a language of one string.") ;
+		String tokenElmtName = lib.GetSingleString(tempFst, "Seventh arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (tokenElmtName.length() == 0) {
 			throw new KleeneArgException("Seventh arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8579,7 +8791,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(7).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String inputElmtName = lib.GetSingleString(tempFst, "Eighth arg to testTokensXMLFile must denote a language of one string.") ;
+		String inputElmtName = lib.GetSingleString(tempFst, "Eighth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (inputElmtName.length() == 0) {
 			throw new KleeneArgException("Eighth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8590,7 +8802,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(8).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputsElmtName = lib.GetSingleString(tempFst, "Ninth arg to testTokensXMLFile must denote a language of one string.") ;
+		String outputsElmtName = lib.GetSingleString(tempFst, "Ninth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (outputsElmtName.length() == 0) {
 			throw new KleeneArgException("Ninth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8601,7 +8813,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(9).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String outputElmtName = lib.GetSingleString(tempFst, "Tenth arg to testTokensXMLFile must denote a language of one string.") ;
+		String outputElmtName = lib.GetSingleString(tempFst, "Tenth arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (outputElmtName.length() == 0) {
 			throw new KleeneArgException("Tenth arg to testTokensXMLFile must denote one non-empty string") ;
@@ -8612,7 +8824,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		node.jjtGetChild(10).jjtAccept(this, data) ;
 		tempFst = (Fst)(stack.pop()) ;
 
-		String weightAttrName = lib.GetSingleString(tempFst, "Eleventh arg to testTokensXMLFile must denote a language of one string.") ;
+		String weightAttrName = lib.GetSingleString(tempFst, "Eleventh arg to testTokensXMLFile must denote a language of exactly one string.") ;
 		
 		if (weightAttrName.length() == 0) {
 			throw new KleeneArgException("Eleventh arg to testTokensXMLFile must denote one non-empty string") ;
@@ -9092,7 +9304,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst pathFst = (Fst)(stack.pop()) ;
 
-			path = lib.GetSingleString(pathFst, "Second arg to writeXML must denote a language of one string.") ;
+			path = lib.GetSingleString(pathFst, "Second arg to writeXML must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
 				throw new KleeneArgException("Second arg to writeXML must denote a non-empty string") ;
@@ -9104,7 +9316,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(2).jjtAccept(this, data) ;
 			Fst encodingFst = (Fst)(stack.pop()) ;
 
-			encoding = lib.GetSingleString(encodingFst, "Second arg to writeXML must denote a language of one string.") ;
+			encoding = lib.GetSingleString(encodingFst, "Second arg to writeXML must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
 				throw new KleeneArgException("Second arg to writeXML must denote a non-empty string") ;
@@ -9133,7 +9345,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst pathFst = (Fst)(stack.pop()) ;
 
-			path = lib.GetSingleString(pathFst, "Second arg to writeDOT must denote a language of one string.") ;
+			path = lib.GetSingleString(pathFst, "Second arg to writeDOT must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
 				throw new KleeneArgException("Second arg to writeDOT must denote a non-empty string") ;
@@ -9145,7 +9357,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			node.jjtGetChild(2).jjtAccept(this, data) ;
 			Fst encodingFst = (Fst)(stack.pop()) ;
 
-			encoding = lib.GetSingleString(encodingFst, "Third arg to writeDOT must denote a language of one string.") ;
+			encoding = lib.GetSingleString(encodingFst, "Third arg to writeDOT must denote a language of exactly one string.") ;
 			
 			if (encoding.length() == 0) {
 				throw new KleeneArgException("Third arg to writeDOT must denote a non-empty string") ;
@@ -9208,10 +9420,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			// Should leave an Fst object on the stack
 			Fst pathFst = (Fst)(stack.pop()) ;
 
-			pathstring = lib.GetSingleString(pathFst, "Each arg to 'source' must denote a language of one string.") ;
+			pathstring = lib.GetSingleString(pathFst, "Each arg to 'source' must denote a language of exactly one string.") ;
 			
 			if (pathstring.length() == 0) {
-				throw new KleeneArgException("Each path arg to 'source' must be a non-empty string") ;
+				throw new KleeneArgException("Each path arg to 'source' must denote a language of exactly one non-empty string") ;
 			}
 			File file = new File(pathstring) ;
 
@@ -9226,7 +9438,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				node.jjtGetChild(p + 1).jjtAccept(this, data) ;
 				Fst encodingFst = (Fst)(stack.pop()) ;
 
-				encoding = lib.GetSingleString(encodingFst, "Each arg to 'source' must denote a language of one string.") ;
+				encoding = lib.GetSingleString(encodingFst, "Each arg to 'source' must denote a language of exactly one string.") ;
 				if (encoding.length() == 0) {
 					throw new KleeneArgException("The encoding argument to source must be a non-empty string.") ;
 				}

@@ -768,9 +768,27 @@ public class Kleene {
 					||	t.kind == LNG_STATECOUNT_FUNC_ID
 					||	t.kind == LNG_ARCCOUNT_FUNC_ID
 					||	t.kind == LNG_ARITY_FUNC_ID
+
+					// boolean functions
 					||	t.kind == LNG_IS_RTN_FUNC_ID
 					||	t.kind == LNG_IS_CYCLIC_FUNC_ID
+					||	t.kind == LNG_IS_ACCEPTOR_FUNC_ID
+					||	t.kind == LNG_IS_TRANSDUCER_FUNC_ID
+
+					||	t.kind == LNG_IS_WEIGHTED_FUNC_ID
+					||	t.kind == LNG_IS_IDETERMINISTIC_FUNC_ID
+					||	t.kind == LNG_IS_ODETERMINISTIC_FUNC_ID
+					||	t.kind == LNG_IS_EPSILONFREE_FUNC_ID
+
+					||	t.kind == LNG_IS_EMPTY_LANGUAGE_FUNC_ID
+					||	t.kind == LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID
+					|| 	t.kind == LNG_CONTAINS_EMPTY_STRING_FUNC_ID
+					||	t.kind == LNG_IS_STRING_FUNC_ID  // i.e. single string language
+					||	t.kind == LNG_CONTAINS_OTHER_FUNC_ID
+//					||	t.kind == LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID
 //					||	t.kind == LNG_EQUIVALENT_FUNC_ID
+					// end of boolean functions
+
 					||	t.kind == NUM_ABS_FUNC_ID
 					||	t.kind == DBL_CEIL_FUNC_ID
 					||	t.kind == DBL_FLOOR_FUNC_ID
@@ -779,7 +797,7 @@ public class Kleene {
 					||	t.kind == DBL_DOUBLE_FUNC_ID
 					||	t.kind == LNG_LONG_FUNC_ID
 					||	t.kind == LNG_SIZE_FUNC_ID
-					||	t.kind == LNG_IS_EMPTY_FUNC_ID
+					||	t.kind == LNG_IS_EMPTY_FUNC_ID    // used for testing lists
 
 					||	t.kind == NUM_HEAD_FUNC_ID
 					||	t.kind == NUM_GETLAST_FUNC_ID
@@ -1139,6 +1157,10 @@ TOKEN: {
 |   < DRAW_RW: "draw" > : NON_INITIAL
 |   < SIGMA_RW: "sigma" > : NON_INITIAL
 |   < TEST_RW: "test" > : NON_INITIAL
+
+|	< ASSERT_RW: "assert" > : NON_INITIAL
+|	< REQUIRE_RW: "require" > : NON_INITIAL
+
 |   < TESTTOKENSTEXTFILE_RW: "testTokensTextFile" > : NON_INITIAL
 |   < TESTTOKENSXMLFILE_RW:      "testTokensXMLFile" >      : NON_INITIAL
 |	< EXCEPTION_RW: "exception" > : NON_INITIAL
@@ -1591,9 +1613,24 @@ TOKEN: {
 |   < LNG_ARITY_FUNC_ID:      <NUM_PREFIX> <CIRCUMFLEX> "__arity">
 
 // boolean functions
-|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isRtn">
-|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isCyclic">
+|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>         "__isRtn">
+|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>     "__isCyclic">
+|	< LNG_IS_ACCEPTOR_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>     "__isAcceptor">
+|	< LNG_IS_TRANSDUCER_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isTransducer">
 
+|	< LNG_IS_WEIGHTED_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 			"__isWeighted">
+|	< LNG_IS_IDETERMINISTIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isIDeterministic">
+|	< LNG_IS_ODETERMINISTIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isODeterministic">
+|	< LNG_IS_EPSILONFREE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 		"__isEpsilonFree">
+
+|	< LNG_IS_EMPTY_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	  	"__isEmptyLanguage">
+|	< LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isEmptyStringLanguage">
+|	< LNG_CONTAINS_EMPTY_STRING_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__containsEmptyString">
+|	< LNG_IS_STRING_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 				"__isString">
+											// i.e. is single string language
+|	< LNG_CONTAINS_OTHER_FUNC_ID: <NUM_PREFIX> <CIRCUMFLEX>				"__containsOther">
+
+//|	< LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isUniversalLanguage">
 //|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__equivalent">
 
 |	< NUM_ABS_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__abs">
@@ -1612,6 +1649,8 @@ TOKEN: {
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
+
+// wired-in, #^isEmpty( list ) used for net lists and number lists
 |	< LNG_IS_EMPTY_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "isEmpty" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2545,6 +2584,10 @@ void statement(): {}
 |   draw_statement()
 |	sigma_statement()
 |   test_statement()
+
+|	assert_statement()
+|	require_statement()
+
 |   testTokensTextFile_statement()
 |	testTokensXMLFile_statement()
 |	sys_print_statement()
@@ -3018,6 +3061,17 @@ void test_statement() #test_statement: {}
 	<TEST_RW> regexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
 }
 
+void assert_statement() #assert_statement: {}
+{
+	<ASSERT_RW> numexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
+}
+
+void require_statement() #require_statement: {}
+{
+	<REQUIRE_RW> numexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
+}
+
+
 void sys_print_statement() #sys_print_statement: {}
 {
 	<SYS_PRINT_RW> regexp() ( <COMMA_OP> regexp() ) ? <SEMICOLON>
@@ -3285,9 +3339,24 @@ void primary_numexp(): {}
 | 	lng_arccount_func_call()		// __arcCount()
 
 | 	lng_arity_func_call()         	// __arity()
-|	lng_is_rtn_func_call()			// __isRtn()
-|	lng_is_cyclic_func_call()			// __isCyclic()
 
+// boolean function calls
+|	lng_is_rtn_func_call()			// __isRtn()
+|	lng_is_cyclic_func_call()		// __isCyclic()
+|	lng_is_acceptor_func_call()		// __isAcceptor()
+|	lng_is_transducer_func_call()	// __isTransducer()
+
+|	lng_is_weighted_func_call()			// __isWeighted()
+|	lng_is_ideterministic_func_call()	// __isIDeterministic()
+|	lng_is_odeterministic_func_call()	// __isODeterministic()
+|	lng_is_epsilonfree_func_call()		// __isEpsilonFree()
+
+|	lng_is_empty_language_func_call()			// __isEmptyLanguage()
+|	lng_is_empty_string_language_func_call()	// __isEmptyStringLanguage()
+|	lng_contains_empty_string_func_call()		// __containsEmptyString()
+|	lng_is_string_func_call()					// __isString()
+|	lng_contains_other_func_call()				// __containsOther()
+//|	lng_is_universal_language_func_call()		// __isUniversalLanguage()
 //|	lng_equivalent_func_call()		// __equivalent
 
 | 	num_abs_func_call()
@@ -4026,7 +4095,7 @@ void lng_arity_func_call() #lng_arity_func_call: {}
 	<LNG_ARITY_FUNC_ID> regexp_one_arg_list() 
 }
 
-// boolean
+// boolean functions
 
 void lng_is_rtn_func_call() #lng_is_rtn_func_call: {}
 {
@@ -4037,6 +4106,67 @@ void lng_is_cyclic_func_call() #lng_is_cyclic_func_call: {}
 {
 	<LNG_IS_CYCLIC_FUNC_ID> regexp_one_arg_list() 
 }
+
+void lng_is_acceptor_func_call() #lng_is_acceptor_func_call: {}
+{
+	<LNG_IS_ACCEPTOR_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_transducer_func_call() #lng_is_transducer_func_call: {}
+{
+	<LNG_IS_TRANSDUCER_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_weighted_func_call() #lng_is_weighted_func_call: {}
+{
+	<LNG_IS_WEIGHTED_FUNC_ID> regexp_one_arg_list() 
+}
+void lng_is_ideterministic_func_call() #lng_is_ideterministic_func_call: {}
+{
+	<LNG_IS_IDETERMINISTIC_FUNC_ID> regexp_one_arg_list() 
+}
+void lng_is_odeterministic_func_call() #lng_is_odeterministic_func_call: {}
+{
+	<LNG_IS_ODETERMINISTIC_FUNC_ID> regexp_one_arg_list() 
+}
+void lng_is_epsilonfree_func_call() #lng_is_epsilonfree_func_call: {}
+{
+	<LNG_IS_EPSILONFREE_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_empty_language_func_call() #lng_is_empty_language_func_call: {}
+{
+	<LNG_IS_EMPTY_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_empty_string_language_func_call() #lng_is_empty_string_language_func_call: {}
+{
+	<LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_contains_empty_string_func_call() #lng_contains_empty_string_func_call: {}
+{
+	<LNG_CONTAINS_EMPTY_STRING_FUNC_ID> regexp_one_arg_list() 
+}
+
+
+// i.e. single string language
+void lng_is_string_func_call() #lng_is_string_func_call: {}
+{
+	<LNG_IS_STRING_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_contains_other_func_call() #lng_contains_other_func_call: {}
+{
+	<LNG_CONTAINS_OTHER_FUNC_ID> regexp_one_arg_list() 
+}
+
+
+//void lng_is_universal_language_func_call() #lng_is_universal_language_func_call: {}
+//{
+//	<LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
+//}
+
 
 //void lng_equivalent_func_call() #lng_equivalent_func_call: {}
 //{
@@ -4248,6 +4378,7 @@ void lng_size_func_call() #lng_size_func_call: {}
 	<LNG_SIZE_FUNC_ID> list_arg_list()
 }
 
+// #^isEmpty( list )
 void lng_is_empty_func_call() #lng_is_empty_func_call: {}
 {
 	<LNG_IS_EMPTY_FUNC_ID> list_arg_list()

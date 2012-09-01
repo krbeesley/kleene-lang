@@ -17,7 +17,7 @@ $(TARGET).pdf: $(TARGET).tex
 pdf: open
 
 open: $(TARGET).pdf
-	evince $(TARGET).pdf
+	open $(TARGET).pdf
 
 clean:  
 	rm -f $(TARGET).aux $(TARGET).bbl $(TARGET).blg $(TARGET).toc $(TARGET).dvi $(TARGET).ent $(TARGET).log $(TARGET).ps $(TARGET).pdf $(TARGET)$(SMALL).ps  $(TARGET)$(SMALL).pdf *.cb *.cb2 *~

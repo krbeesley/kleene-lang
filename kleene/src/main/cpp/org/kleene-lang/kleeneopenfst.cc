@@ -141,7 +141,7 @@ Java_OpenFstLibraryWrapper_emptyLanguageWithStartStateFstNative
 	return (jlong)(uintptr_t) fstp ;
 }
 
-
+// return ptr to new Fst encoding the empty string language
 JNIEXPORT jlong JNICALL
 Java_OpenFstLibraryWrapper_emptyStringLanguageFstNative
   (JNIEnv *env, jclass cls)
@@ -241,7 +241,8 @@ Java_OpenFstLibraryWrapper_universalRelationFstNative
 	return (jlong)(uintptr_t) fstp ;
 }
 
-
+// return ptr to a new Fst encoding one string, which
+// consists of characters listed in intArray
 JNIEXPORT jlong JNICALL
 Java_OpenFstLibraryWrapper_oneStringFstNative
 	(JNIEnv *env, jclass cls,
@@ -1011,8 +1012,9 @@ Java_OpenFstLibraryWrapper_iterateLowHighNative
 	(JNIEnv *env, jclass cls,
 	 jlong fstPtr, jlong low, jlong high)
 {
-	// basically a kind of concatenation, start with an
-	// emptyStringLanguageFst (recognizes only the empty string)
+	// basically a kind of concatenation;
+	// start with an emptyStringLanguageFst 
+	// (which recognizes only the empty string)
 	StdVectorFst *resultFstp = new StdVectorFst() ;
 	resultFstp->AddState() ;
 	resultFstp->SetStart(0) ;
@@ -1130,11 +1132,34 @@ Java_OpenFstLibraryWrapper_isCyclicNative
 }
 
 JNIEXPORT jboolean JNICALL
-Java_OpenFstLibraryWrapper_isEmptyNative
+Java_OpenFstLibraryWrapper_isEmptyLanguageNative
   (JNIEnv *env, jclass cls,
    jlong fstPtr)
 {
 	if (((StdVectorFst *)(uintptr_t) fstPtr)->Start() == kNoStateId) {
+		return (jboolean) true ;
+	} else {
+		return (jboolean) false ;
+	}
+}
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_containsEmptyStringNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr)
+{
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+
+	StateId startStateId = fstp->Start() ;
+
+	// if there is a real start state (i.e. the FST is not
+	// completely empty, AND the start state is a final state,
+	// then the FST accepts the empty string
+
+	if (( startStateId != kNoStateId )
+		&& 
+		( fstp->Final(startStateId) != TropicalWeight::Zero() )
+	   ) {
 		return (jboolean) true ;
 	} else {
 		return (jboolean) false ;

@@ -332,6 +332,14 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // not possible
 	  return data ;
   }
+  public Object visit(ASTassert_statement node, Object data) {
+	  // not possible
+	  return data ;
+  }
+  public Object visit(ASTrequire_statement node, Object data) {
+	  // not possible
+	  return data ;
+  }
   public Object visit(ASTprint_statement node, Object data) {
 	  // not possible
 	  return data ;
@@ -873,7 +881,7 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
 
-// boolean
+// boolean functions
 
   public Object visit(ASTlng_is_rtn_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
@@ -883,6 +891,67 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
+  public Object visit(ASTlng_is_acceptor_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTlng_is_transducer_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_weighted_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_ideterministic_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_odeterministic_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_epsilonfree_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_empty_language_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_empty_string_language_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_contains_empty_string_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_is_string_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  public Object visit(ASTlng_contains_other_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+
+/*
+  public Object visit(ASTlng_is_universal_language_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+*/
 
 /*
   public Object visit(ASTlng_equivalent_func_call node, Object data) {

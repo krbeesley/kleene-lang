@@ -1,5 +1,5 @@
 
-//	KleeneArgException.java
+//	RequireException.java
 //
 //	The Kleene Programming Language
 
@@ -21,9 +21,9 @@
 
 //	[short description here]
 
-public class KleeneArgException extends RuntimeException {
-    KleeneArgException() {}
-    KleeneArgException(String msg) {
+public class RequireException extends RuntimeException {
+    RequireException() {}
+    RequireException(String msg) {
 		super(msg) ;  // retrieve with e.getMessage()
     }
 }

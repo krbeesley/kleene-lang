@@ -1,5 +1,5 @@
 
-//	KleeneArgException.java
+//	AssertException.java
 //
 //	The Kleene Programming Language
 
@@ -21,9 +21,9 @@
 
 //	[short description here]
 
-public class KleeneArgException extends RuntimeException {
-    KleeneArgException() {}
-    KleeneArgException(String msg) {
+public class AssertException extends RuntimeException {
+    AssertException() {}
+    AssertException(String msg) {
 		super(msg) ;  // retrieve with e.getMessage()
     }
 }

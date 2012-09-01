@@ -1,5 +1,5 @@
 // basic global definition script for Kleene
-// ~/.kleene/global/basic.kl
+// ~/.kleene/global/predefined.kl
 
 // Users should NOT edit this file.
 
@@ -656,5 +656,62 @@ $@^map($^func, $@list) {
 
 #^isCyclic($fst) {
 	return #^__isCyclic($fst) ;
+}
+
+#^isAcceptor($fst) {
+	return #^__isAcceptor($fst) ;
+}
+
+#^isTransducer($fst) {
+	return #^__isTransducer($fst) ;
+}
+
+
+#^isWeighted($fst) {
+	return #^__isWeighted($fst) ;
+}
+
+#^isIDeterministic($fst) {
+	return #^__isIDeterministic($fst) ;
+}
+
+#^isODeterministic($fst) {
+	return #^__isODeterministic($fst) ;
+}
+
+#^isEpsilonFree($fst) {
+	return #^__isEpsilonFree($fst) ;
+}
+
+#^isEmptyLanguage($fst) {
+	return #^__isEmptyLanguage($fst) ;
+}
+
+#^isEmptyStringLanguage($fst) {
+	return #^__isEmptyStringLanguage($fst) ;
+}
+
+#^containsEmptyString($fst) {
+	return #^__containsEmptyString($fst) ;
+}
+
+#^isString($fst) {
+	return #^__isString($fst) ;
+}
+// aliases
+#^isSingleStringLanguage = #^isString ;
+#^isOneStringLanguage    = #^isString ;
+
+// rough sketch??
+#^isUniversalLanguage($fst) {
+	// problem: need to reduce sigma, e.g. where e:e always acts like
+	// OTHER_ID:OTHER_ID, then e should be removed from the sigma
+	return 	#^arity($fst) == 1
+		&&	#^size(#@^getSigma($fst)) == 0
+		&&	#^stateCount(~$fst) == 0 ;
+}
+
+#^containsOther($fst) {
+	return #^__containsOther($fst) ;
 }
 

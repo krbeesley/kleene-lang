@@ -1,6 +1,44 @@
 
 		Kleene Version Notes
 
+2012-09-1
+	Added boolean functions:
+		#^isWeighted($fst)
+		#^isIDeterministic($fst)
+		#^isODeterministic($fst)
+		#^containsOther($fst)
+		#^hasClosedAlphabet($fst)
+		#^isEpsilonFree($fst)
+		#^isEmptyLanguage($fst)
+		#^isEmptyStringLanguage($fst)
+		#^isString($fst)  or  #^isSingleStringLanguage($fst)
+		#^containsEmptyString($fst)
+		#^isUniversalLanguage($fst) [not completely reliable yet]
+
+	Release v0.9.2.2
+
+2012-08-12
+	Added #^isAcceptor($fst)
+		true iff it's a _semantic_ acceptor, with labels
+		like x:x, and does not contain OTHER_NONID
+
+	Added #^isTransducer($fst)
+		equivalent to !#^isAcceptor($fst)
+
+2012-07-31
+	Added assert(numexp(), regexp()) statement.
+	Throws an AssertException if the numexp() does not interpret as
+	true.  The optional regexp() must denote a language of exactly one
+	string, used as a message for the Exception.  Intended to be used
+	for testing.
+
+	Added require(numexp(), regexp()) statement.
+	Throws a RequireException if the numexp() does not interpret as
+	true.  The optional regexp() must denote a language of exactly one
+	string, used as a message for the Exception.  Intended to be used
+	when declaring functions, to check semantic restrictions on the
+	arguments.
+
 2012-07-25
 	Release v0.9.2.1
 	with some fixes to function calls from the GUI

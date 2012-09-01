@@ -22,7 +22,7 @@
 //	Constants used in the Kleene GUI
 
 public interface KleeneGuiConstants {
-	public static final String VERSION_NUMBER = "0.9.2.1" ;
+	public static final String VERSION_NUMBER = "0.9.2.2" ;
 
 	public static final String COPYRIGHT_YEAR_RANGE = "2006-2012" ;
 }

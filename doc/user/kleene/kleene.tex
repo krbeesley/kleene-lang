@@ -96,7 +96,7 @@ North Salt Lake\\
 Utah 84054, USA\\
 \texttt{ken.beesley@sap.com}}
 
-\date{23 July 2012}
+\date{19 August 2012}
 
 \begin{document}
 %\begin{frontmatter}
@@ -2043,6 +2043,134 @@ The following arithmetic-valued functions are supported.
 \end{tabular}
 
 \vspace{0.5cm}
+
+\subsubsection{Boolean Functions}
+
+Boolean functions are special cases of arithmetic functions that return 1 for true and 0 for false.  They
+are typically used in if-else expressions or in loops for testing qualities of finite-state machines.
+The predefined boolean functions are 
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|}
+\hline
+\verb!#^isAcceptor($fst)! \\
+\verb!#^isTransducer($fst)! \\
+\verb!#^isRtn($fst)! \\
+\hline
+\verb!#^isWeighted($fst)! \\
+\verb!#^isIDeterministic($fst)! \\
+\verb!#^isODeterministic($fst)! \\
+\verb!#^containsOther($fst)! \\
+\verb!#^hasClosedAlphabet($fst)! \\
+\verb!#^isEpsilonFree($fst)! \\
+\hline
+\verb!#^isEmptyLanguage($fst)! \\
+\verb!#^isEmptyStringLanguage($fst)! \\
+\verb!#^isString($fst)! or \verb!#^isSingleStringLanguage($fst)!\\
+\verb!#^containsEmptyString($fst)! \\
+\verb!#^isUniversalLanguage($fst)! \\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+\noindent
+and others will no doubt be defined as they become needed.
+
+The \verb!#^isAcceptor($fst)! function returns true if and only if the
+argument network is semantically an
+acceptor.  In OpenFst, where all arc labels in a finite-state machine
+are two-level, with an input label and an output label, an acceptor is a
+machine wherein each mapping is an identity mapping.\footnote{If the network contains an arc labeled
+OTHER\_NONID:OTHER\_NONID, then it will look like an acceptor to the OpenFst library, but in Kleene such
+a network is semantically and in practice a transducer, and if \verb!#^isAcceptor()! is called on such
+a network the return value is 0 (false).  Conversely, if
+\verb!#^isTransducer()! is called on any network that
+contains an arc labeled OTHER\_NONID:OTHER\_NONID, the return value is 1 (true).}
+
+The \verb!#^isWeighted($fst)! function returns true if and only if the argument network contains arcs
+with a non-neutral weight value.
+
+The \verb!#^isIDeterministic($fst)! function returns true if and only if the network is \emph{input}-side
+deterministic.  Similarly, the \verb!#^isODeterministic($fst)! function returns true if and only if the
+network is \emph{output}-side deterministic.\footnote{The spellings IDeterministic and ODeterministic are
+used inside the OpenFst library.}
+
+The \verb!#^containsOther($fst)! function returns true if and only if the network contains at least one
+OTHER\_ID or OTHER\_NONID label.  Conversely, 
+\verb!#^hasClosedAlphabet($fst)! returns true if and only if the
+alphabet of the network is closed, i.e.\@ the network does not contain any OTHER\_ID
+or OTHER\_NONID labels.  Thus 
+\verb!#^hasClosedAlphabet($fst)! is equivalent to 
+\verb@!#^containsOther($fst)@.
+
+The \verb!#^isEpsilonFree($fst)! function returns true if and only if the network contains no
+EPSILON:EPSILON arcs, i.e.\@ no double-sided epsilon labels.  Because Kleene routinely runs epsilon-removal
+on all networks, which removes such double-sided epsilon arcs, unless such removal is explicitly turned off, there is seldom any practical use for 
+\verb!#^isEpsilonFree($fst)!.
+
+The \verb!#^isEmptyLanguage($fst)! function returns true if and only if the network encodes the empty
+language, i.e.\@ the language that contains no strings at all, not even the empty string.
+
+The \verb!#^isEmptyStringLanguage($fst)! function returns true if and only if the network encodes the
+empty string language, i.e.\@ the language that contains only the empty string.
+
+The \verb!#^isString($fst)! function, aliased as \verb!#^isSingleStringLanguage($fst)!, returns true if
+and only if the network encodes a language of exactly one string.
+
+The \verb!#^containsEmptyString($fst)! function returns true if and only if the network encodes a
+language that contains the empty string.
+
+The \verb!#^isUniversalLanguage($fst)! function returns true if and only if the network encodes the
+universal language, i.e.\@ the language that contains all possible strings.  KRB, 2012-08-19:  This
+function will not be fully reliable until a ``compact sigma'' function is implemented.
+
+\subsubsection{Assert and Require Statements}
+
+The \verb!assert(#numexp, $regexp)! statement has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!assert(#numexp, $regexp)! statement is typically used
+for testing.
+
+\begin{Verbatim}[fontsize=\small]
+$fst = a - a ;
+assert(#^isEmptyLanguage($fst), "Should denote the empty language.") ;
+
+$fst2 = a* ;
+assert(#^containsEmptyString($fst2), "Should contain the empty string.") ;
+\end{Verbatim}
+
+In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!require(#numexp, $regexp)! statement is typically used
+in user-defined functions to impose ``semantic'' restrictions on the
+arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
+and \verb!require(#numexp, $regexp)! arguments could be debated.  One
+possibility would be to implement a global switch that would cause all
+\verb!assert(#numexp, $regexp)! statements, but not \verb!require(#numexp,
+$regexp)! statements, to be ignored at runtime.}
+
+\begin{Verbatim}[fontsize=\small]
+#^myIntersect($a, $b) {
+	require(#^isAcceptor($a) && #^isAcceptor($b), 
+		"The arguments to #^myIntersect must denote an acceptor.") ;
+	return $a & $b ;
+}
+\end{Verbatim}
+
+
+
+
+
 
 \subsection{Lists}
 

@@ -141,11 +141,17 @@ public class OpenFstLibraryWrapper
 	private static native boolean isEpsilonFreeNative(long fst) ;
 	private static native boolean isIDeterministicNative(long fst) ;
 	private static native boolean isODeterministicNative(long fst) ;
-	private static native boolean isEmptyNative(long fst) ;
+	private static native boolean isEmptyLanguageNative(long fst) ;
 	private static native boolean isCyclicNative(long fst) ;
 	private static native boolean isAcyclicNative(long fst) ;
+
 	private static native boolean isStringNative(long fst) ; 
-	// just one-string language
+	// i.e. just one-string language
+	// in the syntax, #^isString(Fst fst) or
+	//                #^isSingleStringLanguage(Fst fst)
+	//
+	private static native boolean containsEmptyStringNative(long fst) ;
+	
 	private static native boolean isNotStringNative(long fst) ;
 
 	private static native String getShortFstInfoNative(long fst) ;
@@ -604,10 +610,6 @@ public class OpenFstLibraryWrapper
 		return fst1 ;
 	}
 
-	//public Fst SigmaStarFst() {
-	//	return UniversalLanguageFst() ;
-	//}
-
 	public Fst UniversalLanguageFst() {
 		// semiring generalization point
 		Fst universalLanguageFst = 
@@ -810,11 +812,19 @@ public class OpenFstLibraryWrapper
 	// 		Functions testing Fsts
 	// ************************************************************
 	
-	public boolean IsEmptyStringLanguageFst(Fst fst) {
+	public boolean IsEmptyStringLanguage(Fst fst) {
 		if (numStatesNative(fst.getFstPtr()) == 1 
 			&& numArcsNative(fst.getFstPtr()) == 0 
 			&& fst.getSigma().size() == 0) 
 		{
+			return true ;
+		} else {
+			return false ;
+		}
+	}
+
+	public boolean ContainsEmptyString(Fst fst) {
+		if (containsEmptyStringNative(fst.getFstPtr())) {
 			return true ;
 		} else {
 			return false ;
@@ -1211,7 +1221,7 @@ public class OpenFstLibraryWrapper
 		if (isSapRtnConventions() && (a.getIsRtn() || b.getIsRtn())) {
 			if (a.getIsRtn()) { 
 				resultFst = a ;
-				if (IsEmptyStringLanguageFst(b)) {
+				if (IsEmptyStringLanguage(b)) {
 					if (a.getFromSymtab()) {
 						resultFst = CopyFst(a) ;
 					}
@@ -1228,7 +1238,7 @@ public class OpenFstLibraryWrapper
 				}
 			} else {	// b is the RTN
 				resultFst = b ;
-				if (IsEmptyStringLanguageFst(a)) {
+				if (IsEmptyStringLanguage(a)) {
 					if (b.getFromSymtab()) {
 						resultFst = CopyFst(b) ;
 					}
@@ -1271,7 +1281,7 @@ public class OpenFstLibraryWrapper
 		Fst resultFst = new Fst(differenceNative(a.getFstPtr(), b.getFstPtr())) ; 
 
 		// N.B. difference can leave the result empty
-		if (!isEmptyNative(resultFst.getFstPtr())) {
+		if (!isEmptyLanguageNative(resultFst.getFstPtr())) {
 			addSigmaOther(resultFst, a) ;
 		}
 		CorrectSigmaOtherInPlace(resultFst) ;
@@ -1452,7 +1462,7 @@ public class OpenFstLibraryWrapper
 		Fst resultFst = new Fst(intersectNative(a.getFstPtr(), b.getFstPtr())) ;
 
 		// N.B. intersect can leave the result empty
-		if (!isEmptyNative(resultFst.getFstPtr())) {
+		if (!isEmptyLanguageNative(resultFst.getFstPtr())) {
 			addSigmaOther(resultFst, a) ;
 			// not needed
 			// addSigmaOther(resultFst, b)
@@ -1476,7 +1486,14 @@ public class OpenFstLibraryWrapper
 		invertInPlaceNative(a.getFstPtr()) ;
 	}
 
+
 	public boolean IsAcceptor(Fst a) {
+		// isAcceptorNative is True iff the Fst looks
+		// like an acceptor to OpenFst, i.e. all the
+		// labels look like x:x
+		// Note that if the Fst contains OTHER_NONID:OTHER_NONID
+		// then it will look like an acceptor to OpenFst but
+		// it's semantically a transducer.
 		return isAcceptorNative(a.getFstPtr()) ;
 	}
 	public boolean IsSemanticAcceptor(Fst a) {
@@ -1497,8 +1514,8 @@ public class OpenFstLibraryWrapper
 	public boolean IsODeterministic(Fst a) {
 		return isODeterministicNative(a.getFstPtr()) ;
 	}
-	public boolean IsEmpty(Fst a) {
-		return isEmptyNative(a.getFstPtr()) ;
+	public boolean IsEmptyLanguage(Fst a) {
+		return isEmptyLanguageNative(a.getFstPtr()) ;
 	}
 	public boolean IsCyclic(Fst a) {
 		return isCyclicNative(a.getFstPtr()) ;
