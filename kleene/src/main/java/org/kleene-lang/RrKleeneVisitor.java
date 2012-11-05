@@ -521,15 +521,48 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
+  public Object visit(ASTnet_parallel_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
   public Object visit(ASTrule_lhs node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
+  public Object visit(ASTrule_lhs_upper node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTrule_lhs_lower node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTrule_lhs_markup node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTleft_markup_insertion node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTright_markup_insertion node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
   public Object visit(ASTrule_right_arrow_oblig node, Object data) {
 	  // this is a leaf node
 	  return data ;
   }
   public Object visit(ASTrule_right_arrow_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_right_arrow_max_l2r node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
+  public Object visit(ASTrule_right_arrow_min_l2r node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -541,17 +574,21 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
+  public Object visit(ASTrule_left_arrow_max_l2r node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_l2r node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+
+
   public Object visit(ASTrestriction_exp node, Object data) {
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTlongest_exp node, Object data) {
-	  // nothing below this point can be a valid rr ref like $>name
-	  node.childrenAccept(this, new Boolean(false)) ;
-	  return data ;
-  }
-  public Object visit(ASTshortest_exp node, Object data) {
-	  node.childrenAccept(this, new Boolean(false)) ;
+  public Object visit(ASTrestriction_lhs node, Object data) {
 	  return data ;
   }
   // for rules that compile into transducers
@@ -564,7 +601,12 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   // for rules that compile into transducers
-  public Object visit(ASTcontext node, Object data) {
+  public Object visit(ASTone_level_rule_context node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  // for rules that compile into transducers
+  public Object visit(ASTtwo_level_rule_context node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -573,32 +615,25 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   // for rules that compile into transducers
-  public Object visit(ASTleft_context node, Object data) {
+  public Object visit(ASTleft_rule_context node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
-	  return data ;
-  }
-  // for => restrictions that compile into acceptors
-  public Object visit(ASTleft_restriction_context node, Object data) {
 	  return data ;
   }
   // for rules that compile into transducers
-  public Object visit(ASTright_context node, Object data) {
+  public Object visit(ASTright_rule_context node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
+  // for => restrictions that compile into acceptors
+  public Object visit(ASTleft_restriction_context node, Object data) {
 	  return data ;
   }
   // for => restrictions that compile into acceptors
   public Object visit(ASTright_restriction_context node, Object data) {
 	  return data ;
   }
-  public Object visit(ASTdefault_context node, Object data) {
-	  node.childrenAccept(this, new Boolean(false)) ;
-	  return data ;
-  }
-  public Object visit(ASTupper_context node, Object data) {
-	  node.childrenAccept(this, new Boolean(false)) ;
-	  return data ;
-  }
-   public Object visit(ASTlower_context node, Object data) {
+  public Object visit(ASTwhere_clauses node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -606,6 +641,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
+  public Object visit(ASTwhere_mixed_clause node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
   public Object visit(ASTelmt_of_net_list_exp node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;

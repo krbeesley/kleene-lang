@@ -704,7 +704,7 @@ $@^map($^func, $@list) {
 
 // rough sketch??
 #^isUniversalLanguage($fst) {
-	// problem: need to reduce sigma, e.g. where e:e always acts like
+	// problem: need to 'compact sigma', e.g. where e:e always acts like
 	// OTHER_ID:OTHER_ID, then e should be removed from the sigma
 	return 	#^arity($fst) == 1
 		&&	#^size(#@^getSigma($fst)) == 0

@@ -631,8 +631,8 @@ public class Kleene {
 		" " +
 		"Copyright \u00A9 " + KleeneGuiConstants.COPYRIGHT_YEAR_RANGE 
 		+ " SAP AG. " + 
-		"All rights reserved.", 
-		"images/splash/artpremier.jpg", gui, 4000) ;
+		"Apache License, Version 2", 
+		"images/splash/donostia3.jpg", gui, 5000) ;
     }
 
     boolean parsing_rrprod_def = false ;
@@ -653,19 +653,20 @@ public class Kleene {
 			|| 	t.kind == NET_ID					// $foo
 			|| 	t.kind == LEFT_DOUBLE_QUOTE			// start of double-quoted string
 			||	t.kind == LSQUARE					// start of [abc]
-			|| 	t.kind == LSQUARE_CIRCUMFLEX			// start of [^abc]
-			||	t.kind == MULTICHAR_SYMBOL			// '[Noun]'
+			|| 	t.kind == LSQUARE_CIRCUMFLEX		// start of [^abc]
+			||	t.kind == MULTICHAR_SYMBOL			// start of multi-char symbol, e.g. '[Noun]'
 			||	t.kind == WORD_BOUNDARY				// #, used in contexts
-			||	t.kind == LONGEST_DIRECTIVE			// longest{ } -> left _ right
-			||	t.kind == SHORTEST_DIRECTIVE		// shortest{ } -> left _ right
 			||	t.kind == LANGLE 					// start of a weight <0.3>
 			||	t.kind == TILDE_OP					// regular negation/complement 
 			||	t.kind == TILDE_OP_ASCII
 			||	t.kind == EPSILON
 			|| 	t.kind == EPSILON_ASCII
-			||	t.kind == NET_FUNC_ID_BEFORE_ARGLIST	// keep this here
+			||	t.kind == NET_FUNC_ID_BEFORE_ARGLIST	// keep this here; the tokenizer
+														// has already determined that it's
+														// followed by a left paren
 
-			// built-in functions followed by some kind of arg list
+			// built-in functions followed by a left parent, i.e.
+			// there is some kind of arg list following.
 			|| (
 					(	t.kind == NET_REVERSE_FUNC_ID
 					||	t.kind == NET_INVERT_FUNC_ID
@@ -711,10 +712,14 @@ public class Kleene {
 					
 					||	t.kind == NET_GET_NET_FUNC_ID
 					||	t.kind == NET_SUB_FUNC_ID
+
 					||	t.kind == NET_EMBED_RTN_SUBNETS_FUNC_ID
 					||	t.kind == NET_EXPAND_RTN_FUNC_ID
 					||	t.kind == NET_START_FUNC_ID
+					||	t.kind == NET_PARALLEL_FUNC_ID
 					)
+				// now check for the following LPAREN, indicating that
+				// there is an arglist following
 				&& getToken(i+1).kind == LPAREN
 			   )
 			) {
@@ -746,6 +751,7 @@ public class Kleene {
 		}
 	}
 		
+	// used in semantic lookahead, especially in arguments to functions
 	boolean mustBeNumexp() {
 		int i ;
 		// look past left parens to first significant token
@@ -786,6 +792,7 @@ public class Kleene {
 					||	t.kind == LNG_IS_STRING_FUNC_ID  // i.e. single string language
 					||	t.kind == LNG_CONTAINS_OTHER_FUNC_ID
 //					||	t.kind == LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID
+// #^isUniversalLanguage defined now in predefined.kl; don't try to do it here
 //					||	t.kind == LNG_EQUIVALENT_FUNC_ID
 					// end of boolean functions
 
@@ -1211,7 +1218,9 @@ TOKEN: {
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
 											   )* > 
-|   < ITERATOR_NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	// couldn't used <NUM_PREFIX> here, as it clashed with the #
+	// used in rule word-boundaries
+|   < ITERATOR_NUM_ID: "#" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
 											   )* > 
@@ -1299,66 +1308,61 @@ TOKEN: {
 	//}
 //|  
 	// for common right-arrow rule  a -> b / l _ r
-	< RIGHT_RULE_ARROW: "\u2192">    // Unicode RIGHTWARDS ARROW
+	< RIGHT_RULE_ARROW:   "\u2192" >    // Unicode RIGHTWARDS ARROW
 |   < RIGHT_RULE_ARROW_ASCII: "->" >
 
 	// for optional right-arrow rule  a ->? b / l _ r
-|   < RIGHT_RULE_ARROW_OPT: "\u2192" (<WHITESPACE>)* "?" >
-|   < RIGHT_RULE_ARROW_ASCII_OPT: "->" (<WHITESPACE>)* "?" >
+|   < RIGHT_RULE_ARROW_OPT:   "\u2192" (<WHITESPACE>)* "?" >
+|   < RIGHT_RULE_ARROW_OPT_ASCII: "->" (<WHITESPACE>)* "?" >
 
-|   < RESTRICTION_ARROW: "\u21D2">   // Unicode RIGHTWARDS DOUBLE ARROW
-|   < RESTRICTION_ARROW_ASCII: "=>">
+	// for right-arrow-rule, max, left-to-right behavior
+	// a+ {max}-> b / l _ r
+|   < RIGHT_RULE_ARROW_MAX_L2R:       <LCURLY> (<WHITESPACE>)* "max"
+(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "\u2192" >
+|   < RIGHT_RULE_ARROW_MAX_L2R_ASCII: <LCURLY> (<WHITESPACE>)* "max"
+(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "->" >
+ 
+	//  for right-arrow-rule, min, left-to-right behavior
+	//  a+b+ {min}-> b / l _ r
+|   < RIGHT_RULE_ARROW_MIN_L2R:       <LCURLY> (<WHITESPACE>)* "min"
+(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "\u2192" >
+|   < RIGHT_RULE_ARROW_MIN_L2R_ASCII: <LCURLY> (<WHITESPACE>)* "min" 
+(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "->" >
 
-|   < LEFT_RULE_ARROW: "\u2190">     // Unicode LEFTWARDS ARROW
+	// for left-arrow-rule
+	// a <- b / l _ r
+|   < LEFT_RULE_ARROW:   "\u2190">     // Unicode LEFTWARDS ARROW
 |   < LEFT_RULE_ARROW_ASCII: "<-">
 
-|   < LEFT_RULE_ARROW_OPT: "\u2190" (<WHITESPACE>)* "?" >    
-|   < LEFT_RULE_ARROW_ASCII_OPT: "<-" (<WHITESPACE>)* "?" >
+	// for left-arrow-rule optional
+	// a <-? b / l _ r
+|   < LEFT_RULE_ARROW_OPT:   "\u2190" (<WHITESPACE>)* "?" >    
+|   < LEFT_RULE_ARROW_OPT_ASCII: "<-" (<WHITESPACE>)* "?" >
 
-// Possible use to signal upper vs. lower matching of contexts?
-//  \u2191 is UPWARDS ARROW
-//  \u2193 is DOWNWARDS ARROW
+	//  for left-arrow-rule, max, left-to-right behavior
+	//  a <-{max} b+ / l _ r
+|   < LEFT_RULE_ARROW_MAX_L2R:   "\u2190" (<WHITESPACE>)* <LCURLY> "max"
+(<WHITESPACE>)* <RCURLY> >
+|   < LEFT_RULE_ARROW_MAX_L2R_ASCII: "<-" (<WHITESPACE>)* <LCURLY> "max"
+(<WHITESPACE>)* <RCURLY> >
+
+	//  for left-arrow-rule, min, left-to-right behavior
+	//  a <-{min} a+b+ / l _ r
+|   < LEFT_RULE_ARROW_MIN_L2R:   "\u2190" (<WHITESPACE>)* <LCURLY> "min"
+(<WHITESPACE>)* <RCURLY>  >
+|   < LEFT_RULE_ARROW_MIN_L2R_ASCII: "<-" (<WHITESPACE>)* <LCURLY> "min"
+(<WHITESPACE>)* <RCURLY>  >
+
+|	<MARKUP_OP: "~~~" >
+
+|   < RESTRICTION_ARROW:   "\u21D2" >   // Unicode RIGHTWARDS DOUBLE ARROW
+|   < RESTRICTION_ARROW_ASCII: "=>" >
 
 |   < LEFT_DOUBLE_QUOTE: "\"">   : IN_DOUBLE_QUOTES
 
 |   < LSQUARE: "[" >             : IN_SQUARE_BRACKETS
 |   < LSQUARE_CIRCUMFLEX: "[^" > : IN_SQUARE_BRACKETS
 
-// directives used in rules--must be followed by curly brace
-// N.B. you can't concatenatate anything with a curly-braced expression
-// (unlike parenthesized or square-bracketed expressions);
-// angle brackets not good here--needed to delimit weights
-
-// LONGEST_DIRECTIVE and SHORTEST_DIRECTIVE can appear at the start
-// of a regular expression
-
-|   < LONGEST_DIRECTIVE: "longest" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-|   < SHORTEST_DIRECTIVE: "shortest" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-
-// UPPER_DIRECTIVE and LOWER_DIRECTIVE can appear only before a rule context
-
-|   < UPPER_DIRECTIVE: "{" (<WHITESPACE>)* "upper" (<WHITESPACE>)* "}" >
-        {  
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-|   < LOWER_DIRECTIVE: "{" (<WHITESPACE>)* "lower" (<WHITESPACE>)* "}" >
-        {  
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
 |	< WHERE_MATCHED_DIRECTIVE_DEFAULT: "where" ( <WHITESPACE> )* "{" >
 		{
 			input_stream.backup(1) ;  // backup to re-tokenize the "{"
@@ -1367,14 +1371,29 @@ TOKEN: {
 			matchedToken.image = image.toString().trim() ;
 		}
 		// equivalent to "where", but more explicit
-|   < WHERE_MATCHED_DIRECTIVE: "where_matched" ( <WHITESPACE> )* "{" >
+|   < WHERE_MATCHED_DIRECTIVE: "where-matched" ( <WHITESPACE> )* "{" >
         {  
 	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
 
 	    image.deleteCharAt(image.length() - 1) ;
 	    matchedToken.image = image.toString().trim() ;
         }
-|   < WHERE_MIXED_DIRECTIVE: "where_mixed" ( <WHITESPACE> )* "{" >
+|   < WHERE_MATCHED_DIRECTIVE_UNDERSCORE: "where_matched" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+
+|   < WHERE_MIXED_DIRECTIVE: "where-mixed" ( <WHITESPACE> )* "{" >
+        {  
+	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+        }
+|   < WHERE_MIXED_DIRECTIVE_UNDERSCORE: "where_mixed" ( <WHITESPACE> )* "{" >
         {  
 	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
 
@@ -1405,16 +1424,34 @@ TOKEN: {
 |   < CROSSPRODUCT_OP: ":" >
 // U+2A2F is VECTOR or CROSS PRODUCT   _x_ would be the ASCII version
 
-// context operator in rules
+// one-level rule-context operator
+// semantically, each side must be interpretable as a semantic acceptor
 |   < UNDERSCORE_OP: "_" >
+
+// two-level rule-context operator
+// a regular expression can always be interpreted as two-level
+// U+2017 is the Unicode DOUBLE LOW LINE character
+|	< DOUBLE_UNDERSCORE_OP:    "\u2017" >	// for two-level rule context
+|	< DOUBLE_UNDERSCORE_OP_ASCII: "2_2" >	// ASCII alternative
 
 // try to use just plain # to
 // mark word boundary in rules and restriction expressions (=>)
 // The trick is to
 // match # that is not part of a name like #num or #numFunc()
-|	< WORD_BOUNDARY: "#" (" " | ";" | "|" | "_" ) >
+// KRB:  does it have to be done this way? basically want to 
+// call it a WORD_BOUNDARY unless the following character is "^",
+// "@" or any of <UNICODE_ID_LETTER> (a large list)
+// The following has # followed by space, rule punctuation, or a number of
+// characters that can start a regular expression, including Unicode tilde 223C
+// and the lunate Epsilon 03F5---then backup to retokenize that last character
+|	< WORD_BOUNDARY: "#" (" " | ";" | "|" | "_" | "," | "(" | "." | "\\" | "$" |
+"\"" | "[" | "'" | "<" | "~" | "\u223C" | "\u03F5" ) >
 		{
 			input_stream.backup(1) ;
+
+// note that longer matches starting # will automatically have precedence
+//|	< WORD_BOUNDARY: "#" >
+//		{
 			// give it a special internal multichar image
 			// N.B. cannot be __@#@, which would exclude the symbols from
 			//	the promotion of OTHER
@@ -1426,7 +1463,6 @@ TOKEN: {
 |   < VERTICAL_BAR_OP: "|" >
 
 // infix regexp operator, intersection; 
-// was function-name sigil before 0.9.2.0
 |   < AMPERSAND: "&" >
 
 // new (0.9.2.0+) function-name sigil
@@ -1484,7 +1520,7 @@ TOKEN: {
 			}
 		}
 		// COMMA_OP handled this way to deal with case of
-		// $@&map($&($a){ return $a $a ;}, $@list)
+		// $@^map($^($a){ return $a $a ;}, $@list)
 		// where the block of the anon function ends in
 		// DEFAULT mode, but need to switch to NON_INITIAL
 		// to handle any further arguments
@@ -1502,7 +1538,7 @@ TOKEN: {
 											   | "_"
 											   )* > : NON_INITIAL
 
-    // $&union
+    // $^union
     // could be DEFAULT or NON_INITIAL
 
     // if DEFAULT, could be a function assignment like
@@ -1514,7 +1550,7 @@ TOKEN: {
     // which has a tricky switch back to DEFAULT
 
     // or it could be a func_declaration like
-    // $&union   ($a, $b)   = { return $a | $b    ; } ;
+    // $^union   ($a, $b)   = { return $a | $b    ; } ;
     // DEF       NON_INIT   DEF        NON_INIT   DEF
     //           count-parens
 
@@ -1581,13 +1617,13 @@ TOKEN: {
 |	< NET_REMOVELAST_DEST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__removeLast!" >
 
 // functions for retrieving individual numbers from num lists 
-|	< NUM_HEAD_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__head" >
-|	< NUM_GETLAST_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__getLast" >
-|	< NUM_GET_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__get" >
+|	< NUM_HEAD_FUNC_ID:		<NUM_FUNC_PREFIX> "__head" >
+|	< NUM_GETLAST_FUNC_ID:	<NUM_FUNC_PREFIX> "__getLast" >
+|	< NUM_GET_FUNC_ID:		<NUM_FUNC_PREFIX> "__get" >
 
-|	< NUM_POP_DEST_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__pop!" >
-|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__removeLast!" >
-|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__remove!" >
+|	< NUM_POP_DEST_FUNC_ID:			<NUM_FUNC_PREFIX> "__pop!" >
+|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_FUNC_PREFIX> "__removeLast!" >
+|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_FUNC_PREFIX> "__remove!" >
 
 // wired-in, need to match following "(" to avoid having longer match 
 // override it.  The getNet function returns a network given a
@@ -1606,64 +1642,75 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_PREFIX> <CIRCUMFLEX> "__pathCount">
-|   < LNG_STATECOUNT_FUNC_ID: <NUM_PREFIX> <CIRCUMFLEX> "__stateCount">
-|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_PREFIX> <CIRCUMFLEX> "__arcCount">
+|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_FUNC_PREFIX> "__pathCount">
+|   < LNG_STATECOUNT_FUNC_ID: <NUM_FUNC_PREFIX> "__stateCount">
+|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_FUNC_PREFIX> "__arcCount">
 
-|   < LNG_ARITY_FUNC_ID:      <NUM_PREFIX> <CIRCUMFLEX> "__arity">
+|   < LNG_ARITY_FUNC_ID:      <NUM_FUNC_PREFIX> "__arity">
 
 // boolean functions
-|	< LNG_IS_RTN_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>         "__isRtn">
-|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>     "__isCyclic">
-|	< LNG_IS_ACCEPTOR_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX>     "__isAcceptor">
-|	< LNG_IS_TRANSDUCER_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__isTransducer">
+|	< LNG_IS_RTN_FUNC_ID:	<NUM_FUNC_PREFIX>         "__isRtn">
+|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isCyclic">
+|	< LNG_IS_ACCEPTOR_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isAcceptor">
+|	< LNG_IS_TRANSDUCER_FUNC_ID:	<NUM_FUNC_PREFIX> "__isTransducer">
 
-|	< LNG_IS_WEIGHTED_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 			"__isWeighted">
-|	< LNG_IS_IDETERMINISTIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isIDeterministic">
-|	< LNG_IS_ODETERMINISTIC_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isODeterministic">
-|	< LNG_IS_EPSILONFREE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 		"__isEpsilonFree">
+|	< LNG_IS_WEIGHTED_FUNC_ID:	<NUM_FUNC_PREFIX> 			"__isWeighted">
+|	< LNG_IS_IDETERMINISTIC_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isIDeterministic">
+|	< LNG_IS_ODETERMINISTIC_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isODeterministic">
+|	< LNG_IS_EPSILONFREE_FUNC_ID:	<NUM_FUNC_PREFIX> 		"__isEpsilonFree">
+			// i.e. is free of two-sided epsilons
+|	< LNG_IS_EMPTY_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	  	"__isEmptyLanguage">
+|	< LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isEmptyStringLanguage">
+|	< LNG_CONTAINS_EMPTY_STRING_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__containsEmptyString">
+|	< LNG_IS_STRING_FUNC_ID:	<NUM_FUNC_PREFIX> 				"__isString">
+			// i.e. is single string language
+|	< LNG_CONTAINS_OTHER_FUNC_ID: <NUM_FUNC_PREFIX>				"__containsOther">
 
-|	< LNG_IS_EMPTY_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	  	"__isEmptyLanguage">
-|	< LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isEmptyStringLanguage">
-|	< LNG_CONTAINS_EMPTY_STRING_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__containsEmptyString">
-|	< LNG_IS_STRING_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 				"__isString">
-											// i.e. is single string language
-|	< LNG_CONTAINS_OTHER_FUNC_ID: <NUM_PREFIX> <CIRCUMFLEX>				"__containsOther">
+//|	< LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isUniversalLanguage">
+			// KRB: don't try to do this here;
+			// #^isUniversalLanguage now defined in predefined.kl
+			// but won't be reliable until 'compact alphabet' is implemented
 
-//|	< LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> 	"__isUniversalLanguage">
-//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__equivalent">
+//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_FUNC_PREFIX> "__equivalent">
+			// KRB: think about this one
 
-|	< NUM_ABS_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__abs">
-|   < DBL_CEIL_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__ceil">
-|	< DBL_FLOOR_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__floor">
-|	< LNG_ROUND_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__round">
-|	< DBL_RINT_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__rint">
-|	< DBL_DOUBLE_FUNC_ID:		<NUM_PREFIX> <CIRCUMFLEX> "__double">
-|	< LNG_LONG_FUNC_ID:			<NUM_PREFIX> <CIRCUMFLEX> "__long">
-//|	< LNG_NET_COUNT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__netCount">
-//|	< LNG_NUM_COUNT_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "__numCount">
+|	< NUM_ABS_FUNC_ID:			<NUM_FUNC_PREFIX> "__abs">
+|   < DBL_CEIL_FUNC_ID:			<NUM_FUNC_PREFIX> "__ceil">
+|	< DBL_FLOOR_FUNC_ID:		<NUM_FUNC_PREFIX> "__floor">
+|	< LNG_ROUND_FUNC_ID:		<NUM_FUNC_PREFIX> "__round">
+|	< DBL_RINT_FUNC_ID:			<NUM_FUNC_PREFIX> "__rint">
+|	< DBL_DOUBLE_FUNC_ID:		<NUM_FUNC_PREFIX> "__double">
+|	< LNG_LONG_FUNC_ID:			<NUM_FUNC_PREFIX> "__long">
 
-// wired-in, need to match following "(" to avoid having longer match override it
-|	< LNG_SIZE_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "size" (<WHITESPACE>)* "(" >
+// wired-in function names:
+// need to (temporarily) match a following "(" to avoid matching, e.g.,  "size" if the next
+// token is really something longer like "sizeFoo"
+|	< LNG_SIZE_FUNC_ID:	<NUM_FUNC_PREFIX> "size" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
 // wired-in, #^isEmpty( list ) used for net lists and number lists
-|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_PREFIX> <CIRCUMFLEX> "isEmpty" (<WHITESPACE>)* "(" >
+|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_FUNC_PREFIX> "isEmpty" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|   < NET_START_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "start"  (<WHITESPACE>)*
-"(">
+|   < NET_START_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "start" (<WHITESPACE>)* "(">
 	{
 		input_stream.backup(1) ;
 		SwitchTo(NON_INITIAL) ;
 	}
-    // for $&start($>foo) 
+    // for $^start($>foo) 
+
+|   < NET_PARALLEL_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "parallel" (<WHITESPACE>)* "(">
+	{
+		input_stream.backup(1) ;
+		SwitchTo(NON_INITIAL) ;
+	}
+    // for $^parallel(rule, rule ...) to compile rules in parallel 
 
 |   < VOID_FUNC_ANON: <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
@@ -1672,6 +1719,10 @@ TOKEN: {
 	     	paren_count = 0 ;
 	     	SwitchTo(NON_INITIAL) ;
         }
+		// for ^(args ...)??
+
+		// KRB:  think about this again
+		//     the name alone could be an argument in a function call
 
 		// in a void_func_definition, the tokenizer starts in DEFAULT (initial) state,
 		// then needs to switch to NON_INITIAL to tokenize the (params),
@@ -1679,13 +1730,13 @@ TOKEN: {
 		// tokenize the block
 
 		//  a void function call (a kind of stand-alone statement) should also work with this plan
-		//  &myfunc (params) ;
-		//  The $myfunc will be first in the line, so the tokenizer will be in the DEFAULT state;
-		//  then it will shift into NON_INITIAL for the params, and then back to DEFAULT for
-		//  the semicolon.
+		//  ^myfunc (params) ;
+		//  The ^myfunc will be first token in the line, 
+		//		so the tokenizer will be in the DEFAULT state;
+		//  Then it will shift into NON_INITIAL for the params, and then back to DEFAULT for
+		//  the terminating semicolon.
 
-		// &foo(params) { ...
-
+		// ^foo(params) { ...
     // the tricky switch back to DEFAULT state for the block
     // requires counting to find a matching closing right paren
 |   < VOID_FUNC_ID_BEFORE_ARGLIST :          
@@ -1699,7 +1750,7 @@ TOKEN: {
 	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
 			// fix the image (a StringBuffer)
 	    	image.deleteCharAt(image.length() - 1) ;
-			// set the matchedToken.image (a String)
+			// set the matchedToken.image (a String), trimming off any whitespaces
 	    	matchedToken.image = image.toString().trim() ;
 
             if ( curLexState == DEFAULT ) {
@@ -1714,7 +1765,6 @@ TOKEN: {
 		                                             | "_"
 													 )* 
 													 ( "!" )? > : NON_INITIAL
-
 |   < VOID_FUNC_FUNC_ANON: 
         <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
@@ -1782,7 +1832,7 @@ TOKEN: {
 		// then (the tricky part) it needs to switch back to DEFAULT to
 		// tokenize the block
 
-		// $&foo(params) { ...
+		// $^foo(params) { ...
 
     // the tricky switch back to DEFAULT state for the block
     // requires counting to find a matching closing right paren
@@ -1868,13 +1918,14 @@ TOKEN: {
 		| "_"
 		)* > : NON_INITIAL
 
-|   < NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> 
+//|   < NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> 
+|   < NUM_ID: "#" <UNICODE_ID_LETTER> 
         ( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
 		)* > : NON_INITIAL
 
-|   < NUM_FUNC_ANON:  <NUM_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
+|   < NUM_FUNC_ANON:  <NUM_FUNC_PREFIX> (<WHITESPACE>)* "(">
         {
 		 input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -1882,7 +1933,7 @@ TOKEN: {
 	     SwitchTo(NON_INITIAL) ;
         }
 |   < NUM_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+        <NUM_FUNC_PREFIX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT>
 		| "_"
@@ -1902,7 +1953,7 @@ TOKEN: {
             }
         }
 |   < NUM_FUNC_ID_NO_ARGLIST:
-        <NUM_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+        <NUM_FUNC_PREFIX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT>
 		| "_"
@@ -1911,7 +1962,7 @@ TOKEN: {
 		> : NON_INITIAL
 
 |   < NUM_FUNC_FUNC_ANON: 
-        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
+        <NUM_FUNC_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
         {
 		 input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -1920,7 +1971,7 @@ TOKEN: {
         }
 
 |   < NUM_FUNC_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+        <NUM_FUNC_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
 		<DECIMAL_DIGIT> | "_")* (<WHITESPACE>)* "(">
         {  
 	    input_stream.backup(1) ;   // lop off the "("
@@ -1935,7 +1986,7 @@ TOKEN: {
             }
         }
 |   < NUM_FUNC_FUNC_ID_NO_ARGLIST:
-        <NUM_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+        <NUM_FUNC_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
 		<DECIMAL_DIGIT> | "_")* > : NON_INITIAL
 
 |   < NET_LIST_ID: <NET_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
@@ -1963,7 +2014,7 @@ TOKEN: {
         }
 
 |   < NUM_LIST_FUNC_FUNC_ANON:
-        <NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
+        <NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 		 	input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -1984,7 +2035,7 @@ TOKEN: {
 		}
 
 |	< NUM_LIST_GET_SLICE_FUNC_ID:	
-	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
+	<NUM_LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
 		{
 			input_stream.backup(1) ;
 			SwitchTo(NON_INITIAL) ;
@@ -1997,7 +2048,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__push!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2011,7 +2062,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__add!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2025,7 +2076,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__addAt!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2039,7 +2090,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__set!" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2054,7 +2105,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__tail" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2068,7 +2119,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_COPY_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_COPY_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__copy" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2082,7 +2133,7 @@ TOKEN: {
 			SwitchTo(NON_INITIAL) ;
 		}
 
-|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
+|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
 "__getSigma" (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2128,7 +2179,7 @@ TOKEN: {
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
 
 |   < NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+		<NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
 		{
 			input_stream.backup(1) ;
@@ -2143,17 +2194,17 @@ TOKEN: {
 		}
 
 |   < NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+		<NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
 
-|   < NUM_LIST_ID: <NUM_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
+|   < NUM_LIST_ID: <NUM_LIST_PREFIX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
 
-|   < NUM_LIST_LIT_PREFIX: <NUM_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
+|   < NUM_LIST_LIT_PREFIX: <NUM_LIST_PREFIX> (<WHITESPACE>)* "(" >
         { input_stream.backup(1) ; }
 
 |   < NUM_LIST_FUNC_ANON:
-        <NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
+        <NUM_LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
         {
 			input_stream.backup(1) ;
 	     	in_parenthesized = true ;
@@ -2162,7 +2213,7 @@ TOKEN: {
         }
 
 |   < NUM_LIST_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+		<NUM_LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_")* 
@@ -2181,7 +2232,7 @@ TOKEN: {
 		}
 
 |   < NUM_LIST_FUNC_ID_NO_ARGLIST: 
-		<NUM_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
+		<NUM_LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
 		( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_")*
@@ -2208,6 +2259,7 @@ TOKEN: {
 |   < ESCAPE_CHAR: "\\" ( "$"
                         | "#"
 						| "&"
+						| "^"	// KRB:  added 2012-09, test it
 						| "["
 						| "]"
 						| "("
@@ -2246,7 +2298,7 @@ TOKEN: {
 
 						| ~[]       // Perl-like redundant literalization of anything, 
 									// i.e. \m is the same same as m.
-						// Without this line, \m is handled in a Python-like way,
+						// Without the line above, \m is handled in a Python-like way,
 						// as a literal backslash followed by m.  
 						// The Java approach would be to make \m illegal.
 
@@ -2316,7 +2368,10 @@ TOKEN: {
 <*>
 TOKEN: {
     < #NET_PREFIX:  "$" >
-|   < #NUM_PREFIX:  "#" >
+//|   < #NUM_PREFIX:  "#" >		// caused problems with word-boundary in
+//								// rule contexts
+|   < #NUM_FUNC_PREFIX:  "#^" >
+|	< #NUM_LIST_PREFIX:  "#@" >
 |   < #LIST_PREFIX:  "@" >
 
 |   < #WHITESPACE:        ( " " | "\t" | "\n" )+ >
@@ -2495,17 +2550,17 @@ void statement(): {}
 |   rrprod_definition()
 |   num_assignment()
 
-//  &myvoidfunc =   needs lookahead of two tokens to
+//  ^myvoidfunc =   needs lookahead of two tokens to
 //		distinguish it from a void_func_call
 |	LOOKAHEAD(2)
 	void_func_assignment()
 
 //  a void_func_call is a kind of statement
-//  &myfunc(args) ;
+//  ^myfunc(args) ;
 |   LOOKAHEAD(void_func_call())
 	void_func_call()    
 
-//  &myfunc(params) { ... }
+//  ^myfunc(params) { ... }
 |	void_func_definition()
 
 | 	LOOKAHEAD(2)
@@ -2755,13 +2810,13 @@ void void_func_assignment() #void_func_assignment : {}
 
 void void_func_definition() #void_func_definition : {}
 {
-	// &foo(params) { } 
+	// ^foo(params) { } 
 	// allow just single statement instead of block?
     void_func_id() param_list() func_block()
 }
 
 // N.B. any XXX_func_assignment needs to terminate with a SEMICOLON
-// example:    $&foo = $&bar ;
+// example:    $^foo = $^bar ;
 void net_func_assignment() #net_func_assignment : {}
 {
 	// $^foo = $^bar ;
@@ -2773,43 +2828,43 @@ void net_func_assignment() #net_func_assignment : {}
 // in C and Java (no equal sign; no final semicolon)
 void net_func_definition() #net_func_definition : {}
 {
-	// $&foo(params) { } 
+	// $^foo(params) { } 
 	// allow just single statement instead of block?
     net_func_id() param_list() func_block()
 }
 
 void net_list_func_assignment() #net_list_func_assignment : {}
 {
-	// $@&foo = $@&bar ;
-	// $@&foo = $@&(){} ;
+	// $@^foo = $@^bar ;
+	// $@^foo = $@^(){} ;
     net_list_func_id() <EQUAL_SIGN> net_list_func_exp() <SEMICOLON>
 }
 
 void net_list_func_definition() #net_list_func_definition : {}
 {
-	// $@&foo(params) { } 
+	// $@^foo(params) { } 
 	// allow just single statement instead of block?
     net_list_func_id() param_list() func_block()
 }
 
 void num_list_func_assignment() #num_list_func_assignment : {}
 {
-	// #@&foo = #@&bar ;
-	// #@&foo = #@&(){} ;
+	// #@^foo = #@^bar ;
+	// #@^foo = #@^(){} ;
     num_list_func_id() <EQUAL_SIGN> num_list_func_exp() <SEMICOLON>
 }
 
 void num_list_func_definition() #num_list_func_definition : {}
 {
-	// #@&foo(params) { } 
+	// #@^foo(params) { } 
 	// allow just single statement instead of block?
     num_list_func_id() param_list() func_block()
 }
 
 void num_func_assignment() #num_func_assignment : {}
 {
-	// #&foo = #&bar ;
-	// #&foo = #&(){} ;
+	// #^foo = #^bar ;
+	// #^foo = #^(){} ;
     num_func_id() <EQUAL_SIGN> num_func_exp() <SEMICOLON>
 }
 
@@ -2817,7 +2872,7 @@ void num_func_assignment() #num_func_assignment : {}
 // on the LHS of the equal-sign
 void num_func_definition() #num_func_definition : {}
 {
-	// #&foo(params) { } ;
+	// #^foo(params) { } ;
 	// allow just single statement instead of block?
     num_func_id() param_list() func_block()
 }
@@ -3329,7 +3384,7 @@ void primary_numexp(): {}
 | 	hex_int_literal()
 | 	dec_float_literal()  //   .5   0.5
 | 	num_id()             //   #foo
-| 	num_func_call()      //   #&func(args)
+| 	num_func_call()      //   #^func(args)
 //| 	num_list_ref()        //   #@list[1] 
 
 | 	<LPAREN> numexp() <RPAREN>
@@ -3357,6 +3412,9 @@ void primary_numexp(): {}
 |	lng_is_string_func_call()					// __isString()
 |	lng_contains_other_func_call()				// __containsOther()
 //|	lng_is_universal_language_func_call()		// __isUniversalLanguage()
+	// KRB: #^isUniversalLanguage() now defined in predefined.kl
+	// but won't be reliable until something
+	// 		like the Xerox 'compact sigma' is implemented
 //|	lng_equivalent_func_call()		// __equivalent
 
 | 	num_abs_func_call()
@@ -3377,8 +3435,8 @@ void primary_numexp(): {}
 |	num_get_func_call()
 
 |	num_pop_dest_func_call()
-|	num_removelast_dest_func_call()		// #&__removeLast!(#@list)
-|	num_remove_dest_func_call()			// #&__remove!(#@list, #index)
+|	num_removelast_dest_func_call()		// #^__removeLast!(#@list)
+|	num_remove_dest_func_call()			// #^__remove!(#@list, #index)
 
 }
 
@@ -3391,8 +3449,8 @@ void num_func_call() #num_func_call : {}
 
 void num_func_exp() #num_func_exp : {}
 {
-    num_func_id()          // #&add
-|   num_func_anon_exp()  // #&(){}
+    num_func_id()          // #^add
+|   num_func_anon_exp()  // #^(){}
 |   num_func_func_call()
 }
 
@@ -3455,166 +3513,736 @@ void dec_float_literal() #dec_float_literal : {}
 
 // ######################### regexp ##############################
 
-// always create an ASTnumexp() node, useful in cases like arg_list
+// always create an ASTregexp() node, useful in cases like arg_list
 // where the items can be of different types
 
-void regexp() #regexp:
-{}
+void regexp() #regexp: {} 
 {
-  composed_exp() 
+  composed_exp()		// composition is the lowest priority operator in regular expressions;
+  						// if the expression consists of multiple alternation rules,
+						// then they are probably composed together (but see also the
+						// $^parallel(...) function, which is a basic regular expression)
 }
 
 // n-ary operation; build a flat tree for composition
 void composed_exp(): {}
 {
-  ( rule_like_exp() ( (<COMPOSITION_OP> | <COMPOSITION_OP_ASCII>) rule_like_exp() )* ) #composed_exp(>1)
+  ( poss_rule_exp() ( (<COMPOSITION_OP> | <COMPOSITION_OP_ASCII>) poss_rule_exp() )* ) 
+  #composed_exp(>1)
+  // i.e. iff multiple expressions were matched, joined by the composition operator 
+  //	put them all under a new ASTcomposed_exp node
 }
 
-void rule_like_exp(): 
-{ int rule_sections = 0 ; }
+void poss_rule_exp() :
+{ int rule_section_count = 0 ; 
+  int markup_exp_count = 0 ;
+}
 {
-   
-unioned_exp() 
-    { rule_sections = 0 ; }
+	(
+		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
+						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
+		// must be a left-arrow rule, with markup on the upper side,
+		// lacking an explicit left_markup_insertion (will be interpreted as empty string)
+		{ markup_exp_count = 0 ; }
+		// there may not be a right_markup_insertion either, in which case the rule is a no-op
+		( unioned_exp() { markup_exp_count += 1 ; } #right_markup_insertion(1) )?
+		#rule_lhs_markup(markup_exp_count)
 
-    (  
-	   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-	   		unioned_exp() #rule_lhs(2) 
-           	{ rule_sections = 1 ; }
+		// 1 node on the jjtree stack
+		// must be a rule left arrow here
+		(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
+					// KRB: do not allow markup here  (the upper lhs is markup)
+					(unioned_exp() #rule_lhs_lower(1))
+					// this completes the LHS of the rule (counting as one rule_section
+					#rule_lhs(2) { rule_section_count = 1 ; }
 
-           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   		( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_oblig(rule_sections)
-	|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_ASCII_OPT> )
-	     	unioned_exp() #rule_lhs(2) 
-           	{ rule_sections = 1 ; }
+					// the RHS of a rule is optional
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   		( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_opt(rule_sections)
-	|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-			(
-				// Catch a parsing problem found by Paola
-				// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
-				LOOKAHEAD ( {mustBeNumexp()} )
-				{ appendGuiError("Tokenization/parse problem: " +
-					"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
-					"as either < -1> or <(-1)>") ;
-				}
-				//numexp()
-			|
-				// should be followed by one of these "lower" expressions
-				( longest_exp() 
-            	| shortest_exp()
-				| unioned_exp() 
-				) #rule_lhs(2)
-           		{ rule_sections = 1 ; }
+					// where clauses are also optional, grouped, if present under #where_clauses
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
 
-           		( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   			( where_clause() { rule_sections += 1 ; } )* #rule_left_arrow_oblig(rule_sections)
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+		)
+
+	| 	unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
+
+		// when something starts out looking like a regular expression,
+		// it could be the start of an alternation rule, or a language
+		// restriction expression; after finding a unioned_exp(), see
+		// if the next token is an arrow operator or a <MARKUP_OP>
+
+		// N.B. the LHS parts of an alternation rule or language restriction
+		// expression shouldn't be semantic transducers, but they could still be
+		// acceptors and have the syntactic form of a cross-product expression,
+		// e.g.   a:a -> b:b
+		// So need to allow the upper and lower expressions to be syntactically
+		// composed, but do a semantic check during evaluation to make sure
+		// that they denote acceptors.
+
+		// N.B. if the composition operator (_o_) appears inside a sub-expression of a rule
+		// then it must be in parentheses
+
+		// N.B. this disjunction here is optional ( ... )?
+		(  
+			// right-arrow rules:  N.B. IF EDITED, SEE rule() AND MAKE PARALLEL EDITS
+
+		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
+				// KRB:  here possibility of markup rules
+				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
+				// old, allowed straightforward rewrite rule only
+				//(unioned_exp() #rule_lhs_lower(1)) 	// and this unioned_exp is the left-hand lower side
+				#rule_lhs(2) { rule_section_count = 1 ; }  // a rule must always have a left-hand side
+
+				// optional right-hand side of a rule
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				// zero or more where clauses
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_oblig(rule_section_count)
+		|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_OPT_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()		
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+		|  ( <RIGHT_RULE_ARROW_MAX_L2R> | <RIGHT_RULE_ARROW_MAX_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_l2r(rule_section_count)
+		|  ( <RIGHT_RULE_ARROW_MIN_L2R> | <RIGHT_RULE_ARROW_MIN_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_l2r(rule_section_count)
+
+
+			// left-arrow rules    a <- b / l _ r where ...
+
+		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+			// left-arrow markup rules
+
+		|  <MARKUP_OP> 				// 		Y ~~~ Z <- X  /  left _ right
+									// or	Y ~~~   <- X  /  left _ right
+			#left_markup_insertion(1) 						// the Y part has been matched
+			{ markup_exp_count = 1 ; }
+			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; })?	// the optional Z part
+			#rule_lhs_markup(markup_exp_count)				// covering Y ~~~ Z
+
+			// after parsing  Y ~~~ Z here
+			// there must now be a left-rule-arrow of some kind
+
+			(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+					(
+						// Catch a parsing problem found by Paola
+						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+						LOOKAHEAD ( {mustBeNumexp()} )
+						{ appendGuiError("Tokenization/parse problem: " +
+							"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+							"as either < -1> or <(-1)>") ;
+						}
+						//numexp()
+					|
+						// KRB: do not allow markup here
+						(unioned_exp() #rule_lhs_lower(1))
+						#rule_lhs(2) { rule_section_count = 1 ; }
+
+						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+						( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+						#rule_left_arrow_oblig(rule_section_count)
+					)
+			|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_opt(rule_section_count)
+			|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r(rule_section_count)
+
+			|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r(rule_section_count)
 			)
-	|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_ASCII_OPT> ) 
-			( longest_exp()
-	        | shortest_exp()
-			| unioned_exp() 
-			) #rule_lhs(2) 
-           	{ rule_sections = 1 ; }
 
-           	( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   		( where_clause() { rule_sections += 1 ; } )* #rule_left_arrow_opt(rule_sections)
+			// language-restriction expression
 
-    |  ( <RESTRICTION_ARROW> | <RESTRICTION_ARROW_ASCII> ) restriction_rhs()
-		#restriction_exp(2)
-    )?
-|
-    
-( longest_exp() | shortest_exp() )
-        { rule_sections = 0 ; }
-    (  
-	   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) unioned_exp() #rule_lhs(2) 
-           { rule_sections = 1 ; }
-           ( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   ( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_oblig(rule_sections)
+		|  ( <RESTRICTION_ARROW> | <RESTRICTION_ARROW_ASCII> ) 
+			#restriction_lhs(1)
+			restriction_rhs()		// creates an AST node
+			#restriction_exp(2)
+		)?
+	)
 
-	|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_ASCII_OPT> )
-	           unioned_exp() #rule_lhs(2) 
-           { rule_sections = 1 ; }
-           ( <SLASH_OP>  rule_rhs() { rule_sections += 1 ; } )? 
-	   ( where_clause() { rule_sections += 1 ; } )* #rule_right_arrow_opt(rule_sections)
-    )?
 }
 
-void longest_exp() #longest_exp : {}
+// ******************************************************************************
+// special productions for alternation rules and language-restriction expressions
+
+// rule() is called only for $^parallel(rule, rule ...)
+// in this case, the daughters must be alternation rules
+
+void rule() :
+{ int rule_section_count = 0 ; 
+  int markup_exp_count = 0 ;
+}
 {
-    <LONGEST_DIRECTIVE> unioned_exp()
+	(
+		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
+						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
+		// must be a left-arrow rule, with markup on the upper side,
+		// lacking an explicit left_markup_insertion (will be interpreted as empty string)
+		{ markup_exp_count = 0 ; }
+		// there may not be a right_markup_insertion either, in which case the rule is a no-op
+		( unioned_exp() { markup_exp_count += 1 ; } #right_markup_insertion(1) )?
+		#rule_lhs_markup(markup_exp_count)
+
+		// 1 node on the jjtree stack
+		// must be a rule left arrow here
+		(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
+					// KRB: do not allow markup here  (the upper lhs is markup)
+					(unioned_exp() #rule_lhs_lower(1))
+					// this completes the LHS of the rule (counting as one rule_section
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					// the RHS of a rule is optional
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					// where clauses are also optional, grouped, if present under #where_clauses
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+		)
+
+
+	| 	unioned_exp()
+
+		// N.B. here the following parenthesized expression is not optional; this production
+		// is called when you really need a rule, i.e. inside $^parallel(rule, rule, ...)
+		(  
+			// right-arrow rules:  N.B. IF EDITED, SEE poss_rule_exp() AND MAKE PARALLEL EDITS
+
+		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
+				// KRB: allow markup here
+				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
+				// old
+				//(unioned_exp() #rule_lhs_lower(1))	// and this unioned_exp is the left-hand lower side
+				#rule_lhs(2) { rule_section_count = 1 ; }  // a rule must always have a left-hand side
+
+				// optional right-hand side of a rule
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				// zero or more where clauses
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_oblig(rule_section_count)
+
+		|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_OPT_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+
+		|  ( <RIGHT_RULE_ARROW_MAX_L2R> | <RIGHT_RULE_ARROW_MAX_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_l2r(rule_section_count)
+		|  ( <RIGHT_RULE_ARROW_MIN_L2R> | <RIGHT_RULE_ARROW_MIN_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_l2r(rule_section_count)
+
+
+			// left-arrow rules
+
+		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				// KRB: do NOT allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+						   |<WHERE_MATCHED_DIRECTIVE>
+						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+						   |<WHERE_MIXED_DIRECTIVE>
+						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+
+			// left-arrow markup rules
+
+		|  <MARKUP_OP> 				// Y ~~~ Z <- X  /  left _ right
+			#left_markup_insertion(1) 						// the Y part has been matched
+			{ markup_exp_count = 1 ; }
+			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; } )?	// the optional Z part
+			#rule_lhs_markup(markup_exp_count)						// covering Y ~~~ Z
+
+			// after parsing  Y ~~~ Z here
+			// there must now be a left-rule-arrow of some kind
+
+			(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+					(
+						// Catch a parsing problem found by Paola
+						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+						LOOKAHEAD ( {mustBeNumexp()} )
+						{ appendGuiError("Tokenization/parse problem: " +
+							"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+							"as either < -1> or <(-1)>") ;
+						}
+						//numexp()
+					|
+						// KRB:  do NOT allow markup here
+						(unioned_exp() #rule_lhs_lower(1))
+						#rule_lhs(2) { rule_section_count = 1 ; }
+
+						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+						( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+						#rule_left_arrow_oblig(rule_section_count)
+					)
+			|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_opt(rule_section_count)
+
+			|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r(rule_section_count)
+
+			|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
+							   |<WHERE_MATCHED_DIRECTIVE>
+							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+							   |<WHERE_MIXED_DIRECTIVE>
+							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r(rule_section_count)
+			)
+		)
+	)
 }
 
-void shortest_exp() #shortest_exp : {}
+void rule_lhs_lower_or_markup(): {}
 {
-    <SHORTEST_DIRECTIVE> unioned_exp()
-}
+	// called only when "upper ->" (any kind of right rule arrow) has been found; could be
+	// a straightforward rewrite rule or a markup rule.
+	(
+		<MARKUP_OP>
+		// no left_markup_insertion
+		// optional right_markup_insertion follows
+		(
+			( unioned_exp() #right_markup_insertion(1) )?
+		) #rule_lhs_markup
 
-// RHS of rules that compile into transducers
+	| 	LOOKAHEAD(unioned_exp() <MARKUP_OP>)
+		// there is a left_markup_insertion, with optional right_markup_insertion following MARKUP_OP
+		( (unioned_exp() #left_markup_insertion(1))
+		  <MARKUP_OP>
+		  (unioned_exp() #right_markup_insertion(1))?
+		) #rule_lhs_markup
+
+	|   (unioned_exp()) #rule_lhs_lower
+	)
+}
+ 
+
+// RHS of alternation rules
 void rule_rhs() #rule_rhs: {}
 {
-    context() ( <BOOLEAN_OR_OP> context() )*
+    rule_context() ( <BOOLEAN_OR_OP>  rule_context() )*
 }
 
-// RHS of restriction => expressions
-void restriction_rhs() #restriction_rhs: {}
+// contexts for rules
+// N.B. alternation-rule contexts now come in two flavors,
+//   _		where the left and right context must be acceptors
+//  2_2     where the left and right contexts are interpreted as transducers
+
+void rule_context() : 
+{ int context_sections = 0 ; }
 {
-	restriction_context() ( <BOOLEAN_OR_OP> restriction_context() )*
+	// rule_context() with left-rule-context will also have an UNDERSCORE_OP,
+	//    but may or may not have an overt right-rule-context();
+    unioned_exp() #left_rule_context(1) { context_sections = 1 ; } 
+		( <UNDERSCORE_OP>  
+		  ( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 2 ; } )? 
+		  #one_level_rule_context(context_sections)
+		|
+		  ( <DOUBLE_UNDERSCORE_OP>
+		  | <DOUBLE_UNDERSCORE_OP_ASCII> 
+		  ) 
+		  ( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 2 ; } )?
+		  #two_level_rule_context(context_sections)
+		  // KRB: make sure that this works with 0 context_sections
+		)
+
+|   // there might just be an underscore, and then an optional right context
+	<UNDERSCORE_OP> 
+	( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 1 ; } )?
+	#one_level_rule_context(context_sections)
+	// KRB: make sure that this works with 0 context_sections
+
+|   // there might just be a double underscore, and then an optional right context
+	( <DOUBLE_UNDERSCORE_OP>
+	| <DOUBLE_UNDERSCORE_OP_ASCII> 
+	) 
+	( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 1 ; } )?
+	#two_level_rule_context(context_sections)
+	// KRB:  make sure that this works with 0 context_sections
 }
 
-// contexts for rules (compile into transducers)
-void context() #context : {}
+void where_clauses() #where_clauses : {}
 {
-	// context() with left-context may or may not have an overt right
-	// context(); contexts can be marked upper or lower, or be unmarked
-	// default contexts (upper for -> rules, lower for <- rules)
-    context_part() #left_context(1) <UNDERSCORE_OP> 
-	                         ( LOOKAHEAD(1) context_part() #right_context(1) )?
-
-|   // there must be an underscore, and then an optional right context
-	<UNDERSCORE_OP>  ( LOOKAHEAD(1) context_part() #right_context(1) )?
-}
-
-void restriction_context() #restriction_context : {}
-{
-	// restriction_context() with left-context may or may not have an overt right
-	// restriction_context (no possibility of upper vs. lower, as in rules)
-    unioned_exp() #left_restriction_context(1) <UNDERSCORE_OP> 
-	                         ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
-
-|   // there must be an underscore, and then an optional right context
-	<UNDERSCORE_OP>  ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
-}
-
-// three possibilities for rules:
-//  	default_context(), will be upper side for -> rules, lower side for <- rules
-//		upper_context()    overtly marked upper { 
-void context_part() : {}
-{
-    default_context()
-|   upper_context()
-|   lower_context()
-}
-
-// a "default" context is default upper in a right-arrow rule, 
-// and default lower in a left-arrow rule
-void default_context() #default_context : {}
-{
-    unioned_exp()
-}
-
-void upper_context() #upper_context : {}
-{
-    <UPPER_DIRECTIVE> unioned_exp()
-
-}
-
-void lower_context() #lower_context : {}
-{
-    <LOWER_DIRECTIVE> unioned_exp()
-
+	where_clause() ( LOOKAHEAD(2) (<COMMA_OP>)? where_clause() )*
 }
 
 void where_clause(): {}
@@ -3625,20 +4253,52 @@ void where_clause(): {}
 
 void where_matched_clause() #where_matched_clause : {}
 {
-    <WHERE_MATCHED_DIRECTIVE> <LCURLY> elmt_of_net_list_exp() (
-	<COMMA_OP> elmt_of_net_list_exp() )* <RCURLY>
+    ( <WHERE_MATCHED_DIRECTIVE>
+	| <WHERE_MATCHED_DIRECTIVE_DEFAULT> 
+	| <WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
+	) 
+	<LCURLY> 
+		elmt_of_net_list_exp() ( LOOKAHEAD(2) (<COMMA_OP>)? elmt_of_net_list_exp() )* 
+	<RCURLY>
 }
 
-void where_mixed_clause() #where_matched_clause : {}
+void where_mixed_clause() #where_mixed_clause : {}
 {
-    <WHERE_MIXED_DIRECTIVE>   <LCURLY> elmt_of_net_list_exp() (
-	<COMMA_OP> elmt_of_net_list_exp() )* <RCURLY>
+    ( <WHERE_MIXED_DIRECTIVE>   
+	| <WHERE_MIXED_DIRECTIVE_UNDERSCORE>
+	)
+	<LCURLY> 
+		elmt_of_net_list_exp() ( LOOKAHEAD(2) (<COMMA_OP>)? elmt_of_net_list_exp() )* 
+	<RCURLY>
 }
 
 void elmt_of_net_list_exp() #elmt_of_net_list_exp : {}
 {
     net_id() ( <ELEMENT_OF_OP> | <ELEMENT_OF_OP_ASCII> ) net_list_exp()
 }
+
+
+// RHS of restriction => expressions
+void restriction_rhs() #restriction_rhs: {}
+{
+	restriction_context() ( <BOOLEAN_OR_OP> restriction_context() )*
+}
+
+void restriction_context() #restriction_context : {}
+{
+	// restriction_context() with left-context may or may not have an overt right
+	// restriction_context; 
+	// N.B. the parts of a restriction_context should be semantically acceptors,
+	// but they might have the syntactic form of a composition, e.g.  a:a _ b:b
+    unioned_exp() #left_restriction_context(1) <UNDERSCORE_OP> 
+	                         ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
+
+|   // there must be an underscore, and then an optional right context
+	<UNDERSCORE_OP>  ( LOOKAHEAD(1) unioned_exp() #right_restriction_context(1) )?
+}
+
+// *************************************************************************************
+// end of special productions for alternation rules and language-restriction expressions
 
 // associative:  make a flat tree
 void unioned_exp(): {}
@@ -3752,9 +4412,9 @@ void primary_regexp():
 | complement_char_union()		// [^a-z]
 
 | net_func_call()
-// $&foo(args)      $&(params){block}(args)
+// $^foo(args)      $^(params){block}(args)
 
-// built-in functions
+// built-in functions that return net (FST)
 
 | net_reverse_func_call()
 
@@ -3797,8 +4457,8 @@ void primary_regexp():
 | 	net_get_func_call()
 
 |	net_pop_dest_func_call()
-|	net_removelast_dest_func_call()	// $&__removeLast!($@list, #index)
-|	net_remove_dest_func_call()		// $&__remove!($@list, #index)
+|	net_removelast_dest_func_call()	// $^__removeLast!($@list, #index)
+|	net_remove_dest_func_call()		// $^__remove!($@list, #index)
 
 | 	net_get_net_func_call()
 |	net_sub_func_call()
@@ -3816,9 +4476,9 @@ void primary_regexp():
 | net_read_xml_call()
 
 | net_start_func_call()
+| net_parallel_func_call()
 
-
-//| net_list_ref()      // $@list[1]         $@(a,b,c)[1]   $@&foo(args)[1]
+//| net_list_ref()      // $@list[1]         $@(a,b,c)[1]   $@^foo(args)[1]
 
 }
 
@@ -4065,14 +4725,23 @@ void net_subst_symbol_func_call() #net_subst_symbol_func_call: {}
 void net_read_xml_call() #net_read_xml_call: {}
 {
 	<NET_READ_XML_FUNC_ID> regexp_one_arg_list()
-	// The built-in $&__readXML requires 1 argument: representing the filepath
-	// This $&__readXML is wrapped as $&readXML in ~/.kleene/global/predefined.kl, 
+	// The built-in $^__readXML requires 1 argument: representing the filepath
+	// This $^__readXML is wrapped as $^readXML in ~/.kleene/global/predefined.kl, 
 }
 
 void net_start_func_call() #net_start_func_call: {}
 {
 	<NET_START_FUNC_ID> rrprod_id_one_arg_list()
-	// $&__start($>foo)  must have one argument, $>name, an rrprod_id
+	// wired-in $^start($>foo) must have one argument, $>name, an rrprod_id
+}
+
+void net_parallel_func_call() #net_parallel_func_call: {}
+{
+	<NET_PARALLEL_FUNC_ID> 
+	<LPAREN>
+		// there should be two or more rule() daughters
+		rule() <COMMA_OP> rule() (LOOKAHEAD(1) <COMMA_OP> rule())*
+	<RPAREN>
 }
 
 void lng_pathcount_func_call() #lng_pathcount_func_call: {}
@@ -4133,35 +4802,32 @@ void lng_is_epsilonfree_func_call() #lng_is_epsilonfree_func_call: {}
 {
 	<LNG_IS_EPSILONFREE_FUNC_ID> regexp_one_arg_list() 
 }
-
 void lng_is_empty_language_func_call() #lng_is_empty_language_func_call: {}
 {
 	<LNG_IS_EMPTY_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
 }
-
 void lng_is_empty_string_language_func_call() #lng_is_empty_string_language_func_call: {}
 {
 	<LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
 }
-
 void lng_contains_empty_string_func_call() #lng_contains_empty_string_func_call: {}
 {
 	<LNG_CONTAINS_EMPTY_STRING_FUNC_ID> regexp_one_arg_list() 
 }
-
-
 // i.e. single string language
 void lng_is_string_func_call() #lng_is_string_func_call: {}
 {
 	<LNG_IS_STRING_FUNC_ID> regexp_one_arg_list() 
 }
-
 void lng_contains_other_func_call() #lng_contains_other_func_call: {}
 {
 	<LNG_CONTAINS_OTHER_FUNC_ID> regexp_one_arg_list() 
 }
 
-
+// KRB:  don't try to do this here
+// #^isUniversalLanguage now defined in predefined.kl
+// but won't be reliable until something
+//		like the Xerox 'compact sigma' is implemented
 //void lng_is_universal_language_func_call() #lng_is_universal_language_func_call: {}
 //{
 //	<LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID> regexp_one_arg_list() 
@@ -4488,22 +5154,22 @@ void net_list_exp() #net_list_exp : {}
   	net_list_id()            // $@listname
 | 	net_list_lit()           // $@(a,b,c)
 
-// built-in functions
+// built-in functions that return a list of net
 
-|	net_list_get_sigma_func_call()	// $@&__getSigma($fst)
+|	net_list_get_sigma_func_call()	// $@^__getSigma($fst)
 
-|	net_list_get_slice_func_call()	// $@&getSlice(...)
+|	net_list_get_slice_func_call()	// $@^getSlice(...)
 // getSlice is wired in because of unlimited special arguments
-|	net_list_tail_func_call()		// $@&__tail($@list)
-|	net_list_copy_func_call()		// $@&__copy($@list)
-|	net_list_push_dest_func_call()	// $@&__push!($fst, $@list)
-|	net_list_add_dest_func_call()	// $@&__add!($@list, $fst)
-|	net_list_addat_dest_func_call()	// $@&__addAt!($@list, #index, $fst)
-|	net_list_set_dest_func_call()	// $@&__set!($@list, #index, $fst)
+|	net_list_tail_func_call()		// $@^__tail($@list)
+|	net_list_copy_func_call()		// $@^__copy($@list)
+|	net_list_push_dest_func_call()	// $@^__push!($fst, $@list)
+|	net_list_add_dest_func_call()	// $@^__add!($@list, $fst)
+|	net_list_addat_dest_func_call()	// $@^__addAt!($@list, #index, $fst)
+|	net_list_set_dest_func_call()	// $@^__set!($@list, #index, $fst)
 
 // user-defined function
 
-| 	net_list_func_call()     // $@&funcretarr(args), $@&map(args)
+| 	net_list_func_call()     // $@^funcretarr(args), $@^map(args)
 }
 
 void net_list_id() #net_list_id : {}
@@ -4536,7 +5202,7 @@ void net_list_func_id() #net_list_func_id : {}
 {
     ( <NET_LIST_FUNC_ID_BEFORE_ARGLIST> 
 	| <NET_LIST_FUNC_ID_NO_ARGLIST> 
-	) { jjtThis.setImage(token.image); }   // $@&name
+	) { jjtThis.setImage(token.image); }   // $@^name
 }
 
 void net_list_func_anon_exp() #net_list_func_anon_exp : {}
@@ -4562,7 +5228,7 @@ void net_list_func_func_id() #net_list_func_func_id : {}
 {
     ( <NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST> 
 	| <NET_LIST_FUNC_FUNC_ID_NO_ARGLIST> 
-	) { jjtThis.setImage(token.image); }   // $@&name
+	) { jjtThis.setImage(token.image); }   // $@^name
 }
 
 void net_list_func_func_anon_exp() #net_list_func_func_anon_exp : {}
@@ -4588,19 +5254,19 @@ void num_list_exp() #num_list_exp : {}
 
 // built-ins
 
-|	num_list_get_sigma_func_call()	// #@&__getSigma($fst)
+|	num_list_get_sigma_func_call()	// #@^__getSigma($fst)
 
-|	num_list_get_slice_func_call()	// #@&getSlice(...)
-|	num_list_tail_func_call()		// #@&__tail(#@list)
-|	num_list_copy_func_call()		// #@&__tail(#@list)
-|	num_list_push_dest_func_call()	// #@&__push!(#num, #@list)
-|	num_list_add_dest_func_call()	// #@&__add!(#@list, #num)
-|	num_list_addat_dest_func_call()	// #@&__addAt!(#@list, #index, #num)
-|	num_list_set_dest_func_call()	// #@&__set!(#@list, #index, #num)
+|	num_list_get_slice_func_call()	// #@^getSlice(...)
+|	num_list_tail_func_call()		// #@^__tail(#@list)
+|	num_list_copy_func_call()		// #@^__tail(#@list)
+|	num_list_push_dest_func_call()	// #@^__push!(#num, #@list)
+|	num_list_add_dest_func_call()	// #@^__add!(#@list, #num)
+|	num_list_addat_dest_func_call()	// #@^__addAt!(#@list, #index, #num)
+|	num_list_set_dest_func_call()	// #@^__set!(#@list, #index, #num)
 
 // user-defined
 
-| 	num_list_func_call()     // $@&funcretarr(args)
+| 	num_list_func_call()     // $@^funcretarr(args)
 }
 
 void num_list_id() #num_list_id : {}
@@ -4632,7 +5298,7 @@ void num_list_func_exp() #num_list_func_exp : {}
 void num_list_func_id() #num_list_func_id : {}
 {
     ( <NUM_LIST_FUNC_ID_BEFORE_ARGLIST> | <NUM_LIST_FUNC_ID_NO_ARGLIST> )
-				{ jjtThis.setImage(token.image); }   // $@&name
+				{ jjtThis.setImage(token.image); }   // $@^name
 }
 
 void num_list_func_anon_exp() #num_list_func_anon_exp : {}
@@ -4656,7 +5322,7 @@ void num_list_func_func_id() #num_list_func_func_id : {}
 {
     ( <NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST> 
 	| <NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST> 
-	) { jjtThis.setImage(token.image); }   // $@&name
+	) { jjtThis.setImage(token.image); }   // $@^name
 }
 
 void num_list_func_func_anon_exp() #num_list_func_func_anon_exp : {}
@@ -4948,7 +5614,7 @@ void expression() :
 // net_list_exp
 // 		net_list_id()            // $@listname
 // |	net_list_lit()           // $@(a,b,c)
-// | 	net_list_func_call()     // $@&funcretarr(args)
+// | 	net_list_func_call()     // $@^funcretarr(args)
 
 |	LOOKAHEAD( { mustBeNetListExp() } )	
 	// based on lookahead, there must be a net_list_exp
@@ -5017,8 +5683,8 @@ void expression() :
 // start counting parens
 
 // num_func_exp
-//    	num_func_id()          // #&add
-// |   	num_func_anon_exp()  // #&(){}
+//    	num_func_id()          // #^add
+// |   	num_func_anon_exp()    // #^(){}
 // |   	num_func_func_call()
 
 |	LOOKAHEAD ( <NUM_FUNC_ID_NO_ARGLIST>			// no arg_list follows
@@ -5066,7 +5732,7 @@ void expression() :
 //num_list_exp() #num_list_exp : {}
 //  num_list_id()            // $@listname
 //| num_list_lit()           // $@(1,2,3)
-//| num_list_func_call()     // $@&funcretarr(args)
+//| num_list_func_call()     // $@^funcretarr(args)
 
 |	LOOKAHEAD( { mustBeNumListExp() } )	
 	// there must be a num_list_exp
@@ -5128,7 +5794,7 @@ void expression() :
 
 // As in Python, all syntactic required params must come before all
 //   optional params.
-// $&myfunc($a, $b, $c = abc, $d = xyz) = { ... }
+// $^myfunc($a, $b, $c = abc, $d = xyz) = { ... }
 
 // Probably need to use semantic lookahead to decide when to
 // stop parsing params_required, e.g.
@@ -5168,20 +5834,20 @@ void optional_params() #optional_params: {}
 void param() : {}
 {
     net_id()                       //  $mynet
-  | net_func_id()                  //  $&myfunc
-  | net_func_func_id()             //  $&&foo
+  | net_func_id()                  //  $^myfunc
+  | net_func_func_id()             //  $^^foo
 
   | net_list_id()		   			//  $@foo
-  | net_list_func_id()              //  $@&foo
-  | net_list_func_func_id()         //  $@&&foo
+  | net_list_func_id()              //  $@^foo
+  | net_list_func_func_id()         //  $@^^foo
 
   | num_id()                       //  #myname
-  | num_func_id()                  //  #&foo
-  | num_func_func_id()             //  #&&foo
+  | num_func_id()                  //  #^foo
+  | num_func_func_id()             //  #^^foo
 
   | num_list_id()		   			//  #@foo
-  | num_list_func_id()              //  #@&foo
-  | num_list_func_func_id()         //  #@&&foo
+  | num_list_func_id()              //  #@^foo
+  | num_list_func_func_id()         //  #@^^foo
 
   | void_func_id()
   | void_func_func_id()
@@ -5197,23 +5863,23 @@ void id_with_assignment() : {}
 	//{ throw new ParseException("Positional args must precede named args.") ; }
   | 
     net_id_with_assignment()            //  $mynet =
-  | net_func_id_with_assignment()       //  $&myfunc =
-  | net_func_func_id_with_assignment()  //  $&&foo =
+  | net_func_id_with_assignment()       //  $^myfunc =
+  | net_func_func_id_with_assignment()  //  $^^foo =
 
   | net_list_id_with_assignment()		//  $@foo =
-  | net_list_func_id_with_assignment()   //  $@&foo =
-  //| net_list_func_func_id_with_assignment() //  $@&&foo =
+  | net_list_func_id_with_assignment()   //  $@^foo =
+  //| net_list_func_func_id_with_assignment() //  $@^^foo =
 
   | num_id_with_assignment()            //  #myname =
-  | num_func_id_with_assignment()       //  #&foo =
-  | num_func_func_id_with_assignment()  //  #&&foo =
+  | num_func_id_with_assignment()       //  #^foo =
+  | num_func_func_id_with_assignment()  //  #^^foo =
 
   | num_list_id_with_assignment()		   //  #@foo =
-  | num_list_func_id_with_assignment()   //  #@&foo =
-  //| num_list_func_func_id_with_assignment()    //  #@&&foo =
+  | num_list_func_id_with_assignment()   //  #@^foo =
+  //| num_list_func_func_id_with_assignment()    //  #@^^foo =
 
-  | void_func_id_with_assignment()		// &foo =
-  | void_func_func_id_with_assignment()	// &&foo =
+  | void_func_id_with_assignment()		// ^foo =
+  | void_func_func_id_with_assignment()	// ^^foo =
 }
 
 void net_id_with_assignment() #net_id_with_assignment: {}
@@ -5222,8 +5888,8 @@ void net_id_with_assignment() #net_id_with_assignment: {}
 }
 void net_func_id_with_assignment() #net_func_id_with_assignment : {}
 {
-	// $&foo = $&bar ;
-	// $&foo = $&(){} ;
+	// $^foo = $^bar ;
+	// $^foo = $^(){} ;
     net_func_id() <EQUAL_SIGN> net_func_exp() ( <SEMICOLON> )?
 }
 void net_func_func_id_with_assignment() #net_func_func_id_with_assignment : {}
@@ -5233,8 +5899,8 @@ void net_func_func_id_with_assignment() #net_func_func_id_with_assignment : {}
 
 void void_func_id_with_assignment() #void_func_id_with_assignment : {}
 {
-	// &foo = &bar ;
-	// &foo = &(){} ;
+	// ^foo = ^bar ;
+	// ^foo = ^(){} ;
     void_func_id() <EQUAL_SIGN> void_func_exp() ( <SEMICOLON> )?
 }
 void void_func_func_id_with_assignment() #void_func_func_id_with_assignment : {}
@@ -5261,8 +5927,8 @@ void num_id_with_assignment() #num_id_with_assignment: {}
 }
 void num_func_id_with_assignment() #num_func_id_with_assignment : {}
 {
-	// #&foo = #&bar ;
-	// #&foo = #&(){} ;
+	// #^foo = #^bar ;
+	// #^foo = #^(){} ;
     num_func_id() <EQUAL_SIGN> num_func_exp() ( <SEMICOLON> )?
 }
 void num_func_func_id_with_assignment() #num_func_func_id_with_assignment : {}

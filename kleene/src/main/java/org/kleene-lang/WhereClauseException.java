@@ -1,5 +1,5 @@
 
-//	KleeneGuiConstants.java
+//	WhereClauseException.java
 //
 //	The Kleene Programming Language
 
@@ -19,11 +19,11 @@
 
 //   Author: ken.beesley@sap.com (Kenneth R. Beesley)
 
-//	Constants used in the Kleene GUI
+//	[short description here]
 
-public interface KleeneGuiConstants {
-	public static final String VERSION_NUMBER = "0.9.3.0" ;
-
-	public static final String COPYRIGHT_YEAR_RANGE = "2006-2012" ;
+public class WhereClauseException extends RuntimeException {
+    WhereClauseException() {}
+    WhereClauseException(String msg) {
+		super(msg) ;  // retrieve with e.getMessage()
+    }
 }
-

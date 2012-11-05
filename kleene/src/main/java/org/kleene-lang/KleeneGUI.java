@@ -73,7 +73,7 @@ public class KleeneGUI extends JFrame implements ActionListener {
 
     // Constructor
     public KleeneGUI(Environment environ, PipedWriter pwriter) {
-		super("Kleene Machine GUI") ;
+		super("Kleene GUI") ;
 
 		env = environ ;
 

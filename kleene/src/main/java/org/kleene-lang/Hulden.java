@@ -27,9 +27,9 @@ public class Hulden {
 	OpenFstLibraryWrapper lib ;
 	SymMap symmap ;
 
-	public Hulden(OpenFstLibraryWrapper lw, SymMap sm) {
-		lib = lw ;
-		symmap = sm ;
+	public Hulden(OpenFstLibraryWrapper lib, SymMap symmap) {
+		this.lib = lib ;
+		this.symmap = symmap ;
 	}
 
 	// *******************************************************************
@@ -59,22 +59,22 @@ public class Hulden {
 	// alternation rules.
 
 	// Define the special-symbol names only here, in case they need to be changed.
-	// Do not strew these strings all through the code.
+	// Do not strew such strings all through the code.
 
 	public String IOpenAndCloseSym = "**@I[]@" ;
 	public String IOpenSym         = "**@I[@" ;
-	public String ICloseSym		= "**@I]@" ;
-	public String ISym				= "**@I@" ;
+	public String ICloseSym		   = "**@I]@" ;
+	public String ISym			   = "**@I@" ;
 
 	// letter 'O', @O@ on tape 1 marks triples "outside" the action of a rule
 	public String outsideMarkerSym = "**@O@" ;
 
 	// ID, on tape 3, marks identity mappings of the symbol on tape 2
-	public String idMarkerSym = "**@ID@" ;
+	public String idMarkerSym      = "**@ID@" ;
 
 	// the hardEpsilon is used to compile alternation rules
 	// N.B. @0@ has a zero, not to be confused with @O@ with letter 'O'
-	public String hardEpsilonSym = "**@0@" ;  // following Hulden's notation
+	public String hardEpsilonSym   = "**@0@" ;  // following Hulden's notation
 
 	// N.B. needs to be considered in the promotion of OTHER
 	// See also the tokenization of WORD_BOUNDARY in Kleene.jjt
@@ -204,6 +204,7 @@ public class Hulden {
 					) ;
 	}
 
+
 	// Hulden
 	// define SpecialSymbols ISyms|"@O@"|"@ID@"|"@0@"|"@#@" ;
 	// N.B. distinguish @O@, with letter 'O' from @0@, with zero
@@ -218,6 +219,21 @@ public class Hulden {
 		) ;
 	}
 
+	// if the "parts" of a rule,  A -> B / L _ R contain OTHER,
+	// then they get "contaminated" with the special symbols; use
+	// CleanupSpecialSymbolsXXX(), to weed them out
+
+	// used to exclude special symbols from A and B on the LHS,
+	// A -> B
+	public Fst CleanupSpecialSymbolsAction(Fst fst) {
+		if (fst.getContainsOther()) {
+			return lib.Intersect(	fst, 
+							  		notContainsFst(SpecialSymbolsAction())
+							 	) ;
+		}
+		return fst ;
+	}
+
 	private Fst SpecialSymbolsContext() {
 		return lib.Union4Fsts(
 					ISyms(),
@@ -229,21 +245,16 @@ public class Hulden {
 		) ;
 	}
 
-	// if the "parts" of a rule,  A -> B / L _ R contain OTHER,
-	// then they get "contaminated" with the special symbols; use
-	// CleanupSpecialSymbolsXXX(), to weed them out
-
-	public Fst CleanupSpecialSymbolsAction(Fst fst) {
-		return lib.Intersect(	fst, 
-							  	notContainsFst(SpecialSymbolsAction())
-							 ) ;
-	}
+	// used to exclude special symbols from the Left and Right sides
+	// of the context
 	public Fst CleanupSpecialSymbolsContext(Fst fst) {
-		return lib.Intersect(	fst, 
-								notContainsFst(SpecialSymbolsContext())
-							 ) ;
+		if (fst.getContainsOther()) {
+			return lib.Intersect(	fst, 
+									notContainsFst(SpecialSymbolsContext())
+							 	) ;
+		}
+		return fst ;
 	}
-
 
 	// *************************************************************************
 						
@@ -294,6 +305,23 @@ public class Hulden {
 		return lib.OutputProjection(lib.Compose(X, temp)) ;
 	}
 
+	// KRB experimental addition trying to handle a <- "" (left-arrow epenthesis rules)
+	// 2012-09-23
+	private Fst Tape3of3(Fst X) {
+		// argument should be an Acceptor
+		// if (!lib.IsAcceptor(lang.getFstPtr()))
+
+		Fst temp = lib.KleeneStar(lib.Concat3Fsts(
+										lib.OneArcFst(lib.Epsilon, lib.otherNonIdSym),
+										lib.OneArcFst(lib.Epsilon, lib.otherNonIdSym),
+										lib.OneArcFst(lib.otherIdSym)
+										)
+								) ;
+
+		return lib.OutputProjection(lib.Compose(X, temp)) ;
+	}
+	
+
 	// given a two-tape language lang, return the three-tape language that has
 	// lang on tapes 2 and 3 (and anything on tape 1)
 
@@ -312,6 +340,109 @@ public class Hulden {
 
 		return lib.OutputProjection(lib.Compose(X, temp)) ;
 	}
+
+	// Hulden's
+	// define EPEXTEND  Tape1of3("@O@") | [ Tape1of3("@I[@" "@I@"* "@I]@" | "@I[]@" ) &
+	// 										Tape2of3(~["@0@"*])
+	// 									  ] ;
+	// used for interpreting epenthesis rules (at least right-arrow epenthesis rules)
+	private Fst EPEXTEND_RIGHT_ARROW() {
+		Fst temp = lib.Union(
+			Tape1of3(lib.OneArcFst(outsideMarkerSym)),
+
+		 	lib.Intersect(	Tape1of3(lib.Union(	lib.Concat3Fsts(lib.OneArcFst(IOpenSym),
+										 					  	lib.KleeneStar(lib.OneArcFst(ISym)),
+															  	lib.OneArcFst(ICloseSym)
+															   ),
+									 			lib.OneArcFst(IOpenAndCloseSym)
+									          )
+							),
+							Tape2of3(lib.Complement(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym))))
+			)
+		) ;
+		return temp ;
+	}
+
+	// Hulden's
+	// define EPContextL(X) [?* X & ?* EPEXTEND] ;
+	// used for interpreting epenthesis rules (at least right-arrow epenthesis rules)
+	// modify
+	// define EPContextL_RIGHT_ARROW(X) [?* X & ?* EPEXTEND_RIGHT_ARROW] ;
+	public Fst EPContextL_RIGHT_ARROW(Fst X) {
+		Fst fst = lib.Intersect(	lib.Concat(	lib.UniversalLanguageFst(), X),
+									lib.Concat(	lib.UniversalLanguageFst(), EPEXTEND_RIGHT_ARROW())
+								) ;
+		return fst ;
+	}
+
+	// Hulden's
+	// define EPContextR(X) [EPEXTEND ?* & X ?*] ;
+	// used for interpreting epenthesis rules (at least right-arrow epenthesis rules)
+	// modify
+	// define EPContextR_RIGHT_ARROW(X) [EPEXTEND_RIGHT_ARROW ?* & X ?*] ;
+	public Fst EPContextR_RIGHT_ARROW(Fst X) {
+		Fst fst = lib.Intersect(	lib.Concat(	EPEXTEND_RIGHT_ARROW(), lib.UniversalLanguageFst()),
+									lib.Concat(	X,        lib.UniversalLanguageFst())
+								) ;
+		return fst ;
+	}
+
+	// Hulden's
+	// define EPEXTEND  Tape1of3("@O@") | [ Tape1of3("@I[@" "@I@"* "@I]@" | "@I[]@" ) &
+	// 										Tape2of3(~["@0@"*])
+	// 									  ] ;
+	// used for interpreting epenthesis rules (modified for left-arrow epenthesis like a <- "" )
+	// change Tape2of3 to Tape3of3 for EPEXTEND_LEFT_ARROW
+	// i.e.
+	// define EPEXTEND_LEFT_ARROW  Tape1of3("@O@") | [ Tape1of3("@I[@" "@I@"* "@I]@" | "@I[]@" ) &
+	//											# difference here, Tape3of3 instead of Tape2of3
+	//											Tape3of3(~["@0@"*])
+	//								  			] ;
+
+	private Fst EPEXTEND_LEFT_ARROW() {
+		Fst temp = lib.Union(
+			Tape1of3(lib.OneArcFst(outsideMarkerSym)),
+
+		 	lib.Intersect(	Tape1of3(lib.Union(	lib.Concat3Fsts(lib.OneArcFst(IOpenSym),
+										 					  	lib.KleeneStar(lib.OneArcFst(ISym)),
+															  	lib.OneArcFst(ICloseSym)
+															   ),
+									 			lib.OneArcFst(IOpenAndCloseSym)
+									          )
+							),
+							// the difference is here---Tape3of3 for a <- "" rather than Tape2of3, for "" -> a
+							//Tape2of3(lib.Complement(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym))))
+							Tape3of3(lib.Complement(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym))))
+			)
+		) ;
+		return temp ;
+	}
+
+	// Hulden's
+	// define EPContextL(X) [?* X & ?* EPEXTEND] ;
+	// used for interpreting epenthesis rules (at least right-arrow epenthesis rules)
+	// modify for left-arrow rules
+	// define EPContextL_LEFT_ARROW(X) [?* X & ?* EPEXTEND_LEFT_ARROW] ;
+	public Fst EPContextL_LEFT_ARROW(Fst X) {
+		Fst fst = lib.Intersect(	lib.Concat(	lib.UniversalLanguageFst(), X),
+									lib.Concat(	lib.UniversalLanguageFst(), EPEXTEND_LEFT_ARROW())
+								) ;
+		return fst ;
+	}
+
+	// Hulden's
+	// define EPContextR(X) [EPEXTEND ?* & X ?*] ;
+	// used for interpreting epenthesis rules (at least right-arrow epenthesis rules)
+	// modify for left-arrow rules
+	// define EPContextR_LEFT_ARROW(X) [EPEXTEND_LEFT_ARROW ?* & X ?*] ;
+	public Fst EPContextR_LEFT_ARROW(Fst X) {
+		Fst fst = lib.Intersect(	lib.Concat(	EPEXTEND_LEFT_ARROW(), lib.UniversalLanguageFst()),
+									lib.Concat(	X,        lib.UniversalLanguageFst())
+								) ;
+		return fst ;
+	}
+
+
 
 	// *********************************************************************
 
@@ -407,11 +538,7 @@ public class Hulden {
 							)
 						) 
 					) ;
-		if (X.getContainsOther()) {
-			return lib.OutputProjection(lib.Compose(CleanupSpecialSymbolsContext(X), temp)) ;
-		} else {
-			return lib.OutputProjection(lib.Compose(X, temp)) ;
-		}
+		return lib.OutputProjection(lib.Compose(X, temp)) ;
 	}
 
 	// Hulden:  the part of the definition that says
@@ -464,11 +591,7 @@ public class Hulden {
 								)
 							)
 					) ;
-		if (X.getContainsOther()) {
-			return lib.OutputProjection(lib.Compose(CleanupSpecialSymbolsContext(X), temp)) ;
-		} else {
-			return lib.OutputProjection(lib.Compose(X, temp)) ;
-		}
+		return lib.OutputProjection(lib.Compose(X, temp)) ;
 	}
 
 	// Hulden:
@@ -489,7 +612,7 @@ public class Hulden {
 	// define Longest(X)	[Tape1of3(IOpen Tape1Sig* ["@O@"|IOpen] Tape1Sig*) &
 	// Tape2of3(X/"@0@")] ;
 
-	private Fst Longest(Fst X) {
+	public Fst Longest(Fst X) {
 		return lib.Intersect(
 					Tape1of3(
 						lib.Concat4Fsts(
@@ -507,15 +630,25 @@ public class Hulden {
 	}
 
 	// First symbol is not [ and string contains [ (leftmost match)
+	//
+	// Beesley:  Leftmost(X) is used in Constraints when compiling
+	// max or min rules:
+	// define Constraints NotContain( Upper(L) Unrewritten(A-0) Upper(R)
+	// 
+	// define Constraints NotContain( Upper(L) (Unrewritten(A-0) |
+	//                                          Leftmost(A-0)    |
+	//                                          Longest(A-0)     ) Upper(R)
+	// So, between contexts, don't allow A to be unrewritten
+	//                       don't allow A to be other than Leftmost
+	//                       don't allow A to be other than Longest
 
 	// Hulden
 	// define Leftmost(X)	[Upper(X) & Tape1of3("@O@" ?* IOpen ?*) ] ;
 	// imposes a restriction based on tape 1
 
-	private Fst Leftmost(Fst X) {
+	public Fst Leftmost(Fst x) {
 		return lib.Intersect(
-					// KRB:  need to call CleanupSpecialSymbolsXXX() here??
-					Upper(X),
+					Upper(x),
 					Tape1of3(lib.Concat4Fsts(
 										lib.OneArcFst(outsideMarkerSym),
 										lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
@@ -526,12 +659,31 @@ public class Hulden {
 			) ;
 	}
 
+	// Beesley
+	// first attempt to define Rightmost(X), would be
+	// define Rightmost(X) [ Upper(X) & Tape1of3(?* IClose ?* "@O@")] ;
+	// wrote to Hulden 2012-10-26
+	
+	public Fst Rightmost(Fst x) {
+		return lib.Intersect(
+				Upper(x),
+				Tape1of3(lib.Concat4Fsts(
+									lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+									IClose(),
+									lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+									lib.OneArcFst(outsideMarkerSym)
+									)
+					    )
+				) ;
+	}
+
+
 	// Last symbol is not ] (shortest match)
 
 	// Hulden
 	// define Shortest(X)	[Tape1of3("@I[@" \IClose*) & Tape2of3(X)] ;
 
-	private Fst Shortest(Fst X) {
+	public Fst Shortest(Fst X) {
 		return lib.Intersect(
 					Tape1of3(lib.Concat(
 								lib.OneArcFst(IOpenSym),
@@ -675,6 +827,176 @@ public class Hulden {
 							 )
 						   ) ;
 	}
+
+	// Hulden, message 2012-09-25
+	// added AlignMarkup() and CPMarkup, parallel to Align2() and CP() above, for use
+	// in compiling markup rules, e.g.   a b ->  x ... y /  left _ right
+	// or in general                       X ->  Y ... Z
+	//
+	// define AlignMarkup(X,Y,Z) [ Tape1of2("@0@"*) & Tape2of2(Y) ]
+	// 							 [ Tape1of2(X) & Tape2of2("@ID@"*) ]
+	// 							 [ Tape1of2("@0@"*) & Tape2of2(Z) ] ;
+	//
+	// N.B. Hulden's formulas work for right-arrow rules   X -> Y ... Z
+	// need a modification for left-arrow  Y ... Z <-  X    see below
+	
+	private Fst AlignMarkupRightArrow(Fst X, Fst Y, Fst Z) {
+		return lib.Concat3Fsts	(
+					lib.Intersect(
+									Tape1of2(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym))),
+									Tape2of2(Y)
+							     ),
+					lib.Intersect(
+									Tape1of2(X),
+									Tape2of2(lib.KleeneStar(lib.OneArcFst(idMarkerSym)))
+								 ),
+					lib.Intersect(
+									Tape1of2(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym))),
+									Tape2of2(Z)
+						         )
+							) ;
+	}
+
+	// here the X is still the input (now from the lower side)
+	// the Y is still the left insertion
+	// the Z is still the right insertion
+
+	private Fst AlignMarkupLeftArrow(Fst X, Fst Y, Fst Z) {
+		return lib.Concat3Fsts	(
+					lib.Intersect(
+									// here the Y is on tape 1 of 2 (later tape 2 of 3)
+									Tape1of2(Y),
+									Tape2of2(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym)))
+							     ),
+					lib.Intersect(
+									// I don't think this changes, still X above ID
+									Tape1of2(X),
+									Tape2of2(lib.KleeneStar(lib.OneArcFst(idMarkerSym)))
+								 ),
+					lib.Intersect(
+									// here the Z is on tape 1 of 2 (later tape 2 of 3)
+									Tape1of2(Z),
+									Tape2of2(lib.KleeneStar(lib.OneArcFst(hardEpsilonSym)))
+						         )
+							) ;
+	}
+
+
+	//
+	// Hulden, message 2012-09-25, also rewriteexample13.script
+	// define CPMarkup(X,Y,Z)	Tape1of3(ISyms*)
+	// 						&   Tape23of3(AlignMarkup(X,Y,Z))
+	// 						&	[	"@I[@" ? ?
+	// 							    [ "@I@" ? ? ]*
+	// 							    "@I]@" ? ?
+	//
+	// 							|   "@I[]@" ? ?
+	//
+	// 							|	0
+	// 							]
+	// 						;
+	//
+	// N.B. Hulden's formulas for work right-arrow rules   X  ->  Y ... Z
+	// need a modification for left-arrow rules   Y ... Z  <-  X   see below
+
+	public Fst CPMarkupRightArrow(Fst X, Fst Y, Fst Z) {
+		Fst resultFst = lib.Intersect3Fsts(
+				// 1
+				Tape1of3(lib.KleeneStar(ISyms())),
+				// 2
+				Tape23of3(AlignMarkupRightArrow(X, Y, Z)),
+				// 3
+				lib.Union3Fsts(
+					lib.Concat3Fsts(
+						lib.Concat3Fsts(
+							lib.OneArcFst(IOpenSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						),
+						lib.KleeneStar(lib.Concat3Fsts(
+										lib.OneArcFst(ISym),
+										lib.OneArcFst(lib.otherIdSym),
+										lib.OneArcFst(lib.otherIdSym)
+										)
+						),
+						lib.Concat3Fsts(
+							lib.OneArcFst(ICloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						)
+					),
+
+					lib.Concat3Fsts(
+							lib.OneArcFst(IOpenAndCloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+					),
+
+					lib.OneArcFst(lib.Epsilon)
+				)
+			) ;
+		return resultFst ;
+	}
+
+
+//  For left-arrow markup rules    Y ... Z <-  X
+//  X is still the input (here on the lower side)
+//  Y is still the left insertion
+//  Z is still the right insertion
+//define CPMarkupLeftArrow(X,Y,Z)		Tape1of3(ISyms*)
+//								&   Tape23of3(AlignMarkupLeftArrow(X,Y,Z))
+//								&	[     "@I[@" ? ?
+//							    	    [ "@I@"  ? ? ]*
+// 							    	      "@I]@" ? ?
+//
+// 									|   "@I[]@" ? ?
+//
+// 									|	0
+// 									]
+// 								;
+
+	// X is still the input (here on the lower side)
+	// Y is still the left insertion
+	// Z is still the right insertion
+	public Fst CPMarkupLeftArrow(Fst X, Fst Y, Fst Z) {
+		Fst resultFst = lib.Intersect3Fsts(
+				// 1
+				Tape1of3(lib.KleeneStar(ISyms())),
+				// 2
+				Tape23of3(AlignMarkupLeftArrow(X, Y, Z)),
+				// 3
+				lib.Union3Fsts(
+					lib.Concat3Fsts(
+						lib.Concat3Fsts(
+							lib.OneArcFst(IOpenSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						),
+						lib.KleeneStar(lib.Concat3Fsts(
+										lib.OneArcFst(ISym),
+										lib.OneArcFst(lib.otherIdSym),
+										lib.OneArcFst(lib.otherIdSym)
+										)
+						),
+						lib.Concat3Fsts(
+							lib.OneArcFst(ICloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						)
+					),
+
+					lib.Concat3Fsts(
+							lib.OneArcFst(IOpenAndCloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+					),
+
+					lib.OneArcFst(lib.Epsilon)
+				)
+			) ;
+		return resultFst ;
+	}
+
 
 	// Hulden
 	// define Boundary  "@O@"  "@#@"  "@ID@"  ;

@@ -265,7 +265,7 @@ available.
 
 \end{enumerate}
 
-\section{Kleene Syntax}
+\section{Regular Expression Syntax}
 
 \subsection{Regular Expressions}
 
@@ -1768,45 +1768,140 @@ $var =  abc => left _ right ;
 \end{Verbatim}
 
 
-\subsection{Alternation Rules}
+\section{Alternation Rules}
 
-Kleene alternation rules are regular-expression abbreviations that denote
-regular relations and compile into transducers.  As with
-Xerox/\acro{parc} ``Replace Rules'', Kleene alternation rules are
-typically composed together in derivations (also known as
-cascades).\footnote{Parallel compilation of rules is also possible using
-the algorithms from M\r{a}ns Huld\'en, and this will be implemented
-soon.}
+\subsection{Mindtuning for Alternations}
 
+[KRB:  Fill out this section.]  Compare Rewrite Rules, Perl substitution statements. 
 
-\subsubsection{Right-arrow Rules}
+Kleene alternation rules are extensions of the regular-expression language, and each alternation rule compiles into
+a finite-state transducer.  As always, finite-state transducers encode regular relations, and the ``action'' of a
+rule, which appears to be algorithmic, is in reality just the matching a string of input of one side of the relation and the
+return of the related strings on the other side of the relation.
 
-The basic alternation-rule syntax is
+The high-level syntax of alternation rules is designed to be as familiar and intuitive as possible to
+trained linguists.
+
+\subsubsection{Modeling Alternations between Related Languages}
+
+Rewrite rules have long been part of more formal descriptions of phonology and
+morphology, but these rules traditionally existed only as ink marks on paper and had to be tested
+and ``applied'' by hand.  
+
+[KRB: cite Panini.  Discuss attempts to implement such rules on computers.  Debate on the formal power of such
+rewrite rules. Johnson.  Kaplan and Kay.  Karttunen and Kempe.  AT\&T]
+
+\subsubsection{The Richness of Alternation-Rule Types}
+
+Kleene provides a rich set, perhaps the richest set anywhere,
+of alternation-rule types that can, in expert hands, be
+used to model a wide variety of linguistic phenomena.  Unavoidably, this richness is a
+challenge to the beginner, and I will try to show how each rule type is typically used and which
+types are most commonly used.
+
+The semantics of alternation rules are elegant but occasionally hard to grasp, and
+their
+computational implementation is one of the biggest challenges in any language like
+Kleene.
+
+Like traditional Chomsky-Halle Rewrite Rules, and like Xerox/\acro{parc} Replace Rules, multiple Kleene alternation rules can be
+written and ordered in a ``derivation'' or ``cascade.''  Because each rule in the
+cascade compiles into a finite-state transducer, the closure properties of such
+transducers allow us to compose the cascade of ?transducers together into a single finite-state
+transducer that has the exact same behavior as the original cascade, but which maps directly
+from input to output in a single step.  This was one of key discoveries of Johnson.
+
+In addition, there are various ways that Kleene alternation rules can be notated to compile and
+apply ``in parallel,''\footnote{Xerox/\acro{parc} Replace Rules offer a limited
+capability for parallel composition, but the rule types (rule arrows) must be exactly the same,
+which is not a restriction in Kleene.}  which is a key characteristic of the ``two-level'' rules
+proposed by Koskenniemi's Two Level Morphology and implemented in the now-little-used
+Xerox/\acro{parc} twolc compiler.\footnote{Traditional two-level rules continue to be popular at the University of Helsinki, which
+has re-implemented twolc.}  However, in Kleene parallel rules, the rules are
+not limited, as in Two Level Morphology, to constraining only pairs of single characters.
+
+\subsubsection{Huld\'en Algorithms}
+
+Kleene alternation rules are high-level regular-expression abbreviations that denote
+regular relations and compile into transducers.  Kleene defines its own rule syntax, but the rules are interpreted using
+algorithms
+invented by Dr.\@ M\r{a}ns Huld\'en, who has made them freely available for
+general use.  In addition, he kindly supplied documentation, examples and generous
+consultation during the development of Kleene alternation rules.
+
+[Cite Hulden's dissertation and point out that the alternation rules in Kleene are
+based on newer algorithms.]
+
+Among many advantages, the elegant Huld\'en algorithms allow rules of various types
+to be compiled freely in parallel, much more freely than the Replace Rules of
+\texttt{xfst}. 
+
+\subsection{Basic Mapping Rules}
+
+\subsubsection{Right-Arrow Rules}
+
+The most common and useful alternation rules are obligatory right-arrow mapping rules, which are
+superficially similar to the classic ``Rewrite Rules'' of Chomsky \& Halle.
+
+The basic alternation-rule syntax in Kleene is
 
 \begin{alltt}
-\emph{input} -> \emph{output} / \emph{left} _ \emph{right}
+\emph{upper} -> \emph{lower} / \emph{left} _ \emph{right}
 \end{alltt}
 
 \noindent
-where \emph{input}, \emph{output}, \emph{left} and \emph{right} are
-arbitrarily complex regular expressions, though semantically limited to
-denoting regular languages (not relations).\footnote{Using algorithms
-from M\r{a}ns Huld\'en it will be possible to allow left and right
-contexts that denote relations, but this feature has not yet been
-implemented in Kleene.}  By default, in such a right-arrow rule, the left
-and right contexts must match on what OpenFst terms the input side of the
-relation.\footnote{In the Xerox visualization of relations, this input
-side is the ``upper'' side.}  
+where \emph{upper}, \emph{lower}, \emph{left} and \emph{right} are
+arbitrarily complex regular expressions, though they are semantically limited to
+denoting regular languages (not relations).   
 
-The following rule maps \emph{s} to \emph{z} in the context between two vowels,
+\noindent
+As we shall see, alternation rules
+based on Huld\'en's algorithms can have two-level contexts, denoting transducers; but there is such a long
+tradition of rules with single-level contexts that Kleene retains this syntax for the traditional
+semantics.  If the programmer genuinely desires to use two-level contexts, then that will be
+signaled by a slightly different syntax to be presented below.
+For now we will
+concentrate on basic mapping rules wherein all the rule parts---upper, lower, left
+context and right context---are intended by programmer to denote regular languages,
+and where the accidental definition of a two-level context is an error.
 
+Although the overall alternation rule compiles into a two-level transducer that could be applied either in an
+upward or a downward direction, right-arrow rules have a clear downward bias to them;
+we normally think of the upper level of a two-level rule as the input side of the
+relation.  (This notion of input side corresponds with the OpenFst visualization of a
+machine's ``input'' side.)
+In such a basic right-arrow rule, the input expression and both the left
+and right context expression must match on the upper side, what OpenFst terms the
+input side of the relation.
+
+As a concrete example, the following rule, intended to model a phenomenon in Italian and Portuguese pronunciation of
+written words, maps \emph{s} to \emph{z} in the context between two vowels,
+/
 \begin{alltt}
 s -> z / [aeiou] _ [aeiou]
 \end{alltt}
 
 \noindent
-and so it would map \emph{casa} to \emph{caza}, \emph{mesa} to \emph{meza},
+and so it would map, in a downward direction, from \emph{casa} to \emph{caza}, \emph{mesa} to \emph{meza},
 \emph{isose} to \emph{izoze}, etc.
+
+The contexts in alternation rules are optional, allowing the following variations:
+
+\begin{alltt}
+\emph{upper} -> \emph{lower} / \emph{left} _ \emph{right}		// both contexts
+\emph{upper} -> \emph{lower} /     _ \emph{right}		// right context only
+\emph{upper} -> \emph{lower} / \emph{left} _ 			// left context only
+\emph{upper} -> \emph{lower} 									// no contexts
+\end{alltt}
+
+\noindent
+A missing context is equivalent to \verb!.*!, the Universal Language, e.g.
+
+\begin{alltt}
+\emph{upper} -> \emph{lower} /    _ \emph{right}	// right context only
+\emph{upper} -> \emph{lower} / .* _ \emph{right}	// equivalent
+\end{alltt}
+
 
 Alternation rules can have multiple contexts, separated by \texttt{||}, a double
 vertical bar.
@@ -1815,68 +1910,24 @@ vertical bar.
 \emph{input} -> \emph{output} / \emph{L1} _ \emph{R1} || \emph{L2} _ \emph{R2} \ldots
 \end{alltt}
 
-While in right-arrow rules both contexts match, by default, on the input
-(or ``upper'') side of the relation, a context can be forced to match on
-the lower side by preceding it with the \texttt{\{lower\}} marker. (With
-the implementation of more comprehensive algorithms from M\r{a}ns
-Huld\'en, contexts can be two-sided, denoting relations, and the
-\texttt{\{lower\}} marker will no longer be needed.)
-
-\begin{alltt}
-a -> b / \{lower\} b _
-\end{alltt}
-
-\noindent
-While the rule \texttt{a -> b / b \_} would map the input string
-\emph{baaaa} to \emph{bbaaa}, the rule \texttt{a -> b / \{lower\} b \_}
-maps \emph{baaaa} to \emph{bbbbb}.  Such rules, where the left context
-matches on the output/lower side, effectively ``generate their own left
-contexts'' and have been found useful to model the phonological process
-of vowel harmony, which propogates in a kind of left-to-right domino
-effect through a string.
-
-Similarly, while the rule \texttt{a -> b / \_ b} would map the input
-string \emph{aaaab} to \emph{aaabb}, the rule 
-\texttt{a -> b / \_ \{lower\} b} 
-maps \emph{aaaab} to \emph{bbbbb}.  Such rules, where the
-right context matches on the output/lower side, effectively ``generate
-their own right contexts'' and have been found useful to model the
-phonological process of umlaut, where the realization of vowels is
-affected by vowels appearing later in the string.
-
-A right arrow rule using the \texttt{->?} arrow applies optionally.  Thus
-the rule
-
-\begin{alltt}
-s ->? z / [aeiou] _ [aeiou]
-\end{alltt}
-
-\noindent
-maps the input string \emph{casa} to two outputs, \emph{caza} and
-\emph{casa}.  It maps the string \emph{isose} to four outputs:
-\emph{izoze}, \emph{izose}, \emph{isoze} and \emph{isose}.
-
 \subsubsection{Left-arrow Rules}
 
 Left-arrow rules, using the \texttt{<-} arrow, are similar to right-arrow
-rules but have a kind of bottom-up orientation.
+rules but have a default bottom-up orientation or reading.
 
 \begin{alltt}
 z <- s / [aeiou] _ [aeiou]
 \end{alltt}
 
 \noindent
-If this rule is applied ``in an upward direction'' to the input string
-\emph{casa}, the output is \emph{caza}.  By default, in a left-arrow
-rule, the contexts match on the lower/output side.  The default context
-matching can be changed with the \texttt{\{upper\}} marker, which acts
-like the \texttt{\{lower\}} marker described above for right-arrow rules.
-(These \texttt{\{upper\}} and \texttt{\{lower\}} markers will not be
-necessary after two-sided contexts are implemented.)  As with right-arrow
-rules, left-arrow rules can be optional, using the \texttt{<-?} arrow,
-and they can have multiple contexts, separated by \texttt{||}.
+In such a rule, it is natural to think of the lower side as being the input side,\footnote{Recall, however, that in the
+OpenFst visualization of transducers,
+the upper side is always termed the ``input side'' and the lower side is always termed the ``output side.''} and in
+this example the \verb!s! and the two contexts would need to match the lower-side input for the rule to fire.
+If this rule is applied ``in an upward direction'' to the lower-side input string
+\emph{casa}, the upper-side output is \emph{caza}. 
 
-Finite-state experts are often quick to point out that left-arrow rules
+Experts in finite-state programming are often quick to point out that left-arrow rules
 are technically unnecessary.  The composition
 
 \begin{Verbatim}[fontsize=\small]
@@ -1884,22 +1935,382 @@ $result = z <- s / [aeiou] _ [aeiou] _o_ $fst ;
 \end{Verbatim}
 
 \noindent
-could be accomplished equivalently by writing a right-arrow rule
-and inverting it before the composition.
+which composes a left arrow rule ``on top'' of an existing \verb!$fst!,
+could be accomplished equivalently, without left-arrow rules, by 
 
+\begin{itemize}
+\item
+Writing the alternation as a right-arrow rule:  \verb!s -> z / [aeiou] _ [aeiou]!
+\item
+Inverting the \verb!$fst!:  \verb!$^invert($fst)!
+\item
+Composing the right-arrow rule on the lower side of the inverted \verb!$fst!:
+\verb!$^invert($fst) _o_ s -> z / [aeiou] _ [aeiou]!
+\item
+And then inverting the result:  
+\verb!$^invert($^invert($fst) _o_ s -> z / [aeiou] _ [aeiou])!
+\end{itemize}
 
-\begin{Verbatim}[fontsize=\small]
-$result = $^invert(s -> z / [aeiou] _ [aeiou]) _o_ $fst ;
-\end{Verbatim}
 
 \noindent 
+While all that inversion makes perfect sense in theory, many find it less than intuitive to write grammars that way.
 Users will have to judge for themselves whether to use
 the formally unnecessary left-arrow rules.
 
+\subsection{Optional Alternation Rules}
 
-\subsection{Arithmetic Expressions}
+A right-arrow rule using the \texttt{->?} arrow (the normal right arrow followed by a question
+mark\footnote{In regular expressions, the question mark is a postfix operator indicating the optionality of the expression that
+precedes it.  In a similar spirit, adding a question mark after a rule operator signals that the mapping indicated by the rule is
+optional.} applies optionally.  Thus
+the rule
 
-\subsubsection{Uses}
+\begin{alltt}
+s ->? z / [aeiou] _ [aeiou]
+\end{alltt}
+
+\noindent
+maps the upper-side input string \emph{casa} to two outputs, \emph{caza} and
+\emph{casa}.  It maps the string \emph{isose} to four outputs:
+\emph{izoze}, \emph{izose}, \emph{isoze} and \emph{isose}.
+
+Similarly, a left-arrow rule using the \texttt{<-?} arrow (the normal left arrow followed by a question mark) also
+applies optionally.
+
+\begin{alltt}
+z <-? s / [aeiou] _ [aeiou]
+\end{alltt}
+
+\subsection{Maximum and Minimum Matching}
+
+Straightforward mapping rules will match and apply in all possible ways, with multiple outputs whenever there are
+multiple ways to match.  In practice, it is often useful to write rules that act as if a matching algorithm were moving
+left-to-right through the input string, always matching the maximum numbers of symbols whenever two or more matches are
+possible.  The syntax for such rules adds \verb!{max}! to the arrow:
+
+\begin{alltt}
+\emph{upper} \{max\}-> \emph{lower} / \emph{left} _ \emph{right}
+\emph{upper} <-\{max\} \emph{lower} / \emph{left} _ \emph{right}
+\end{alltt}
+
+\noindent
+Note that the \verb!{max}! appears next to the input expression, which is the upper side in a right-arrow rule, and the lower side
+in a left-arrow rule.
+
+[KRB: add concrete examples]  It is important to understand that although the behavior of these rules looks
+left-to-right, and looks like some kind of algorithm is being performed at runtime, these rules, like all the other
+alternation rules, are compiled into finite-state transducers that encode a regular relation.
+
+In some cases, it is also useful to write rules that again act as if a matching algorithm were moving left-to-right
+through the input string, but which always match the \emph{minimum} rather than the maximum if multiple matches are
+possible.  In such rules a \verb!{min}! is added to the arrow:
+
+\begin{alltt}
+\emph{upper} \{min\}-> \emph{lower} / \emph{left} _ \emph{right}
+\emph{upper} <-\{min\} \emph{lower} / \emph{left} _ \emph{right}
+\end{alltt}
+
+[KRB:  consider implementing similar rules with apparent right-to-left behavior, similar to the Xerox ->@ and >@ rules.]
+
+
+\subsection{Epenthesis Rules}
+
+An epenthesis rule inserts symbols where no symbols were before.  That it, it matches the empty string and maps it to
+something not empty.  Recall that empty double quotes, \verb!""!, denotes the empty string.  The following epenthesis rule
+
+\begin{alltt}
+"" -> i /  p _ t
+\end{alltt}
+
+\noindent
+maps the upper string \emph{apto} to the lower string \emph{apito}.  Technically speaking, there are an infinite number
+of empty strings between any two adjacent symbols like \emph{p} and \emph{t}, and at the beginning and end of a string, and such rules might have been interpreted to force
+an infinite number of outputs.\footnote{The Xerox replace rule intuitively written \verb!0 -> i || p _ t! is indeed interpreted this
+way and results in an error.  Xerox epenthesis rules must be notated with special ``dotted brackets,'' 
+e.g.\@ \verb![..] -> i || p _ t! to avoid the error.}  However, the intent of a programmer who writes \verb!"" -> i /  p _ t! is almost always to
+interpret the input as having only one empty string between symbols, and at the boundaries of a string, and the Kleene rule is automatically interpreted in this way.
+
+
+\subsection{Markup Rules}
+
+Markup rules match an input expression, map that input expression to itself in the output, and then ``mark up'' the
+output by surrounding it with symbols specified in the rule, e.g.
+
+\begin{alltt}
+[aeiou] -> '<v>' ~~~ '</v>'
+\end{alltt}
+
+\noindent
+where the intent is to surround each vowel in the output with the \acro{xml}-like symbols \verb!<v>! and \verb!</v>!.  Applied downward,
+this rule will map \emph{unique} to \emph{<v>u</v>n<v>i</v>q<v>u</v><v>e</v>}.
+
+\subsection{Two-Level Rule Contexts}
+
+Using Huld\'en's algorithms, it became possible to implement alternation rules with two-level contexts.\footnote{Two-level contexts
+were not possible in Xerox Replace Rules.}
+Compare the following examples:
+
+\begin{Verbatim}[fontsize=\small]
+a -> b / b _
+\end{Verbatim}
+
+\noindent
+is a rule with a one-level context, and it maps \texttt{baaa} downward to \texttt{bbaa}, while
+
+\begin{Verbatim}[fontsize=\small]
+a -> b / (.*):b 2_2
+\end{Verbatim}
+
+\noindent
+is a rule with a two-level context that maps \texttt{baaa} to {bbbb}.  The \verb!2_2! syntax indicates that the context or contexts are to be interpreted as
+having two levels.  Here the left context is \verb!.*! (the Universal Language) on the upper side and \verb!b! on the
+lower side.
+
+[KRB:  explain, step by step, how the only possible output is bbbb]
+
+This kind of rule, where the left-context matches on
+the lower side of the relation, appears to generate its own left context as it moves
+along, resulting in a kind of left-to-right domino effect.  However, it is
+important to realize that there is no algorithm or process being performed; the rule,
+like all alternation rules, is compiled into a static finite-state transducer, a data
+structure that encodes a
+relation between two regular languages.  The output only appears to reflect a kind of
+left-to-right domino effect that generates its own lower-side left contexts as it
+moves along.
+
+In natural-language phonetics and morphology, such rules are often used to model a phenomenon known
+as vowel harmony.  [Give examples.]
+
+In a similar way, note that
+
+\begin{Verbatim}[fontsize=\small]
+a -> b / _ b
+\end{Verbatim}
+
+\noindent
+maps \texttt{aaab} to \texttt{aabb}, while
+
+\begin{Verbatim}[fontsize=\small]
+a -> b / 2_2  (.*):b
+\end{Verbatim}
+
+\noindent
+maps \texttt{aaab} to \texttt{bbbb}.  Here again, the \verb!2_2! operator indicates that the context or contexts are to
+be interpreted as having two levels, and here the right context is \verb!.*! on the upper side and \verb!b! on the lower
+side.  The rule with a two-level right context appears to
+operate right-to-left, generating its own lower-side right context as it moves along, outputting \texttt{bbbb} in a kind
+of right-to-left domino effect.
+Again, the rule really just compiles into a finite-state transducer that encodes a regular
+relation, and there is no runtime algorithm or process involved.
+
+Such rules have been found useful to model a phenomenon known as umlaut.
+
+
+
+\subsection{Parallel Rules}
+
+\subsubsection{The Built-In Parallel Function}
+
+Huld\'en's algorithms allow alternation rules to be compiled in parallel with complete freedom [KRB:  test and confirm
+this].  Unlike xfst Replace Rules, which can be compiled in parallel only if they have the exact same arrow operator,
+Kleene allows rules of any arrow type to be compiled in parallel.  Unlike traditional Two-Level alternation rules, which are
+compiled in parallel but are
+limited to controlling the mapping of one symbol to one symbol (the so-called ``concrete pairs''), Kleene allows
+rules with arbitrary-length mappings to be compiled in parallel.
+
+The overt way to indicate that a set of rules is to be compiled in parallel is to enclose them in the \verb!$^parallel()!
+built-in function, separated by commas, e.g.
+
+\begin{alltt}
+$r = $^parallel(a -> b, b -> a) ;
+\end{alltt}
+
+\noindent
+This resulting machine will map \emph{abba} to \emph{baab}, and \emph{baab} to \emph{abba}.
+
+Consider also the following example, which (in a rule with one-level contexts) maps a to b in the context between c and
+d, and also, in a rule with two-level contexts, maps d to e after an a that has been mapped to a b.  These rules compile
+in parallel to a machine that maps cad to cbe.
+
+\begin{alltt}
+$r = $^parallel( a -> b / c _ d ,  d -> e / a:b 2_2 ) ;
+\end{alltt}
+
+Consider also the mapping of Brazilian-Portuguese parte to partSi, done earlier using a cascade of rules.  The same mapping can be performed
+by two rules compiled in parallel.
+
+\begin{alltt}
+$r = $^parallel( e -> i / _ # ,  t -> tS / _ (.*):i ) ;
+\end{alltt}
+
+Note that \verb!$^parallel()! is a special built-in function that requires that its arguments be in full rule syntax.  The following example, which
+tries to compile the rules separately into finite-state machines, and then pass the machines as arguments to \verb!$^parallel()! is
+illegal.\footnote{In order to compile rules in parallel, the Huld\'en algorithms need to access and compile all of the rule parts,
+combining them together in non-trivial ways.  If a rule has been pre-compiled into a finite-state machine, the original parts of
+the component rules are no longer identifiable or extractable.}
+
+\begin{alltt}
+$rule1 = e -> i / _ # ;
+$rule2 = t -> tS / _ (.*):i ;
+
+// this is ILLEGAL
+$r = $^parallel( $rule1 ,  $rule2 ) ;
+\end{alltt}
+
+
+\subsubsection{Rules with Where Clauses}
+
+Kleene alternation rules can also have \emph{where}-clauses that define the settings of local variables inside the
+rules.  The following rule
+
+\begin{alltt}
+$r = $voiced -> $unvoiced / _ # 
+          where { $voiced _E_ $@(b, d, g), 
+                  $unvoiced _E_ $@(p, t, k) } ;
+\end{alltt}
+
+\noindent
+models the phenomenon where voiced consonants become devoiced at the end of a word.  (The rule is written on multiple lines to be
+more readable, but this is not required.) This rule is effectively expanded to
+three rules that are compiled in parallel, equivalent to
+
+\begin{alltt}
+$r = $^parallel( b -> p / _ #, 
+                 d -> t / _ #, 
+                 g -> k / _ # ) ;
+\end{alltt}
+
+\noindent
+In this case, the \texttt{where{...}} clause defines two local variables, \verb!$voiced! and \verb!$unvoiced!, each
+of which is bound to values, one at a time, from a list of finite-state machines.  The finite-state machines can be
+arbitrarily complex, though they must conform to any semantic limitations inherent to rules; in this example,
+\verb!$voiced! and \verb!$unvoiced! appear on the left-hand-side of the rule, where the expressions must denote
+regular languages (not relations).
+By default, as in this case, the local variables are bound, during interpretation, to the list
+values in a left-to-right ``matched'' fashion such that when \verb!$voiced! is bound to \verb!b!, \verb!unvoiced! is
+bound to \verb!p!, and when \verb!$voiced! is bound to \verb!d!, \verb!unvoiced! is bound to \verb!t!, etc.  This
+matched assignment behavior requires that the two list expressions have exactly the same length, and Kleene will throw an
+exception if they are not.  
+
+Where-clauses can define
+one, two or more variables that are interpreted as being local to the rule.\footnote{The Kleene interpreter
+literally pushes to a new frame/scope while compiling rules with where-clauses, so that resetting the values of the
+local rule variables does not effect any variables outside the rule that happen to have the same names.}  Each local
+variable in the where clause is followed by the ``element of'' operator, which can be the $\in$ character (Unicode
+ELEMENT OF, U+2208) or the \acro{ascii} equivalent \verb!_E_!.
+The syntax
+\verb!$@(...)! is the normal Kleene syntax for a literal anonymous list of finite-state-machine values.  After the
+$\in$ or \verb!_E_! can appear any Kleene expression whose value is a list of finite-state machines, including
+variables and even function calls that return such a list.
+
+\begin{alltt}
+$@voicedstops = $@(b, d, g) ;
+$@unvoicedstops = $@(p, t, k) ;
+
+$r = $voiced -> $unvoiced / _#  
+        where { $voiced   _E_ $@voidedstops, 
+                $unvoiced _E_ $@unvoicedstops } ;
+\end{alltt}
+
+\noindent
+The following rule, which doubles all vowels, e.g.\@ mapping \emph{unido} to \emph{uuniidoo}, calls \verb!$@^getSigma()!, which
+calculates the sigma (alphabet) of its
+argument and returns it as a list of finite-state machines.
+
+\begin{alltt}
+$r = $vowel -> $vowel $vowel 
+          where { $vowel _E_ $@^getSigma(aeiouAEIOU) } ;
+\end{alltt}
+
+
+Kleene also supports the \verb!where_mixed! keyword, which causes the interpreter to compute the Cartesian Product
+of all the list values and assign the local variables to each of the results in turn.  For \verb!where_mixed!, the lists do not have
+to have the same length.  For example, in the rule
+
+\begin{alltt}
+$r = $foo -> $bar 
+      where_mixed { $foo _E_ $@(a, b, c), 
+	                $bar _E_ $@(y, z) } ;
+\end{alltt}
+
+\noindent
+the Cartesian product of the values contains the six pairs (a, y), (a, z), (b, y), (b, z), (c, y) and (c, z), and so
+the single rule is equivalent to the following six rules compiled in parallel:
+
+\begin{alltt}
+$r = $^parallel( a -> y, 
+                 a -> z, 
+				 b -> y, 
+				 b -> z, 
+				 c -> y, 
+				 c -> z) ;
+\end{alltt}
+
+\noindent
+and either rule will map upper-side input \emph{cab} to \emph{yyy}, \emph{yyz}, \emph{yzy}, \emph{yzz}, \emph{zyy}, \emph{zyz},
+\emph{zzy} and \emph{zzz}.
+
+
+Kleene also supports the \verb!where_matched! keyword, equivalent to \verb!where!, if the programmer desires to make
+the matched behavior more explicit.
+
+\begin{alltt}
+$r = $voiced -> $unvoiced / _ #
+        where_matched { $voiced   _E_ $@(b, d, g), 
+                        $unvoiced _E_ $@(p, t, k) } ;
+\end{alltt}
+
+\noindent
+In addition, one can write a rules with multiple where-clauses, potentially mixing \verb!where! (or
+\verb!where_matched!) and \verb!where_mixed! clauses, and the interpreter will compute the Cartesian product of values
+among the multiple where-clauses.  As the semantics quickly become opaque to the human programmer, multiple where-clauses are best avoided.
+
+\subsubsection{Rules where the Input can Match the Empty String}
+
+We have already examined epenthesis rules such as
+
+\begin{alltt}
+"" -> i / p _ t
+\end{alltt}
+
+\noindent
+where the upper-side input expression is the empty string.  A similar case is where the input expression denotes a
+language that includes the empty string, e.g.
+
+\begin{alltt}
+a* -> x / l _ r
+\end{alltt}
+
+\noindent
+Note that \verb!a*! denotes a language that includes the empty string.
+Because rules match however they can, such a rule will match \emph{laaaar} and map it to \emph{lxr}; and it will also
+match \emph{lr} and map it to \emph{lxr}, mapping nothing to
+something, just like an epenthesis rule.  To handle such cases Kleene interprets 
+
+\begin{alltt}
+a* -> x / l _ r
+\end{alltt}
+
+\noindent
+as two rules compiled in parallel, 
+
+\begin{alltt}
+$^parallel( (a* - "") -> x / l _ r, "" -> x / l _ r)
+\end{alltt}
+
+\noindent
+but this is all hidden from the programmer.\footnote{Xerox Replace Rules for epenthesis require the ``dotted bracket'' notation as
+the input expression, e.g.\@  \verb![..] -> i!, or surrounding the input expression, e.g.\@ \verb![.a*.] -> x!, in
+cases where the input language includes the empty string.  This notation causes the Xerox xfst interpreter to treat
+the input as having only one empty string where, mathematically, an infinite number of empty strings occur.  The
+dotted-bracket notation is easily forgotten by programmers, and the failure to use it, in cases where the input
+expression is or includes the empty string, results in annoying errors.  Kleene
+has no need for a similar notation because it automatically recognizes such rules and interprets them as if there
+were only one empty string before and after each input symbol.}
+
+\section{Arithmetic Expressions}
+
+\subsection{Mindtuning for Arithmetic Expressions}
 
 While \Kleene{} is designed primarily for creating and manipulating
 finite-state networks, it does support arithmetic expressions, variables
@@ -1953,7 +2364,7 @@ Surrounding them with double quotes: \verb!"2"!, or
 Putting them in square-bracketed expressions: \verb![2]! \verb![^2]! \verb![0-9]! \verb![^0-9]!
 \end{itemize}
 
-\subsubsection{Primary Arithmetic Expressions}
+\subsection{Primary Arithmetic Expressions}
 
 The primary arithmetic expressions are the following:
 
@@ -1984,7 +2395,7 @@ The primary arithmetic expressions are the following:
 \noindent
 Note that \Kleene{} does not support octal (base 8) representations of integers.
 
-\subsubsection{Arithmetic Expression Operators}
+\subsection{Arithmetic Expression Operators}
 
 The following regular expression operators are available, 
 listed from high to low precedence.
@@ -2017,7 +2428,7 @@ listed from high to low precedence.
 \noindent
 The result of Boolean operations is always 1 (true) or 0 (false).
 
-\subsubsection{Arithmetic Functions}
+\subsection{Arithmetic Functions}
 
 The following arithmetic-valued functions are supported.
 
@@ -2044,7 +2455,9 @@ The following arithmetic-valued functions are supported.
 
 \vspace{0.5cm}
 
-\subsubsection{Boolean Functions}
+\subsection{Boolean Functions}
+
+\subsubsection{Special Case of Arithmetic Functions}
 
 Boolean functions are special cases of arithmetic functions that return 1 for true and 0 for false.  They
 are typically used in if-else expressions or in loops for testing qualities of finite-state machines.
@@ -2084,7 +2497,7 @@ acceptor.  In OpenFst, where all arc labels in a finite-state machine
 are two-level, with an input label and an output label, an acceptor is a
 machine wherein each mapping is an identity mapping.\footnote{If the network contains an arc labeled
 OTHER\_NONID:OTHER\_NONID, then it will look like an acceptor to the OpenFst library, but in Kleene such
-a network is semantically and in practice a transducer, and if \verb!#^isAcceptor()! is called on such
+a network is semantically and in practice a transducer; if \verb!#^isAcceptor()! is called on such
 a network the return value is 0 (false).  Conversely, if
 \verb!#^isTransducer()! is called on any network that
 contains an arc labeled OTHER\_NONID:OTHER\_NONID, the return value is 1 (true).}
@@ -2093,8 +2506,8 @@ The \verb!#^isWeighted($fst)! function returns true if and only if the argument 
 with a non-neutral weight value.
 
 The \verb!#^isIDeterministic($fst)! function returns true if and only if the network is \emph{input}-side
-deterministic.  Similarly, the \verb!#^isODeterministic($fst)! function returns true if and only if the
-network is \emph{output}-side deterministic.\footnote{The spellings IDeterministic and ODeterministic are
+deterministic, where ``input'' here is taken in the OpenFst sense of the upper side.  Similarly, the \verb!#^isODeterministic($fst)! function returns true if and only if the
+network is \emph{output}-side deterministic, in the OpenFst sense.\footnote{The spellings IDeterministic and ODeterministic are
 used inside the OpenFst library.}
 
 The \verb!#^containsOther($fst)! function returns true if and only if the network contains at least one
@@ -2139,10 +2552,12 @@ for testing.
 
 \begin{Verbatim}[fontsize=\small]
 $fst = a - a ;
-assert(#^isEmptyLanguage($fst), "Should denote the empty language.") ;
+assert(#^isEmptyLanguage($fst), 
+        "Should denote the empty language.") ;
 
 $fst2 = a* ;
-assert(#^containsEmptyString($fst2), "Should contain the empty string.") ;
+assert(#^containsEmptyString($fst2), 
+        "Should contain the empty string.") ;
 \end{Verbatim}
 
 In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
@@ -2156,13 +2571,14 @@ in user-defined functions to impose ``semantic'' restrictions on the
 arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
 and \verb!require(#numexp, $regexp)! arguments could be debated.  One
 possibility would be to implement a global switch that would cause all
-\verb!assert(#numexp, $regexp)! statements, but not \verb!require(#numexp,
-$regexp)! statements, to be ignored at runtime.}
+\verb!assert(#numexp, $regexp)! statements, but not 
+\verb!require(#numexp, $regexp)! statements, to be ignored at runtime.}
 
 \begin{Verbatim}[fontsize=\small]
 #^myIntersect($a, $b) {
 	require(#^isAcceptor($a) && #^isAcceptor($b), 
-		"The arguments to #^myIntersect must denote an acceptor.") ;
+    "The arguments to #^myIntersect must denote an acceptor.") ;
+
 	return $a & $b ;
 }
 \end{Verbatim}
@@ -2172,10 +2588,10 @@ $regexp)! statements, to be ignored at runtime.}
 
 
 
-\subsection{Lists}
+\section{Lists}
 
 
-\subsubsection{Lists of Networks and Numbers}
+\subsection{Lists of Networks and Numbers}
 
 In addition to individual finite-state networks, and individual numbers,
 Kleene also supports collections of networks and collections of numbers.
@@ -2202,7 +2618,7 @@ iteration through the members of a list.
 The sigil \verb!$@! marks lists of networks, and \verb!#@! marks lists of
 numbers. 
 
-\subsubsection{List Literals, Identifiers, and Assignment}
+\subsection{List Literals, Identifiers, and Assignment}
 
 List literals, also known as anonymous lists, are denoted by the
 appropriate sigil, \verb!$@! for nets or \verb!#@! for numbers, followed
@@ -2244,7 +2660,7 @@ delete #@bar ;
 In the \acro{gui}, these commands can be accessed by right-clicking on a list
 icon.
 
-\subsubsection{Pre-Defined Functions Operating on Lists}
+\subsection{Pre-Defined Functions Operating on Lists}
 
 \paragraph{Functions Accessing the Elements of a List.} 
 Individual list
@@ -2452,7 +2868,7 @@ modified list\\
 
 \vspace{.5cm}
 
-\paragraph{Functions Joining the Elements of a List.}
+\subsubsection{Functions Joining the Elements of a List.}
 
 The function 
 \verb!$^reduceLeft($^bin, $@list)! takes as arguments a binary function
@@ -2508,7 +2924,7 @@ multiplication.
 \verb!#^foldLeft()! 
 is currently defined as an alias for \verb!#^reduceLeft()!.
 
-\paragraph{Functions Returning the Map of a List.}
+\subsubsection{Functions Returning the Map of a List.}
 
 The \sout{\$@\^map(\$@list, \$\^mon)} \verb!$@^map($^mon, $@list)!
 applies the single-argument function \verb!$^mon! to each element of
@@ -2542,7 +2958,7 @@ arguments can be anonymous.
 // #@outList will be $@(0, 2, 4, 6)
 \end{Verbatim}
 
-\paragraph{Functions Returning the Sigma of a Network.}
+\subsubsection{Functions Returning the Sigma of a Network.}
 
 The \verb+$@^getSigma!($fst)+ function returns the sigma of the argument
 network as a list of networks, each one consisting of a start state and a final
@@ -2559,7 +2975,7 @@ $@list = $@^getSigma($fst) ;
 #@list = #@^getSigma($fst) ;
 \end{Verbatim}
 
-\paragraph{Functions Returning the Size of a List.}
+\subsubsection{Functions Returning the Size of a List.}
 
 The \verb+#^size(+\textit{list}\verb!)! function takes a list argument,
 either a network-list or a number-list, and returns the
@@ -2579,7 +2995,7 @@ type.}
 The \verb!#^isEmpty(!\emph{list}\verb!)! function takes a list argument and
 returns 1 (true) if the list is empty and 0 (false) otherwise.
 
-\subsubsection{Iteration through Members of a List}
+\subsection{Iteration through Members of a List}
 
 
 The \texttt{foreach} statement iterates through the elements of a list, allowing
@@ -2629,7 +3045,7 @@ foreach (#num in #@(1, 2, 3)) {
 info #num ;    // Point B
 \end{Verbatim}
 
-\subsubsection{User-Defined Functions and Lists}
+\subsection{User-Defined Functions and Lists}
 
 
 Users can define their own functions that take lists as arguments, and functions
@@ -2648,10 +3064,10 @@ $@reversedList = $@^reverse($@(a, b, c)) ;
 \end{Verbatim}
 
 
-\subsubsection{Traditional Array-indexing Syntax}
+\subsection{Traditional Array-indexing Syntax}
 
 
-KRB:  This section is work-in-progress.
+[KRB:  This section is work-in-progress.]
 
 Although the current implementation of lists provides access functions like
 \verb!$^get($@list, #n)!, to retrieve a value at a specified index, 
@@ -2697,12 +3113,9 @@ statements are provided for iterating easily through lists, I believe
 that we can dispense with postfix iteration altogether.
 
 
-\subsection{Void Functions}
+\section{Void Functions}
 
-KRB:  2010-10-14.  This whole section on void functions needs to be
-reviewed.  We need to think again about the sigil for void functions.
-
-\subsubsection{Void Functions with Names}
+\subsection{Void Functions with Names}
 
 Void functions return no value, and their names are
 prefixed with the plain \verb!^!
@@ -2720,15 +3133,15 @@ sequence of Kleene commands.
 ^inputSigma(abc) ;
 \end{Verbatim}
 
-\subsubsection{Anonymous Void Functions}
+\subsection{Anonymous Void Functions}
 
 An anonymous void function looks like
 \verb!^(!\ldots\emph{args}\ldots\verb!)!, with the \verb!^! sigil
 marking a function that has no return value. 
 
-\subsection{Other Statements}
+\section{Other Statements}
 
-\subsubsection{Control Syntax}
+\subsection{Control Syntax}
 
 In addition to network-, arithmetic- and function-assignment statements,
 \Kleene{} provides \verb!if-elsif-then! statements, \verb!while!  and
@@ -2758,9 +3171,9 @@ $^iterate_by_loop($net, #count) {
 }
 \end{Verbatim}
 
-\subsubsection{Input/Output}
+\subsection{Input/Output}
 
-\paragraph{Scripts.}
+\subsubsection{Scripts.}
 
 When Kleene is invoked ``bare'' from the command line, using
 
@@ -2836,7 +3249,7 @@ menu that brings up a window that allows you to browse for the source file and
 to indicate the encoding.  The encoding will be pre-set to the default encoding
 of the operating system, but it can be changed if necessary.
 
-\paragraph{XML Input/Output.}
+\subsubsection{XML Input/Output.}
 
 A network can be written to file in Kleene's 
 \acro{xml} language using the \texttt{writeXML} command,
@@ -2895,7 +3308,7 @@ The reading of \acro{xml} files is now done using the \acro{rome} library's
 \texttt{XmlReader} class, which knows how to detect the encoding of an
 \acro{xml} file.
 
-\paragraph{\acro{dot} Output}
+\subsubsection{\acro{dot} Output.}
 
 Networks can be written to file in the GraphViz \verb!dot!
 format\footnote{\url{http://www.graphviz.org}} using the
@@ -2922,7 +3335,7 @@ pre-set to the recommended \acro{utf-8}.  \acro{dot} output is used in the
 background when you invoke the \acro{draw} command, which can also be
 generated by right-clicking on the network's icon.
 
-\paragraph{Interactive Testing in the \acro{gui}.}
+\subsubsection{Interactive Testing in the \acro{gui}.}
 
 For interactive manual testing of a network within the \acro{gui},
 use the Kleene \texttt{test} command, e.g.
@@ -2954,7 +3367,7 @@ When the network being tested contains \acro{other} (unknown) characters,
 the output may be unintuitive; see Appendix~\ref{app:test} for more
 details.
 
-\subsubsection{Memory Management}
+\subsection{Memory Management}
 
 Memory management commands are intended for use by the developers and
 maintainers of Kleene, not for typical users.
@@ -2974,7 +3387,7 @@ and can be reclaimed by the normal Java garbage collection.  But the
 memory required by the states and arcs is \CPP{} memory and is invisible
 to the Java garbage collector.
 
-\paragraph{Garbage Collection.}
+\subsubsection{Garbage Collection.}
 
 The Kleene parser and interpreter are written in Java, which
 automatically performs garbage collection of Java objects when they no
@@ -3006,7 +3419,7 @@ gc ;
 \end{Verbatim}
 \end{samepage}
 
-\paragraph{Java Memory Usage.}
+\subsubsection{Java Memory Usage.}
 
 Kleene also offers the \texttt{memory}
 command, which prints out a summary showing the maximum memory, the
@@ -3021,7 +3434,7 @@ The format of the output, not shown here, will no doubt evolve as needs
 become clear.  Note that Kleene currently has no way to interrogate the
 memory usage or availability in the \CPP{} memory space.
 
-\paragraph{Java Fst Objects.}
+\subsubsection{Java Fst Objects.}
 
 Kleene now keeps track of how many Java Fst objects have been allocated,
 and how many have been ``finalized'', and this information can be
@@ -3037,7 +3450,7 @@ fsts ;
 The command also displays the number of ``live'' Fsts, which is the
 difference between the number of allocated Fsts and the number of finalized Fsts.
 
-\paragraph{Contents of the Main Symbol Table.}
+\subsubsection{Contents of the Main Symbol Table.}
 
 The \texttt{symtab} command prints a list of the items defined in the main
 ``program'' symbol table, and these items should match the icons in the \acro{gui} symtab
@@ -3058,7 +3471,7 @@ in the system-supplied \texttt{.kleene/global/basic.kl} start-up script.
 gsymtab ;
 \end{Verbatim}
 
-\paragraph{C++ Memory Space.}
+\subsubsection{C++ Memory Space.}
 
 The Kleene system includes one custom-written non-OpenFst \CPP{} file,
 named \texttt{kleeneopenfst.cc}, that defines the ``native'' (\CPP{})
@@ -3074,22 +3487,23 @@ down such leaks.  Kleene currently has no direct way to interrogate the
 memory usage/availability in the \CPP{} memory space.\footnote{Memory
 profilers may provide some help here.}
 
-\section{OpenFst \acro{rtn} Support}
+\section{\acro{rtn} Support}
 
 \label{sec:openfstrtn}
 
-\subsection{Two Distinct Flavors of \acro{rtn} Support}
+%\subsection{Two Distinct Flavors of \acro{rtn} Support}
 
-Kleene is currently being expanded to provide support for two distinct
-flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
-progress.
+% See saprtn.tex.notrack
+%Kleene is currently being expanded to provide support for two distinct
+%flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
+%progress.
 
-This section describes the current Kleene support for \acro{rtn}s
-compatible with the off-the-shelf functions from the OpenFst library.
-\acro{sap} linguists creating pattern networks for the \acro{sap}
-\acro{rtn} pattern-matching runtime code should ignore this section and
-proceed immediately to section~\ref{sec:saprtn} starting on
-page~\pageref{sec:saprtn}.
+%This section describes the Kleene support for \acro{rtn}s
+%compatible with the off-the-shelf functions from the OpenFst library.
+%\acro{sap} linguists creating pattern networks for the \acro{sap}
+%\acro{rtn} pattern-matching runtime code should ignore this section and
+%proceed immediately to section~\ref{sec:saprtn} starting on
+%page~\pageref{sec:saprtn}.
 
 \subsection{OpenFst Recursive Transition Networks (\acro{rtn}s)}
 
@@ -3283,458 +3697,6 @@ library, the \verb!ReplaceFst()! operation provides a convenient method
 that checks for cyclic references, and \verb!$^expandRtn()! invokes this
 method.}
 
-\section{\acro{sap} \acro{rtn} Support}
-
-\label{sec:saprtn}
-
-\subsection{Two Distinct Flavors of \acro{rtn} Support}
-
-Kleene is currently being expanded to provide support for two distinct
-flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
-progress.
-
-This section describes the current Kleene support for building
-\acro{rtn}s using the \acro{sap} \acro{rtn} conventions, which are
-compatible with the proprietary \acro{sap} \acro{rtn} runtime
-code.\footnote{The \acro{sap} \acro{rtn} runtime code was written by Phil
-Sours.  This runtime code is not currently available outside \acro{sap}.}
-Non-\acro{sap} users wishing to create \acro{rtn}s compatible with the
-OpenFst library should should ignore this section and proceed immediately
-to section~\ref{sec:openfstrtn} starting on
-page~\pageref{sec:openfstrtn}.
-
-\subsection{\acro{sap} Recursive Transition Networks (\acro{rtn}s)}
-
-\subsubsection{Status}
-
-Kleene supports the building of Recursive Transition Networks
-(\acro{rtn}s) that are compatible with proprietary \acro{sap} \acro{rtn}
-runtime code.
-
-An \acro{rtn} contains arc labels that are to be interpreted as
-``references'' to subnetworks; and compatible \acro{rtn}-savvy runtime
-code, when applying a network to data, will recognize such a reference
-and ``push'' to the referenced subnetwork to continue the matching, and
-then ``pop'' back to the calling network when the subnetwork has
-successfully matched.  The references to subnetworks can also be thought
-of as non-terminal labels.
-
-\acro{rtn}s, containing references to subnetworks, are often smaller than
-full-sized networks that must contain a full copy of each subnetwork
-wherever it is needed.  However, \acro{rtn}s can denote context-free
-languages, and so can go beyond regular power; a special subclass of
-\acro{rtn}s remain regular.  The recognition/parsing of context-free
-languages requires memory, in particular a push-down stack, and so any
-runtime code to apply \acro{rtn}s must include such a stack.
-
-\subsubsection{Predefined \acro{sap} Pattern Definitions}
-
-\acro{sap} programmers writing patterns must start their source files, or
-their interactive \acro{gui} sessions,  by sourcing the pre-defined
-Kleene script \verb!PatternDefs.kl!.\footnote{This file may exist in
-various versions, e.g.\@ \verb!PatternDefs-11.kl!.}
-
-\begin{Verbatim}[fontsize=\small]
-source "PatternDefs.kl" ;
-\end{Verbatim}
-
-\noindent
-Alternatively, one can launch \Kleene{} and specify the script on the
-command line:
-
-\begin{Verbatim}[fontsize=\small]
-$ java -jar Kleene.jar PatternDefs.kl -gui
-\end{Verbatim}
-
-\noindent
-This script defines a set of useful Kleene functions for use by
-\acro{sap} pattern writers, and it declares that any references to
-subnetworks in an \acro{rtn} should be constructed according to the
-\acro{sap} \acro{rtn} conventions.\footnote{The script
-\verb!PatternDefs.kl! must contain the special Kleene command
-\verb!SapRtnConventions!, which causes Kleene to build \acro{rtn}s
-according to the proprietary \acro{sap} \acro{rtn} conventions.  The
-typical \acro{sap} pattern writer will simply source
-\verb!PatternDefs.kl! and will never need to specify or know about the
-\verb!SapRtnConventions! command.} 
-
-The sourcing of \texttt{PatternDefs.kl} at the beginning of a session
-effectively turns \Kleene{} into what is known at \acro{sap} as the Pattern
-Matching Language (\acro{pml}).
-
-\subsubsection{Syntax for Creating an \acro{sap} \acro{rtn}}
-
-For the \acro{sap} programmer, there needs to be a Kleene syntax to denote a
-reference to a subnetwork, and it needs to be distinct from the syntax
-that causes a copy of a network to be inserted.  For example, in this
-example
-
-\begin{Verbatim}[fontsize=\small]
-$vowel = [aeiou] ;
-$net = k $vowel t $vowel b $vowel ;
-\end{Verbatim}
-
-\noindent
-the \verb!$vowel! network will be copied three times into \verb!$net!.  In
-real-life applications, a subnetwork might encode something much larger, such
-as the union of all nouns or even noun phrases in a natural language, and
-multiple copies of such a subnetwork could easily
-cause the final network to become very large, or even too large to
-compute.
-
-Kleene currently supports a wired-in function \verb!$^sub($s)! that
-programmers can use to denote a reference to a subnetwork.\footnote{I'm
-not tied to the spelling \verb!$^sub($s)! and would be comfortable with
-alternatives such as \verb!$^ref($s)! or \verb!$^push($s)!, or even some
-special syntax like \verb!>$s<! or \verb!>>$s!.}  To continue with our
-trivial example, 
-
-\begin{Verbatim}[fontsize=\small]
-source "PatternDefs.kl" ;
-
-$vowel = [aeiou] ;
-$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
-\end{Verbatim}
-
-\noindent
-this would result in an \verb!$rtn! network that contains three compact
-one-label references to the subnetwork \verb!$vowel! rather than three
-full copies of it.  In real-life applications, the savings in memory can
-be very significant.
-
-As shown in this example, the \acro{sap} pattern writer should source the
-script \verb!PatternDefs.kl!, one way or another, before creating any
-networks intended for use with the \acro{sap} \acro{rtn} runtime
-code.\footnote{If \verb!PatternDefs.kl! is not sourced, the calls to
-\verb!$^sub()! will create references to subnetworks that are not
-compatible with the \acro{sap} runtime code but, rather, are compatible
-with the native support for \acro{rtn}s provided by OpenFst (see
-\ref{sec:openfstrtn}).}
-
-\subsubsection{What does a Reference Look Like in an \acro{sap} \acro{rtn}?}
-
-Networks consist of states and arcs, and each arc has two labels, an
-input label, and an output label.\footnote{The terminology of
-\emph{input} and \emph{output} labels is that of the OpenFst tradition.
-In the Xerox tradition, they are called \emph{upper} and \emph{lower},
-respectively, or sometimes \emph{lexical} and \emph{surface}.}  In the
-actual network, the labels are really integers, and all Unicode
-characters, such as \emph{a}, \emph{b}, \emph{c}, etc.\@ are represented
-using their standard Unicode code point value.  Multichar symbols are
-stored using a code point value selected at random from a Unicode Private
-Use Area.
-
-To be compatible with the \acro{sap} \acro{rtn} runtime code, a reference
-to a subnetwork \verb!$s! is the multichar symbol \verb!'$s'!, which,
-internally, is just an integer.  The identity network label
-\verb!'$s':'$s'! tells the \acro{sap} runtime code to perform a simple
-``push'' to subnetwork \verb!$s!, to match \verb!$s! against the input,
-and to produce the output of \verb!$s!, which may be an acceptor or a
-transducer.  The Kleene syntax \verb!$^sub($s)!, \verb!'$sub'!, or
-\verb!'$sub':'$sub'! results in an arc label \verb!'$s':'$s'!.
-
-The \acro{sap} \acro{rtn} runtime code can also match a subnetwork
-against the input symbols and output epsilon---i.e.\@ the empty string.
-When the runtime code is told to apply the \acro{rtn} in a ``downward''
-direction, matching input symbols against the input/upper side, the
-network label \verb!'$s':$eps! tells the runtime code to push to
-subnetwork \verb!$s! and to map the output to epsilon, effectively
-suppressing the output.  Similarly, when the runtime code is told to
-apply the \acro{rtn} in a ``upward'' direction, matching input symbols
-against the output/lower side, the network label \verb!$eps:'$s'! tells
-the runtime code to push to subnetwork \verb!$s! and to map the output to
-epsilon, again suppressing the output.  This mapping-to-epsilon is
-performed inside the \acro{sap} \acro{rtn} runtime code.
-
-Using real code examples, under \acro{sap} \acro{rtn} conventions, the syntax
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = $^sub($s) ;
-\end{Verbatim}
-
-\noindent
-results in a simple \verb!'$s':'$s'! label.  \acro{sap} programmers can
-also program this more directly as
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = '$s' ;
-\end{Verbatim}
-
-\noindent
-using the normal Kleene syntax for multichar symbols.
-
-
-To specify an input/upper-side reference to \verb!$s!, with mapping to
-epsilon, the syntax is \verb!$^sub($s):""!, \verb!$^sub($s):$eps!,
-\verb!'$sub':""!, \verb!'$sub':$eps!, etc.
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = $^sub($s):$eps ;
-\end{Verbatim}
-
-\acro{sap} references to subnetwork can be either simple identity
-mappings, e.g.\@ \verb!'$s':'$s'!, or mappings to epsilon,
-\verb!'$s':$eps! or \verb!$eps:'$s'!.  Any attempt to map a subnetwork
-reference \verb!$s! to anything other than itself or epsilon will raise
-an exception.
-
-\begin{Verbatim}[fontsize=\small]
-$badrtn1 = '$sub':x ;  // illegal
-$badrtn2 = x:'$sub' ;  // illegal
-\end{Verbatim}
-
-\subsubsection{Embedding Subnetworks in an \acro{sap} \acro{rtn}}
-
-The \verb!$^embedRtnSubnets($rtn)! function takes an \acro{sap}
-\acro{rtn} argument, i.e.\@ a network that contains \acro{sap}-format
-references to subnetworks, and returns a network that consists of the
-original network unioned with a prefixed copy of each referred-to
-subnetwork.  For each referred-to network \verb!$s!, the prefix consists
-of the special symbol \verb!__SUBNETWORKS! followed by the special symbol
-\verb!$s!.  Thus from the following code
-
-\begin{Verbatim}[fontsize=\small]
-$p = p ;
-$q = q ;
-$rtn = a $^sub($p) b $^sub($q) ;
-\end{Verbatim}
-
-\noindent
-the result \verb!$rtn! is this network containing two references to subnetworks
-
-\begin{center}
-\includegraphics[width=\textwidth]{images/sapTwoReferences.pdf}
-\end{center}
-
-\noindent
-but the three referred-to networks remain separate.  After the following
-call to \verb!$^embedRtnSubnets($rtn)!, 
-
-\begin{Verbatim}[fontsize=\small]
-$embedded = $^embedRtnSubnets($rtn) ;
-\end{Verbatim}
-
-
-\noindent
-the resulting \verb!$embedded! network contains a single copy of each
-referred-to subnetwork looks like this
-
-\begin{center}
-\includegraphics[width=\textwidth]{images/sapEmbedded.pdf}
-\end{center}
-
-\noindent
-An embedded network can be saved to file as a single network and is
-applied by \acro{sap}-\acro{rtn}-savvy runtime code that knows the label-prefix
-conventions.  
-The unioning of the base network with the subnetworks also guarantees that
-the meaning of OTHER, if present, is standardized throughout all the
-networks.
-
-When the references are mapped to epsilon, 
-
-\begin{Verbatim}[fontsize=\small]
-$p = p ;
-$q = q ;
-$rtn = a $^sub($p):$eps b $^sub($q):$eps ;
-\end{Verbatim}
-
-\noindent
-the reference labels look slightly different.
-
-\begin{center}
-\includegraphics[width=\textwidth]{images/sapEpsTwoReferences.pdf}
-\end{center}
-
-However, when the referred-to networks are embedded, the embedded networks and their
-prefixes are the same as before.
-
-\begin{Verbatim}[fontsize=\small]
-$embedded = $^embedRtnSubnets($rtn) ;
-\end{Verbatim}
-
-
-\begin{center}
-\includegraphics[width=\textwidth]{images/sapEpsEmbedded.pdf}
-\end{center}
-
-An embedded network is effectively a ``final'' network, and
-programmers should avoid subjecting it to some operations like
-\verb!$^reverse()!, which will create an unusable result.
-
-\subsubsection{Expanding an \acro{sap} \acro{rtn} into a Full Normal Network}
-
-At this time, the expansion of an \acro{sap}-format \acro{rtn} into a full normal network
-is not supported.\footnote{\acro{sap}-format \acro{rtn}s can contain special references
-to subnetworks, wherein the runtime code maps the output to epsilon.  This special
-mapping, performed inside the runtime code, is not currently compatible with the
-off-the-shelf \verb!Replace()! and \verb!ReplaceFst()! operations provided by OpenFst.
-In the future, we may write new versions of these library functions that support
-expansion of \acro{sap} \acro{rtn}s.}
-
-\subsubsection{Semantic Constraints in Kleene on Operations for \acro{sap} \acro{rtn}s}
-
-\label{sec:saprtnrestrictions}
-
-\paragraph{Semantic Constraints.}
-
-There are numerous semantic constraints on the operations that can be performed on
-\acro{sap} \acro{rtns}.  Kleene identifies \acro{rtn}s during interpretation and throws
-exceptions when illegal operations are attempted on them.
-
-\paragraph{Crossproduct.}
-
-In \acro{sap} \acro{rtn}s, a reference to a subnetwork can a simple reference,
-as with \verb!'$foo'! in 
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = a b '$foo' c ;
-\end{Verbatim}
-
-\noindent
-which tells the \acro{sap} \acro{rtn} runtime code to match subnetwork 
-\verb!$foo! against the input and produce whatever \verb!$foo! outputs.
-Alternatively, a reference written as the crossproduct, e.g.\@
-\verb!'$foo':$eps! or,
-equivalently,
-\verb!'$foo':""! tells the runtime code to match subnetwork 
-\verb!$foo! against the input but to map
-the output to epsilon, the empty string.
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = a b '$foo':"" c ;
-\end{Verbatim}
-
-The use of crossproduct with \acro{sap} \acro{rtn}s is limited to having
-references to subnetworks on one side, and epsilon on the other side.
-Thus the examples
-
-\begin{Verbatim}[fontsize=\small]
-$rtn1 = '$foo':"" ;
-$rtn2 = (a '$foo' b):"" ;
-$rtn3 = "":'$foo' ;
-$rtn4 = "":(a '$foo' b) ;
-\end{Verbatim}
-
-\noindent
-are legal crossproducts, but
-
-\begin{Verbatim}[fontsize=\small]
-$bad1 = '$foo':z ;  // illegal mapping to z rather than epsilon
-$bad2 = a:'$foo' ;  // illegal mapping to a rather than epsilon
-\end{Verbatim}
-
-\noindent
-are illegal crossproducts, and Kleene will throw an exception.
-
-\paragraph{Legal and Illegal Operations on \acro{rtn}s.}
-
-The following chart summarizes the operations that definitely can and
-cannot be performed on \acro{sap} \acro{rtn}s.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|c|p{5.7cm}|}
-\hline
-\textbf{Operation} & \textbf{Operator(s)} & \textbf{Comment} \\
-\hline
-\hline
-crossproduct & : & Limited to identity labels, or mapping to epsilon (see
-above)\\
-\hline
-iteration & \verb!* + ?! {} & Legal \\
-\hline
-concatenation & & Legal \\
-\hline
-union & | & Legal \\
-\hline
-\hline
-composition & \verb!_o_! & Illegal \\
-\hline
-complementation & \verb!~! & Illegal \\
-\hline
-subtraction & - & Illegal \\
-\hline
-intersection & \verb!&! & Illegal \\
-\hline
-shortestPath & \verb!$^shortestPath(!\ldots\verb!)! & Illegal \\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-When Kleene detects that an illegal operation is being attempted on one or more
-\acro{rtn} arguments, it throws a runtime exception.
-
-
-The \verb!$^shortestPath($fst, #nshortest=1)! function returns the
-network containing the nshortest ``best'' paths from the input
-\verb!$fst!.\footnote{The terminology and behavior of
-\verb!$^shortestPath($fst, #nshortest=1)! is taken from the
-\verb!ShortestPath()! function of the underlying OpenFst library.}  
-
-Under the Tropical Semiring, wherein weights are costs, the best paths
-have the lowest costs.  By default, the second argument has the value of
-1.  If the input network contains m lowest-cost paths of the same weight,
-and \texttt{nshortest} is less than m, only \texttt{nshortest} paths,
-chosen at random, will be returned.  
-
-\paragraph{Cautions on Operations.}
-
-Certain operations on \acro{sap} \acro{rtn}s are legal but semantically 
-questionable, and
-they should be used with caution.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{9cm}|}
-\hline
-\textbf{Operation} & \textbf{Caution} \\
-\hline
-\hline
-\verb!$^determinize()! & useful but not strictly correct at the symbol level \\
-\hline
-\verb!$^minimize()! & useful but not strictly correct at the symbol level \\
-\hline
-\verb!$^rmEpsilon()! & useful but not strictly correct at the symbol level \\
-\hline
-\hline
-\verb!$^rmWeight()! & legal, but the user should also process subnetworks \\
-\hline
-\verb!$^reverse()! & legal, but the user should also process subnetworks \\
-\hline
-\verb!$^substSymbol()! & legal, but the user should also process subnetworks \\
-\hline
-\verb!$^invert()! & legal, but the user should also process subnetworks \\
-\hline
-\verb!$^inputside()! & legal, but the user should also process subnetworks \\
-\hline
-\verb!$^outputside()! & legal, but the user should also process subnetworks \\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-Kleene does not throw exceptions for these questionable operations, and it is
-up to the user to process the main \acro{rtn} and any referred-to subnetworks
-in appropriate ways.  For example, for an \acro{rtn} defined as
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = a <0.1> b <0.2> '$sub' c <0.3> ;
-$urtn = $^rmWeight($rtn) ;
-\end{Verbatim}
-
-\noindent
-the call to \verb!$^rmWeight()! is legal and potentially useful, but the
-referred-to subnetwork \verb!$sub! may be referred
-to by multiple \acro{rtn}s, or may not even be defined yet, so it cannot be
-un-weighted automatically along with the main \verb!$rtn!.  For more
-information on how \acro{rtn}s are marked, and how semantic problems are
-detected during interpretation, see Appendix~\ref{app:rtn}.
 
 \section{Unicode Support}
 
@@ -4091,7 +4053,7 @@ use these kmp files as well.  To make these Simredo files visible to
 \texttt{kmap}, create a \texttt{\~{}/simredo/} directory on the model of the
 \texttt{\~{}/kmap/} directory just described.
 
-\subsection{Selecting an Input Method}
+\subsection{Selecting a Java Input Method}
 
 How you select a Java Input Method depends on your platform, and this
 subject is treated in detail in the Sato paper cited above.  When running
@@ -4127,7 +4089,7 @@ one of the Yudit kmap files installed in your \texttt{\~{}/kmap/}
 directory, or one of the Simredo kmp files installed in your
 \texttt{\~{}/simredo/} directory.
 
-\subsection{Rendering of Unicode Characters}
+\subsection{Rendering of Unicode Characters in the \acro{gui}}
 
 Entering Unicode characters into a Swing text widget is one
 thing---seeing them \emph{rendered} properly on the screen is another.
@@ -4407,27 +4369,27 @@ notions of identity mapping, non-identity mapping and the labels
 The arc labels \acro{other\_id} and \acro{other\_nonid} are special, and
 these two special symbols should not appear in regular expressions.
 
-\newpage
-\section{Implementation of \acro{sap} \acro{rtn}s}
-
-\label{app:rtn}
-
-Java \texttt{Fst} objects contain a boolean \texttt{isRtn} field that is
-set to true if and only if the network contains one or more references to
-subnetworks, either simple references of the form \verb!'$sub'!, which
-translate to an identity-mapping arc label \verb!$sub:$sub!, or
-crossproduct references of the form \verb!'$sub':""!, \verb!'$sub':$eps!,
-\verb!"":'$sub'! or \verb!$eps:'$sub'! which translate to an arc label
-with \verb!$sub! on one side and epsilon on the other side.  When the
-\texttt{isRtn} field is true, the Kleene \texttt{info} command outputs
-``\acro{sap} \acro{rtn}''.
-
-When operations are performed on networks, there are various semantic
-constraints that must be respected, and the code to check these
-constraints is now grouped in the file
-\texttt{OpenFstLibraryChecker.java}.  The operations that are illegal or
-restricted for \acro{rtn}s (see section~\ref{sec:saprtnrestrictions})
-detect \acro{rtn}s and throw exceptions as appropriate.
+%\newpage
+%\section{Implementation of \acro{sap} \acro{rtn}s}
+%
+%\label{app:rtn}
+%
+%Java \texttt{Fst} objects contain a boolean \texttt{isRtn} field that is
+%set to true if and only if the network contains one or more references to
+%subnetworks, either simple references of the form \verb!'$sub'!, which
+%translate to an identity-mapping arc label \verb!$sub:$sub!, or
+%crossproduct references of the form \verb!'$sub':""!, \verb!'$sub':$eps!,
+%\verb!"":'$sub'! or \verb!$eps:'$sub'! which translate to an arc label
+%with \verb!$sub! on one side and epsilon on the other side.  When the
+%\texttt{isRtn} field is true, the Kleene \texttt{info} command outputs
+%``\acro{sap} \acro{rtn}''.
+%
+%When operations are performed on networks, there are various semantic
+%constraints that must be respected, and the code to check these
+%constraints is now grouped in the file
+%\texttt{OpenFstLibraryChecker.java}.  The operations that are illegal or
+%restricted for \acro{rtn}s (see section~\ref{sec:saprtnrestrictions})
+%detect \acro{rtn}s and throw exceptions as appropriate.
 
 \newpage
 \section{Optimization of Networks}

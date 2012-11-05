@@ -83,7 +83,7 @@ public class PseudoTerminalInternalFrame extends JInternalFrame {
 		historyArea = new TextAreaFIFO(maxRows) ;
 		historyArea.setRows(rows) ;
 		historyArea.setColumns(columns) ;
-		historyArea.setText("// Enter statements below...\n\n") ;
+		historyArea.setText("// Enter Kleene statements below, e.g.\n\n// $fst = abc*d+e? ;\n// draw $fst ;\n\n// Followed by RETURN/ENTER\n\n") ;
 
 		historyArea.setEditable(false) ;
 		historyArea.setLineWrap(true) ;

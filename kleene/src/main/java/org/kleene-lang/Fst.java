@@ -28,9 +28,9 @@ import java.util.Iterator ;
 
 class Fst {
 	// class variables, refer to as Fst.countOfFstsAllocated
-	private static int countOfFstsAllocated = 0 ;
+	private static int countOfFstsAllocated =   0 ;
 	private static int countOfCallsToFinalize = 0 ; 
-	private static int countOfFstsFinalized = 0 ;
+	private static int countOfFstsFinalized =   0 ;
 
 	// instance variables
 	private long fstPtr ;   			// stores ptr to C++ FST object

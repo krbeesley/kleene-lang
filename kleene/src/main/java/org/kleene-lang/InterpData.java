@@ -34,8 +34,6 @@ public class InterpData {
     private boolean loopContinue ;
 	private boolean inGUI ;
 	private boolean isArg ;  // distinguish arg vs. param (similar syntax)
-	private boolean isRightArrowRule ;  // true for -> rule, false for <- rule
-	private boolean isParallelRule ;
 	private KleeneGUI gui ;
 
     // Constructor
@@ -50,8 +48,6 @@ public class InterpData {
 		loopContinue = false ;
 		inGUI = false ;
 		isArg = false ;
-		isRightArrowRule = false ;
-		isParallelRule = false ;
 		gui = null ;
     }
 
@@ -62,8 +58,6 @@ public class InterpData {
 		loopContinue = false ;
 		inGUI = true ;
 		isArg = false ;
-		isRightArrowRule = false ;
-		isParallelRule = false ;
 		gui = g ;
 	}
 
@@ -119,21 +113,4 @@ public class InterpData {
 	public KleeneGUI getGUI() {
 		return gui ;
 	}
-
-	public boolean getIsRightArrowRule() {
-		return isRightArrowRule ;
-	}
-
-	public void setIsRightArrowRule(boolean b) {
-		isRightArrowRule = b ;
-	}
-
-	public boolean getIsParallelRule() {
-		return isParallelRule ;
-	}
-
-	public void setIsParallelRule(boolean b) {
-		isParallelRule = b ;
-	}
-
 }

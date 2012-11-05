@@ -22,6 +22,7 @@
 //	[short description here]
 
 import java.util.LinkedList ;
+import java.util.ArrayList ;
 import java.util.Iterator ;  
 
 class NetList {
@@ -49,6 +50,10 @@ class NetList {
 	//
 	public LinkedList<Fst> getLinkedList() {
 		return linkedList ;
+	}
+
+	public ArrayList<Fst> getArrayList() {
+		return new ArrayList<Fst>(linkedList) ;
 	}
 
 	public int size() {

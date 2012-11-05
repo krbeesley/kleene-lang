@@ -93,7 +93,7 @@ public class TestFstInternalFrame extends JInternalFrame {
 
 		super(title,
 	      true,    // resizeable
-	      true,   // closable
+	      true,    // closable
 	      true,    // maximizable
 	      true) ;  // iconifiable
 
@@ -118,7 +118,7 @@ public class TestFstInternalFrame extends JInternalFrame {
 		Border etchedBorder = 
 			BorderFactory.createEtchedBorder(EtchedBorder.RAISED) ;
 
-		Dimension labelDim = new Dimension(80, 0) ;
+		Dimension labelDim = new Dimension(120, 0) ;
 
 		// Populate the container
 	
@@ -164,7 +164,7 @@ public class TestFstInternalFrame extends JInternalFrame {
 		JPanel genTokHexPanel = new JPanel() ;
 		genTokHexPanel.setLayout(new BoxLayout(genTokHexPanel, 
 											BoxLayout.LINE_AXIS)) ;
-		JLabel genTokHexLabel = new JLabel("Code points") ;
+		JLabel genTokHexLabel = new JLabel("Code point values") ;
 		genTokHexLabel.setPreferredSize(labelDim) ;
 		genTokHexField = new JTextField(40) ;
 		genTokHexField.setEditable(false) ;
@@ -190,7 +190,7 @@ public class TestFstInternalFrame extends JInternalFrame {
 		JPanel anaTokHexPanel = new JPanel() ;
 		anaTokHexPanel.setLayout(new BoxLayout(anaTokHexPanel, 
 											BoxLayout.LINE_AXIS)) ;
-		JLabel anaTokHexLabel = new JLabel("Code points") ;
+		JLabel anaTokHexLabel = new JLabel("Code point values") ;
 		anaTokHexLabel.setPreferredSize(labelDim) ;
 		anaTokHexField = new JTextField(40) ;
 		anaTokHexField.setEditable(false) ;
