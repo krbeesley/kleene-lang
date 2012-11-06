@@ -10,7 +10,7 @@
 *.class
 *.[oa]
 
-# don't track .pdf files, except those the following image/ subdirs
+# don't track .pdf files, except those in the following image/ subdirs
 *.pdf
 !doc/user/kleene/images/*.pdf
 !doc/engineering/notes/runtimecode/images/*.pdf

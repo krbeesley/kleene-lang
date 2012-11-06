@@ -32,7 +32,7 @@ include $(WINPORT_DIR)/os_type.mk   # set os_type to standard name for OS type
 # 0.9.1.0 as a "beta".  There is still work to do before KRB considers
 # Kleene to be 1.0.0.0.
 
-VERSION=0.9.3.1
+VERSION=0.9.3.2
 NAME=Kleene
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
