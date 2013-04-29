@@ -221,7 +221,7 @@ public class SymtabInternalFrame extends JInternalFrame {
 								// (set null to keep user options open)
 				    	"$" + filename) ;  // default name
 				
-					terminal.processInput(iconName + " = " + "$^readXML(\"" + 
+					terminal.processInput(iconName + " = " + "$^readXml(\"" + 
 							     correctedFullPath + "\") ;") ;
 
 				} 

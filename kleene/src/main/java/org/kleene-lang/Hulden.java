@@ -546,11 +546,12 @@ public class Hulden {
 	// is the trick that makes Lower(X) consider the contents of tape 2 if it is
 	// followed by an @ID@ on tape 3.
 
-	// Hulden:  Upper() means: a string on tape 2 ignoring possible hard epsilons
+	// Hulden:  Upper(X) means: a 3-tape string with X on tape 2 
+	// ignoring possible hard epsilons
 	// (@0@)
 
 	// Hulden:
-	// define Upper(X) [X .o. 	[ 0:"@O@"	?		0:"@ID@  # outside the action
+	// define Upper(X) [X .o. 	[ 0:"@O@"	?		0:"@ID@"  # outside the action
 	//							| 0:ISyms	?		0:Tape3Sig
 	//							| 0:ISyms	0:"@0@"	0:[Tape3Sig-"@ID@"]
 	//							]*
@@ -608,9 +609,31 @@ public class Hulden {
 
 	// First symbol is [ and contains one more [ (longest match)
 	
-	// Hulden
+	// Hulden (OLD)
 	// define Longest(X)	[Tape1of3(IOpen Tape1Sig* ["@O@"|IOpen] Tape1Sig*) &
 	// Tape2of3(X/"@0@")] ;
+
+	//public Fst Longest(Fst X) {
+	//	return lib.Intersect(
+	//				Tape1of3(
+	//					lib.Concat4Fsts(
+	//								IOpen(),
+	//								lib.KleeneStar(Tape1Sig()),
+	//								lib.Union(
+	//									lib.OneArcFst(outsideMarkerSym),
+	//									IOpen()
+	//								),
+	//								lib.KleeneStar(Tape1Sig())
+	//					)
+	//				),
+	//				Tape2of3(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)))
+	//			) ;
+	//}
+	
+	// new definition of Longest(X), Mans Hulden, 2013-01-18
+	// define Longest(X)	[	Tape1of3(IOpen Tape1Sig* ["@O@"|IOpen] Tape1Sig*) 
+	//						& 	Tape2of3(X/"@0@" - [?* "@0@"])
+	//						] ;
 
 	public Fst Longest(Fst X) {
 		return lib.Intersect(
@@ -625,7 +648,13 @@ public class Hulden {
 									lib.KleeneStar(Tape1Sig())
 						)
 					),
-					Tape2of3(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)))
+					Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+											lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+														lib.OneArcFst(hardEpsilonSym)
+													  )
+							
+											)
+					)
 				) ;
 	}
 
@@ -662,7 +691,8 @@ public class Hulden {
 	// Beesley
 	// first attempt to define Rightmost(X), would be
 	// define Rightmost(X) [ Upper(X) & Tape1of3(?* IClose ?* "@O@")] ;
-	// wrote to Hulden 2012-10-26
+	// wrote to Hulden 2012-10-26; seems to work, but it now looks like Longest(X)
+	// needs a LongestR2L(X) variant that I haven't figured out yet.
 	
 	public Fst Rightmost(Fst x) {
 		return lib.Intersect(
@@ -837,7 +867,7 @@ public class Hulden {
 	// 							 [ Tape1of2(X) & Tape2of2("@ID@"*) ]
 	// 							 [ Tape1of2("@0@"*) & Tape2of2(Z) ] ;
 	//
-	// N.B. Hulden's formulas work for right-arrow rules   X -> Y ... Z
+	// N.B. Hulden's orig. formulas work for right-arrow rules   X -> Y ... Z
 	// need a modification for left-arrow  Y ... Z <-  X    see below
 	
 	private Fst AlignMarkupRightArrow(Fst X, Fst Y, Fst Z) {
@@ -907,6 +937,7 @@ public class Hulden {
 				Tape23of3(AlignMarkupRightArrow(X, Y, Z)),
 				// 3
 				lib.Union3Fsts(
+					// 1
 					lib.Concat3Fsts(
 						lib.Concat3Fsts(
 							lib.OneArcFst(IOpenSym),
@@ -925,13 +956,13 @@ public class Hulden {
 							lib.OneArcFst(lib.otherIdSym)
 						)
 					),
-
+					// 2
 					lib.Concat3Fsts(
 							lib.OneArcFst(IOpenAndCloseSym),
 							lib.OneArcFst(lib.otherIdSym),
 							lib.OneArcFst(lib.otherIdSym)
 					),
-
+					// 3
 					lib.OneArcFst(lib.Epsilon)
 				)
 			) ;

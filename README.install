@@ -5,9 +5,10 @@
 				Kleene for OS X and Linux
 
 				(see README.install_windows
-				for Windows installation)
+				for Windows installation--not
+				possible at this date)
 
-				2012-07-19
+				2013-04-28
 
 CORRECTIONS, AND SUGGESTIONS TO MAKE THE INSTALLATION STEPS ACCURATE,
 COMPLETE AND CLEAR TO ALL POTENTIAL USERS, WOULD BE MUCH APPRECIATED.
@@ -102,10 +103,12 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	
 	If you're running OS X, it's best to install a "native" version of OS X
 	GraphViz, i.e. one specialized for OS X.  If you do not already have an
-	application called "Graphviz" in your /Applications/ directory, surf to
+	application called "Graphviz.app" (it displays just as "Graphviz")
+	in your /Applications/ directory, surf to
 	http://www.graphviz.org/Download_macos.php and follow the installation
 	instructions there (for "lion," "snowleopard" or "leopard" as
 	appropriate for your version).  Then proceed to step d below.
+	(I am successfully runnning GraphViz 2.30.1 on Snow Leopard.)
 
 	If you are on Linux, or on OS X but for some reason cannot install a
 	"native" Graphviz for OS X, you will need to have a standard

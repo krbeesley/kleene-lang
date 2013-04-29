@@ -265,8 +265,12 @@ $@^getSigma($fst) {
 	return #@^__getSigma($fst) ;
 }
 
-$^readXML($pathfst) {
-	return $^__readXML($pathfst) ;  // built-in
+$^readXml($pathfst) {
+	return $^__readXml($pathfst) ;  // built-in
+}
+
+$^randGen($fst, #npath = 15, #max_length = 50) {
+	return $^__randGen($fst, #npath, #max_length) ;
 }
 
 #^pathCount($fst) {
@@ -616,7 +620,16 @@ $^reduceLeft($^bin, $@list) {
 
 	return $^optimize!($result) ;
 }
-$^foldLeft = $^reduceLeft ;
+
+// foldLeft is like reduceLeft but also has an initial value specified
+$^foldLeft($^bin, $init, $@list) {
+	$result = $init ;
+	foreach($n in $@list) {
+		$result = $^bin($result, $n) ;
+	}
+
+	return $^optimize!($result) ;
+}
 
 // arguments are a list of numbers, and a binary function that
 // takes two number arguments and returns a number
@@ -628,7 +641,16 @@ $^foldLeft = $^reduceLeft ;
 
 	return #result ;
 }
-#^foldLeft = #^reduceLeft ;
+
+// foldLeft is like reduceLeft but also has an initial value specified
+#^foldLeft(#^bin, #init, #@list) {
+	#result = #init ;
+	foreach(#n in #@list) {
+		#result = #^bin(#result, #n) ;
+	}
+
+	return #result ;  
+}
 
 $@^map($^func, $@list) {
 	$@outList = $@() ;
@@ -658,6 +680,18 @@ $@^map($^func, $@list) {
 	return #^__isCyclic($fst) ;
 }
 
+#^isUBounded($fst) {
+	return #^__isUBounded($fst) ;
+}
+
+#^isIBounded = #^isUBounded ;
+
+#^isLBounded($fst) {
+	return #^__isLBounded($fst) ;
+}
+
+#^isOBounded = #^isLBounded ;
+
 #^isAcceptor($fst) {
 	return #^__isAcceptor($fst) ;
 }
@@ -665,7 +699,6 @@ $@^map($^func, $@list) {
 #^isTransducer($fst) {
 	return #^__isTransducer($fst) ;
 }
-
 
 #^isWeighted($fst) {
 	return #^__isWeighted($fst) ;
@@ -675,9 +708,13 @@ $@^map($^func, $@list) {
 	return #^__isIDeterministic($fst) ;
 }
 
+#^isUDeterministic = #^isIDeterministic ;
+
 #^isODeterministic($fst) {
 	return #^__isODeterministic($fst) ;
 }
+
+#^isLDeterministic = #^isODeterministic ;
 
 #^isEpsilonFree($fst) {
 	return #^__isEpsilonFree($fst) ;

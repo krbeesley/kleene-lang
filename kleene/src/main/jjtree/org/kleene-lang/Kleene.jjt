@@ -36,9 +36,11 @@ options {
 
 //############ integer-valued options
 
-// LOOKAHEAD = 1 ;               // default is 1; not a good idea to increase it
-// CHOICE_AMBIGUITY_CHECK = 2 ;  // default is 2
-// OTHER_AMBIGUITY_CHECK = 1 ;   // default is 1
+// LOOKAHEAD = 1 ;               	// global LOOKAHEAD default is 1; 
+									// it is NOT a good idea to increase it;
+								 	// instead, use local LOOKAHEAD
+// CHOICE_AMBIGUITY_CHECK = 2 ;  	// default is 2
+// OTHER_AMBIGUITY_CHECK = 1 ;   	// default is 1
 
 //############ boolean-valued options
 
@@ -47,7 +49,6 @@ STATIC = false ;   // allows multiple parsers to be allocated, e.g. to
        	           //   read scripts from multiple files, perhaps in different
 		   		   //   encodings
             
-
 // default is true, which causes all methods and class variables to be 
 // generated as 'static'; then you need to ReInit() the single static 
 // parser or Tokenizer to reinitialize to read from a different thread;
@@ -167,7 +168,9 @@ public class Kleene {
 	// just one KleeneGUI is used during a Kleene session
     static KleeneGUI gui = null ;
 
-    // just one Environment used throughout in one Kleene session
+    // just one Environment used throughout in one Kleene session;
+	// env is the handle to all the Frames (each with a symbol table)
+	// in the Environment
 	static Environment env = new Environment() ;
 
 	// allocate a single InterpData (reused--passed around the interpreter)
@@ -188,10 +191,10 @@ public class Kleene {
     public static void main(String[] args) {
 		String userKleeneDir = System.getProperty("user.home") + "/.kleene" ;
 
-		// Allocate the first, "global" frame/symtab
+		// Allocate the root, "global" Frame/symtab
         env.allocateGlobalFrame() ;
 
-		// Here load ~/.kleene/global/predefined.kl into the global symtab.
+		// Here load ~/.kleene/global/predefined.kl into the global Frame/symtab.
 		// This file defines some variables, e.g. $e and $eps, and
 		// wraps the built-in functions to look like user-defined
 		// functions.  
@@ -698,6 +701,7 @@ public class Kleene {
 					||	t.kind == NET_SUBST_SYMBOL_DEST_FUNC_ID
 					||	t.kind == NET_SUBST_SYMBOL_FUNC_ID
 					||	t.kind == NET_READ_XML_FUNC_ID
+					||	t.kind == NET_RAND_GEN_FUNC_ID
 					||	t.kind == NET_TO_STRING_FUNC_ID
 					||	t.kind == NET_IMPLODE_FUNC_ID
 					||	t.kind == NET_EXPLODE_FUNC_ID
@@ -778,6 +782,8 @@ public class Kleene {
 					// boolean functions
 					||	t.kind == LNG_IS_RTN_FUNC_ID
 					||	t.kind == LNG_IS_CYCLIC_FUNC_ID
+					||	t.kind == LNG_IS_UBOUNDED_FUNC_ID
+					||	t.kind == LNG_IS_LBOUNDED_FUNC_ID
 					||	t.kind == LNG_IS_ACCEPTOR_FUNC_ID
 					||	t.kind == LNG_IS_TRANSDUCER_FUNC_ID
 
@@ -918,8 +924,8 @@ TOKEN_MGR_DECLS : {
 	// can be defined here; it is
 	// called only if option COMMON_TOKEN_ACTION=true ;
 
-    // The following are used in tokenizer to switch back to 
-	// DEFAULT state after a parenthesized expression, 
+    // The following are used in tokenizer to know when
+	// to switch back to DEFAULT state after a parenthesized expression, 
 	// e.g. a param list, is tokenized
     boolean in_parenthesized = false ;
     int paren_count = 0;
@@ -937,32 +943,41 @@ SKIP: {
 |  	"\r"
 |  	"\n"
 |  	"\f"
+}
+
+// delimited comment (C-style)
+<DEFAULT, NON_INITIAL>
+SKIP: {
+	"/*"	{ 
+				commentNestingDepth = 1; 
+				stateBeforeDelimitedComment = curLexState ;
+				SwitchTo(IN_DELIMITED_COMMENT) ;
+			}
+}
 
 // comment up to EOL or EOF 
 // N.B. optional \r, \r\n or \n at the end, in case the final comment
 // in the file has no EOL sequence to terminate it
-|  	< "//" ( ~[ "\n" , "\r" ] )* >  // comment to EOL
-
-// delimited comment
-|	< "/*" > { commentNestingDepth = 1; 
-				stateBeforeDelimitedComment = curLexState ;
-				SwitchTo(IN_DELIMITED_COMMENT) ;
-			 }
+<DEFAULT, NON_INITIAL>
+SKIP: {
+	< "//" ( ~[ "\n" , "\r" ] )* >  // comment to EOL
 }
 
-// special lexical state for skipping a delimited comment
+// special lexical state for skipping a delimited comment (perhaps nested)
 < IN_DELIMITED_COMMENT >
 SKIP: {
-	// find another /* and go down a depth
+	// find another /* and go down a depth (nesting)
 	"/*" { commentNestingDepth += 1 ; }
 
-   // find */ and shift back to previous state
-|   "*/"	{
+   // find */ and un-nest one level
+   |   "*/" {
 	   		commentNestingDepth -= 1 ;
+			// if we're back to level zero, then revert to the
+			//	lexical state before the delimited comment
 			if (commentNestingDepth == 0) {
 				SwitchTo(stateBeforeDelimitedComment) ;
 			}
-  		}  		
+  		 }  		
 |
    // or just match and skip any character
    < ~[] >
@@ -972,11 +987,14 @@ SKIP: {
 TOKEN: {
 	// when already in IN_DOUBLE_QUOTES mode, and you see a double quote, then
 	//   change mode to NON_INITIAL
-   < RIGHT_DOUBLE_QUOTE: "\"" > : NON_INITIAL
+    < RIGHT_DOUBLE_QUOTE: "\"" > : NON_INITIAL
+	// these two EOL characters are illegal inside double quotes
+|	< BAD_TOKEN1: "\n" > : DEFAULT
+|	< BAD_TOKEN2: "\r" > : DEFAULT
 
-   // inside double quote, a literal double quote must be written backslash-doublequote
+   // inside double quotes, a literal double quote must be written backslash-doublequote
 |  < DOUBLE_QUOTED_ESCAPE_CHAR: "\\" ( "\""		// literalized double quote inside a
-												//		double-quoted 
+												//		double-quoted string
 
 										// Java-like backslash special chars,
 										// not literalization; see values set
@@ -987,40 +1005,63 @@ TOKEN: {
 									  | "r"		// carriage return
 									  | "f"		// formfeed
 
-									  // | ~[]	// this line would allow "\z" to be equiv to "z"
-									  // commenting out the line makes "\z" two chars long
+									  // | ~[]	// this line would allow "\z" to be 
+									  //	equiv to "z"
+									  // commenting out the line makes "\z" two 
+									  //	separate characters
 
 				                      ) > { String stg = image.substring(1) ;
 									  		if (stg.equals("n")) {
-												matchedToken.image = "\n" ;		//  \u000A
+												matchedToken.image = "\n" ;  // \u000A
 											} else if (stg.equals("t")) {
-												matchedToken.image = "\t" ;		//  \u0009
+												matchedToken.image = "\t" ;	 // \u0009
 											} else if (stg.equals("b")) {
-												matchedToken.image = "\b" ;		//  \u0008
+												matchedToken.image = "\b" ;	 // \u0008
 											} else if (stg.equals("r")) {
-												matchedToken.image = "\r" ;		//  \u000D
+												matchedToken.image = "\r" ;	 // \u000D
 											} else if (stg.equals("f")) {
-												matchedToken.image = "\f" ;		//  \u000C
+												matchedToken.image = "\f" ;	 // \u000C
 											} else {
 												matchedToken.image = image.substring(1) ; 
 											}
-									  }
-
+									      }
 	// otherwise, any character can appear between double quotes, except a newline
-	//    or carriage-return
-|  	< DOUBLE_QUOTED_CHAR: ~["\n", "\r"] >
-
-|	< BAD_TOKEN1: "\n" > : DEFAULT
-|	< BAD_TOKEN2: "\r" > : DEFAULT
+	//    or carriage-return, which are caught above
+|  	< DOUBLE_QUOTED_CHAR: ~[] >
 }
 
 <IN_SQUARE_BRACKETS>
+MORE: {
+	// if you find an unliteralized single quote, shift to 
+	// 	IN_SQUARE_BRACKET_MULTICHAR_NAME state
+	// (note that single quotes delimit the name, but ultimately are not part
+	//	of the name)
+	< "'">: IN_SQUARE_BRACKET_MULTICHAR_NAME
+}
+
+
+//  N.B.:  Kleene square brackets allow single-quoted multichar-symbols, e.g.
+//	[abcd'[Noun]']
+<IN_SQUARE_BRACKETS>
 TOKEN: {
-   < RSQUARE: "]" > : NON_INITIAL
-|  < SQUARE_BRACKET_ESCAPE_CHAR: "\\" ( "]" 
+	// find an unliteralized right square bracket, ends the square-bracket
+	// 	expression, return to NON_INITIAL state
+   	< RSQUARE: "]" > : NON_INITIAL
+
+|  	< SQUARE_BRACKET_HYPHEN: "-" >	// delimit char range (or literal, resolve in 
+									// 	the syntax
+
+	// these two EOL characters are illegal inside square brackets
+|	< BAD_TOKEN3: "\n" > : DEFAULT
+|	< BAD_TOKEN4: "\r" > : DEFAULT
+
+// handle literalized ] and -, also control characters
+|  	< SQUARE_BRACKET_ESCAPE_CHAR: "\\" ( "]" 
                                       | "-"
-									  | "'"
-				                      | "\\"
+									  | "'"  // literal single quote
+									  		 // non-literal case used for multichar-
+											 //		symbol delimiter
+									  | "\\"	// literal backslash
 
 										// KRB:  allow these in square brackets?
 										// Java-like backslash special chars,
@@ -1034,33 +1075,37 @@ TOKEN: {
 
 				                      ) > { String st = image.substring(1) ;
 									  		if (st.equals("n")) {
-												matchedToken.image = "\n" ;		//  \u000A
+												matchedToken.image = "\n" ;	// \u000A
 											} else if (st.equals("t")) {
-												matchedToken.image = "\t" ;		//  \u0009
+												matchedToken.image = "\t" ;	// \u0009
 											} else if (st.equals("b")) {
-												matchedToken.image = "\b" ;		//  \u0008
+												matchedToken.image = "\b" ;	// \u0008
 											} else if (st.equals("r")) {
-												matchedToken.image = "\r" ;		//  \u000D
+												matchedToken.image = "\r" ;	// \u000D
 											} else if (st.equals("f")) {
-												matchedToken.image = "\f" ;		//  \u000C
+												matchedToken.image = "\f" ;	// \u000C
 											} else {
 												matchedToken.image = image.substring(1) ; 
 											}
-									  }
-|  < SQUARE_BRACKET_HYPHEN: "-" >    // delimit char range, or literal
-|  < SQUARE_BRACKET_CHAR: ~["\n", "\r", "'"] >
-}
+									      }
 
-<IN_SQUARE_BRACKETS>
-MORE: {
-	< "'">: IN_SQUARE_BRACKET_MULTICHAR_NAME
+// new, \n and \r are now caught above; for single quote, used to delimit
+//	multichar symbols, but not _part_ of multichar symbols, see production below
+|	< SQUARE_BRACKET_CHAR: ~["'"] >	// anything not caught above
 }
 
 < IN_SQUARE_BRACKET_MULTICHAR_NAME >
 TOKEN : {
-	// a single quote signals the end of the multichar symbol
-	< SQUARE_BRACKET_MULTICHAR_SYMBOL: "'" > 
+
+	< BAD_TOKEN7: "\n" >
+|	< BAD_TOKEN8: "\r" >
+	// a single quote signals the end of the multichar symbol,
+	// but it's not part of the name (the single quotes are
+	// just delimiters)
+|	< SQUARE_BRACKET_MULTICHAR_SYMBOL: "'" > 
 	{ 
+		// get rid of the surrounding single quotes
+		// (they are just delimiters--not part of the name)
 	  image.deleteCharAt(0) ;
 	  image.deleteCharAt(image.length() - 1) ;
 
@@ -1096,88 +1141,77 @@ MORE : {
 
 < IN_SQUARE_BRACKET_MULTICHAR_NAME >
 MORE : {
-	< ~["\n", "\r", "'"] >
+	< ~[] >
 }
 
 // DEFAULT state is the "initial" state
 // typically find keywords in this state
+// for greater efficiency in tokenization, order the string literals by length,
+// 	shorter to longer; allows the DFA to be constructed more efficiently
 < DEFAULT >
 TOKEN: {
+
+// strings of 1 symbol
+	< RCURLY_BLOCK: "}" >  // end of block; stay in DEFAULT state
+
+// strings of 2 symbols
+
     // if ( boolean test) {  }
+	// need to switch into NON_INITIAL state to tokenize the boolean test;
     // when closing paren is found, need to switch back to DEFAULT
-    < IF_RW: "if" >
-    {  in_parenthesized = true ;
-	   paren_count = 0 ;
-	   SwitchTo(NON_INITIAL) ;
-	}
-|   < ELSIF_RW: "elsif" >
-    {  in_parenthesized = true ;
-	   paren_count = 0 ;
-	   SwitchTo(NON_INITIAL) ;
-	}
-|   < ELSE_RW: "else" >  // do NOT change to NON_INITIAL after "else"
-    // leave in DEFAULT state
-
-|   < WHILE_RW: "while" >
-    {  in_parenthesized = true ;
-	   paren_count = 0 ;
-	   SwitchTo(NON_INITIAL) ;
-	}
-|   < UNTIL_RW: "until" >
-    {  in_parenthesized = true ;
-	   paren_count = 0 ;
-	   SwitchTo(NON_INITIAL) ;
-	}
-
-|	< SAP_RTN_CONVENTIONS_RW:		"SapRtnConventions" >
-
-|	< DELETE_ALL_RW:      	"delete" ( <WHITESPACE> )+ "all" > : NON_INITIAL
-//|	< DELETE_SELECTED_RW: 	"delete" ( <WHITESPACE> )+ "selected" > : NON_INITIAL
-|   < DELETE_RW:          	"delete" > : NON_INITIAL
-
-|	< OPTIMIZE_RW:			"optimize" > : NON_INITIAL
-|	< OPTIMIZE2_RW:			"optimize!" > : NON_INITIAL
-
+|   < IF_RW: "if" >
+		{  in_parenthesized = true ;
+		   paren_count = 0 ;
+		   SwitchTo(NON_INITIAL) ;  // to tokenize the parenthesized boolean test
+		}
 |	< GARBAGE_COLLECT_RW:	"gc" > : NON_INITIAL
+
+// strings of 3 symbols
+
+// strings of 4 symbols
+
+|   < ELSE_RW: 			"else" >  // stay in DEFAULT state
+|	< FSTS_REPORT_RW:	"fsts" > : NON_INITIAL
+|   < DRAW_RW: 			"draw" > : NON_INITIAL
+|   < TEST_RW: 			"test" > : NON_INITIAL
+|   < INFO_RW: 			"info" > : NON_INITIAL
+|   < QUIT_RW1: 		"quit" > // leave in DEFAULT state
+|   < QUIT_RW2: 		"exit" > // leave in DEFAULT state
+
+// strings of 5 symbols
+
+|   < ELSIF_RW: 			"elsif" >
+		{  in_parenthesized = true ;
+		   paren_count = 0 ;
+		   SwitchTo(NON_INITIAL) ;
+		}
+|   < WHILE_RW: 			"while" >
+		{  in_parenthesized = true ;
+		   paren_count = 0 ;
+		   SwitchTo(NON_INITIAL) ;
+		}
+|   < UNTIL_RW: 			"until" >
+		{  in_parenthesized = true ;
+		   paren_count = 0 ;
+		   SwitchTo(NON_INITIAL) ;
+		}
+|   < SIGMA_RW: 			"sigma" > : NON_INITIAL
+	// see "println" below
+|	< PRINT_RW: 			"print" > : NON_INITIAL
+|   < BREAK_RW: 			"break" >	// leave in DEFAULT state
+
+// strings of 6 symbols
+
 |	< MEMORY_REPORT_RW:		"memory" > : NON_INITIAL
-|	< FSTS_REPORT_RW:		"fsts" > : NON_INITIAL
+	// see "gsymtab" below
 |	< SYMTAB_REPORT_RW:		"symtab" > : NON_INITIAL
-|	< GSYMTAB_REPORT_RW:	"gsymtab" > : NON_INITIAL
+	// see "external" below
+|	< EXTERNAL_RW2:			"extern" > : NON_INITIAL
+|	< EXPORT_RW:			"export" > : NON_INITIAL
+|	< ASSERT_RW: 			"assert" > : NON_INITIAL
 
-|	< EXTERNAL_RW1:		"external" > : NON_INITIAL
-|	< EXTERNAL_RW2:		"extern"   > : NON_INITIAL
-
-|	< EXPORT_RW:		"export"   > : NON_INITIAL
-
-|	< RMEPSILON2_RW:	"rmEpsilon!" > : NON_INITIAL
-|	< RMEPSILON_RW:		"rmEpsilon" > : NON_INITIAL
-
-|	< DETERMINIZE2_RW:	"determinize!" > : NON_INITIAL
-|	< DETERMINIZE_RW:	"determinize" > : NON_INITIAL
-
-|	< MINIMIZE2_RW:		"minimize!" > : NON_INITIAL
-|	< MINIMIZE_RW:		"minimize" > : NON_INITIAL
-
-|	< SYNCHRONIZE2_RW:	"synchronize!" > : NON_INITIAL
-|	< SYNCHRONIZE_RW:	"synchronize" > : NON_INITIAL
-
-|   < DRAW_RW: "draw" > : NON_INITIAL
-|   < SIGMA_RW: "sigma" > : NON_INITIAL
-|   < TEST_RW: "test" > : NON_INITIAL
-
-|	< ASSERT_RW: "assert" > : NON_INITIAL
-|	< REQUIRE_RW: "require" > : NON_INITIAL
-
-|   < TESTTOKENSTEXTFILE_RW: "testTokensTextFile" > : NON_INITIAL
-|   < TESTTOKENSXMLFILE_RW:      "testTokensXMLFile" >      : NON_INITIAL
-|	< EXCEPTION_RW: "exception" > : NON_INITIAL
-|	< PRINT_RW: "print" > : NON_INITIAL
-|	< PRINTLN_RW: "println" > : NON_INITIAL
-|	< SYS_PRINT_RW: "sysPrint" > : NON_INITIAL
-|	< SYS_PRINTLN_RW: "sysPrintln" > : NON_INITIAL
-|   < INFO_RW: "info" > : NON_INITIAL
-|	< WRITEXML_RW: "writeXML" > : NON_INITIAL
-|	< WRITEDOT_RW: "writeDOT" > : NON_INITIAL
+// longer "delete all" will have precedence over shorter "delete"
+|   < DELETE_RW:          	"delete" > : NON_INITIAL
 
 // source myfile ;
 // source myfile, yourfile, hisfile, herfile ;
@@ -1186,45 +1220,130 @@ TOKEN: {
 //   more strings, separated by whitespace and/or commas;
 //	allow full regular expressions, with a semantic restriction
 //  that each one encodes a single string??
-|   < SOURCE_RW: "source" > : NON_INITIAL
+|   < SOURCE_RW: 			"source" > : NON_INITIAL
+|   < RETURN_RW: 			"return" > : NON_INITIAL
 
+|	< RAND_INPUT1_RW:		"rinput" > : NON_INITIAL
+|	< RAND_INPUT2_RW:		"rupper" > : NON_INITIAL
+
+|	< RAND_OUTPUT1_RW:		"rlower" > : NON_INITIAL
+
+// strings of 7 symbols'
+
+|	< RAND_OUTPUT2_RW:		"routput" > : NON_INITIAL
+
+	// see "symtab" above
+|	< GSYMTAB_REPORT_RW:	"gsymtab" > : NON_INITIAL
+|	< REQUIRE_RW: 			"require" > : NON_INITIAL
+	// see "print" above, "sysprint" and "sysprintln" below
+|	< PRINTLN_RW: 			"println" > : NON_INITIAL
     // foreach ($n in $@list) { }
-|   < FOREACH_RW: "foreach">
+|   < FOREACH_RW: "foreach" >
 		{
 			in_parenthesized = true ;
 			paren_count = 0 ;
 			SwitchTo(ITERATOR_STATE) ;
 		}
 
-|   < RETURN_RW: "return"> : NON_INITIAL
-|   < BREAK_RW: "break" >
-|   < CONTINUE_RW: "continue" >
-|   < QUIT_RW1: "quit">
-|   < QUIT_RW2: "exit">
+// strings of 8 symbols
 
-|   < RCURLY_BLOCK: "}" >  // stay in same state???
+	// see "optimize!" below
+|	< OPTIMIZE_RW:			"optimize" > : NON_INITIAL
+	// see also "extern" above
+|	< EXTERNAL_RW1:			"external" > : NON_INITIAL
+	// see "minimize!" below
+|	< MINIMIZE_RW:			"minimize" > : NON_INITIAL
+	// see "sysPrintln" below
+|	< SYS_PRINT_RW: 		"sysPrint" > : NON_INITIAL
+|	< WRITEXML_RW: 			"writeXml" > : NON_INITIAL
+|	< WRITEXML_STATE_ORIENTED_RW: 	"writeXmlStateOriented" > : NON_INITIAL
+|	< WRITEDOT_RW: 			"writeDot" > : NON_INITIAL
+|   < CONTINUE_RW: 			"continue" >  // leave in DEFAULT state
+
+// strings of 9 symbols
+
+	// see "optimize" above
+|	< OPTIMIZE2_RW:			"optimize!" > : NON_INITIAL
+	// see "rmEpsilon!" below
+|	< RMEPSILON_RW:			"rmEpsilon" > : NON_INITIAL
+	// see "minimize" above
+|	< MINIMIZE2_RW:			"minimize!" > : NON_INITIAL
+|	< EXCEPTION_RW: 		"exception" > : NON_INITIAL
+
+	// see rinput rupper rlower routput above
+|	< RAND_INPUT3_RW:		"randInput" > : NON_INITIAL
+|	< RAND_INPUT4_RW:		"randUpper" > : NON_INITIAL
+
+|	< RAND_OUTPUT3_RW:		"randLower" > : NON_INITIAL
+
+// strings of 10 symbols
+
+|	< RAND_OUTPUT4_RW:		"randOutput" > : NON_INITIAL
+
+	// see "rmEpsilon" above
+|	< RMEPSILON2_RW:		"rmEpsilon!" > : NON_INITIAL
+|	< SYS_PRINTLN_RW: 		"sysPrintln" > : NON_INITIAL
+
+// strings of 11 symbols
+
+	// see "determinize!" below
+|	< DETERMINIZE_RW:		"determinize" > : NON_INITIAL
+	// see "synchronize!" below
+|	< SYNCHRONIZE_RW:		"synchronize" > : NON_INITIAL
+
+// strings of 12 symbols
+
+	// see "determinize" above
+|	< DETERMINIZE2_RW:		"determinize!" > : NON_INITIAL
+	// see "synchronize" above
+|	< SYNCHRONIZE2_RW:		"synchronize!" > : NON_INITIAL
+
+// long strings
+
+|	< SAP_RTN_CONVENTIONS_RW:  	"SapRtnConventions" >    // stay in DEFAULT state
+|   < TESTTOKENSXMLFILE_RW:		"testTokensXMLFile" >  : NON_INITIAL
+|   < TESTTOKENSTEXTFILE_RW: 	"testTokensTextFile" > : NON_INITIAL
+
+	// regular expressions
+	// remember that longer matches have precedence over shorter matches
+	// see plain "delete" above
+|	< DELETE_ALL_RW:      	"delete" ( <WHITESPACE> )+ "all" > : NON_INITIAL
+//|	< DELETE_SELECTED_RW: 	"delete" ( <WHITESPACE> )+ "selected" > : NON_INITIAL
 }
+
+// ITERATOR_STATE used after seeing foreach
+// foreach ($n in $@list) { }
+// foreach (#n in #@list) { }
 
 < ITERATOR_STATE >
 SKIP: {
 	" "
 |	"\t"
+|	"\r"
+|	"\n"
+|	"\f"
 }
 
 < ITERATOR_STATE >
 TOKEN: {
+	// order literal strings by length, shorter to longer
+	< ITERATOR_IN3: "\u2208" > : NON_INITIAL  // ELEMENT OF character
+|   < ITERATOR_IN:  "in" >     : NON_INITIAL
+|	< ITERATOR_IN2: "_E_" >    : NON_INITIAL
 
-    < ITERATOR_NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	// recognize the $n in foreach ($n in $@list) { }
+|   < ITERATOR_NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
 											   )* > 
+
+	// recognize the #n in foreach (#n in #@list) { }
 	// couldn't used <NUM_PREFIX> here, as it clashed with the #
 	// used in rule word-boundaries
 |   < ITERATOR_NUM_ID: "#" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
 											   )* > 
-|	< ITERATOR_IN: "in" > : NON_INITIAL 
 }
 
 // tokenizing multichar-symbol names MULTICHAR
@@ -1242,7 +1361,7 @@ MORE: {
 
 // terminating single quote for MULTICHAR_SYMBOL name (all
 // characters previously matched by MORE productions are
-// saved and become part of the MULTICHAR_SYMBOL token
+// saved and become part of the MULTICHAR_SYMBOL token)
 
 < IN_MULTICHAR_NAME >
 TOKEN : {
@@ -1265,8 +1384,10 @@ TOKEN : {
 		  SwitchTo(NON_INITIAL) ;
 	  }
 	}
-|	< BAD_TOKEN3: "\n" > : DEFAULT
-|	< BAD_TOKEN4: "\r" > : DEFAULT
+
+	// a multicharacter symbol name can't be continued on a new line
+|	< BAD_TOKEN5: "\n" > : DEFAULT
+|	< BAD_TOKEN6: "\r" > : DEFAULT
 }
 
 // literalized single quote inside a MULTICHAR_SYMBOL name,
@@ -1282,11 +1403,7 @@ MORE : {
 	  //   single quote
 	   image.deleteCharAt(image.length() - 2) ;
 	}
-}
-
-< IN_MULTICHAR_NAME >
-MORE : {
-	< ~["\n", "\r", "'"] >
+|	< ~[] >
 }
 
 < BAD_TOKENIZATION >
@@ -1297,161 +1414,79 @@ TOKEN: {
 < NON_INITIAL >
 TOKEN: {
 
-	// old MULTICHAR_SYMBOL, did not allow literalized single quote inside
+// order simple strings by length, shorter to longer, to allow
+//	a smaller, more efficient tokenizer DFA to be built
 
-    //< MULTICHAR_SYMBOL: "'" ~["'", "\n", "\r"] ( ~["'", "\n", "\r"] )+ "'" > 
-	// requires 2 or more
-    //{
-	//    image.deleteCharAt(0) ;
-	//    image.deleteCharAt(image.length() - 1) ;
-	//    matchedToken.image = image.toString() ;
-	//}
-//|  
+// strings of 1 character
+
+	// find a double quote, switch into IN_DOUBLE_QUOTES state
+    < LEFT_DOUBLE_QUOTE: 		"\"" >   : IN_DOUBLE_QUOTES
+
+	// find a left square bracket, switch into IN_SQUARE_BRACKETS state
+|   < LSQUARE: 					"["  >   : IN_SQUARE_BRACKETS
+
 	// for common right-arrow rule  a -> b / l _ r
-	< RIGHT_RULE_ARROW:   "\u2192" >    // Unicode RIGHTWARDS ARROW
-|   < RIGHT_RULE_ARROW_ASCII: "->" >
-
-	// for optional right-arrow rule  a ->? b / l _ r
-|   < RIGHT_RULE_ARROW_OPT:   "\u2192" (<WHITESPACE>)* "?" >
-|   < RIGHT_RULE_ARROW_OPT_ASCII: "->" (<WHITESPACE>)* "?" >
-
-	// for right-arrow-rule, max, left-to-right behavior
-	// a+ {max}-> b / l _ r
-|   < RIGHT_RULE_ARROW_MAX_L2R:       <LCURLY> (<WHITESPACE>)* "max"
-(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "\u2192" >
-|   < RIGHT_RULE_ARROW_MAX_L2R_ASCII: <LCURLY> (<WHITESPACE>)* "max"
-(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "->" >
- 
-	//  for right-arrow-rule, min, left-to-right behavior
-	//  a+b+ {min}-> b / l _ r
-|   < RIGHT_RULE_ARROW_MIN_L2R:       <LCURLY> (<WHITESPACE>)* "min"
-(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "\u2192" >
-|   < RIGHT_RULE_ARROW_MIN_L2R_ASCII: <LCURLY> (<WHITESPACE>)* "min" 
-(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* "->" >
-
-	// for left-arrow-rule
-	// a <- b / l _ r
-|   < LEFT_RULE_ARROW:   "\u2190">     // Unicode LEFTWARDS ARROW
-|   < LEFT_RULE_ARROW_ASCII: "<-">
-
-	// for left-arrow-rule optional
-	// a <-? b / l _ r
-|   < LEFT_RULE_ARROW_OPT:   "\u2190" (<WHITESPACE>)* "?" >    
-|   < LEFT_RULE_ARROW_OPT_ASCII: "<-" (<WHITESPACE>)* "?" >
-
-	//  for left-arrow-rule, max, left-to-right behavior
-	//  a <-{max} b+ / l _ r
-|   < LEFT_RULE_ARROW_MAX_L2R:   "\u2190" (<WHITESPACE>)* <LCURLY> "max"
-(<WHITESPACE>)* <RCURLY> >
-|   < LEFT_RULE_ARROW_MAX_L2R_ASCII: "<-" (<WHITESPACE>)* <LCURLY> "max"
-(<WHITESPACE>)* <RCURLY> >
-
-	//  for left-arrow-rule, min, left-to-right behavior
-	//  a <-{min} a+b+ / l _ r
-|   < LEFT_RULE_ARROW_MIN_L2R:   "\u2190" (<WHITESPACE>)* <LCURLY> "min"
-(<WHITESPACE>)* <RCURLY>  >
-|   < LEFT_RULE_ARROW_MIN_L2R_ASCII: "<-" (<WHITESPACE>)* <LCURLY> "min"
-(<WHITESPACE>)* <RCURLY>  >
-
-|	<MARKUP_OP: "~~~" >
-
-|   < RESTRICTION_ARROW:   "\u21D2" >   // Unicode RIGHTWARDS DOUBLE ARROW
-|   < RESTRICTION_ARROW_ASCII: "=>" >
-
-|   < LEFT_DOUBLE_QUOTE: "\"">   : IN_DOUBLE_QUOTES
-
-|   < LSQUARE: "[" >             : IN_SQUARE_BRACKETS
-|   < LSQUARE_CIRCUMFLEX: "[^" > : IN_SQUARE_BRACKETS
-
-|	< WHERE_MATCHED_DIRECTIVE_DEFAULT: "where" ( <WHITESPACE> )* "{" >
-		{
-			input_stream.backup(1) ;  // backup to re-tokenize the "{"
-
-			image.deleteCharAt(image.length() -1) ;
-			matchedToken.image = image.toString().trim() ;
-		}
-		// equivalent to "where", but more explicit
-|   < WHERE_MATCHED_DIRECTIVE: "where-matched" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-|   < WHERE_MATCHED_DIRECTIVE_UNDERSCORE: "where_matched" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-
-|   < WHERE_MIXED_DIRECTIVE: "where-mixed" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-|   < WHERE_MIXED_DIRECTIVE_UNDERSCORE: "where_mixed" ( <WHITESPACE> )* "{" >
-        {  
-	    input_stream.backup(1) ;   // backup to re-tokenize the "{"
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-        }
-|   < ELEMENT_OF_OP: "\u2208" >
-|   < ELEMENT_OF_OP_ASCII: "_E_" >
-
-|   < LANGLE: "<" >
-|   < RANGLE: ">" >
-
-// at end of block, in DEFAULT state, } is RCURLY_BLOCK
-|   < RCURLY: "}" >
-
-|   < QUESTION_MARK: "?">
-
+	// see also RIGHT_RULE_ARROW_ASCII -> 
+|	< RIGHT_RULE_ARROW:   		"\u2192" >	// Unicode RIGHTWARDS ARROW
+	// for left-arrow-rule a <- b / l _ r
+	// see also LEFT_RULE_ARROW_ASCII <-
+|   < LEFT_RULE_ARROW:   		"\u2190" >	// Unicode LEFTWARDS ARROW
+	// see also RESTRICTION_ARROW_ASCII =>
+|   < RESTRICTION_ARROW: 		"\u21D2" >	// Unicode RIGHTWARDS DOUBLE ARROW
+	// see also _E_
+|   < ELEMENT_OF_OP: 			"\u2208" >
+|   < LANGLE: 					"<" >
+|   < RANGLE: 					">" >
+//  N.B. at end of a block, in DEFAULT state, } is tokenized as RCURLY_BLOCK
+// but here, in NON_INITIAL state, it is tokenized as RCURLY
+|   < RCURLY: 					"}" >
+|   < QUESTION_MARK: 			"?" >
 // prefix regexp operator for complement/negation of a regular language
-|   < TILDE_OP: "\u223C" >
-|   < TILDE_OP_ASCII: "~" >
+|   < TILDE_OP: 				"\u223C" >
+|   < TILDE_OP_ASCII: 			"~" >
+// infix regexp operator, see also COMPOSITION_OP_ASCII _o_
+|   < COMPOSITION_OP: 			"\u2218" >       // Unicode RING OPERATOR
 
 // infix regexp operator
-|   < COMPOSITION_OP: "\u2218" >       // Unicode RING OPERATOR
-|   < COMPOSITION_OP_ASCII: "_o_" >
-
-// infix regexp operator
-// CROSSPRODUCT_OP using special Unicode char?
-|   < CROSSPRODUCT_OP: ":" >
+// define a CROSSPRODUCT_OP using special Unicode char?
+|   < CROSSPRODUCT_OP: 			":" >
 // U+2A2F is VECTOR or CROSS PRODUCT   _x_ would be the ASCII version
 
 // one-level rule-context operator
-// semantically, each side must be interpretable as a semantic acceptor
-|   < UNDERSCORE_OP: "_" >
+// semantically, each side of the context must be interpretable as a semantic acceptor
+|   < UNDERSCORE_OP: 			"_" >
 
 // two-level rule-context operator
 // a regular expression can always be interpreted as two-level
 // U+2017 is the Unicode DOUBLE LOW LINE character
-|	< DOUBLE_UNDERSCORE_OP:    "\u2017" >	// for two-level rule context
-|	< DOUBLE_UNDERSCORE_OP_ASCII: "2_2" >	// ASCII alternative
+// see also _2_ and _:_ ASCII alternatives
+|	< DOUBLE_UNDERSCORE_OP:    	"\u2017" >	// for two-level rule context
+// infix regexp operator, union
+|   < VERTICAL_BAR_OP: 			"|" >
 
-// try to use just plain # to
-// mark word boundary in rules and restriction expressions (=>)
-// The trick is to
-// match # that is not part of a name like #num or #numFunc()
-// KRB:  does it have to be done this way? basically want to 
-// call it a WORD_BOUNDARY unless the following character is "^",
-// "@" or any of <UNICODE_ID_LETTER> (a large list)
-// The following has # followed by space, rule punctuation, or a number of
-// characters that can start a regular expression, including Unicode tilde 223C
-// and the lunate Epsilon 03F5---then backup to retokenize that last character
-|	< WORD_BOUNDARY: "#" (" " | ";" | "|" | "_" | "," | "(" | "." | "\\" | "$" |
-"\"" | "[" | "'" | "<" | "~" | "\u223C" | "\u03F5" ) >
+// infix regexp operator, intersection; 
+|   < AMPERSAND: 				"&" >
+
+// new (0.9.2.0+) function-name sigil
+|	< CIRCUMFLEX: 				"^" >
+// prefix num/boolean operator
+|   < EXCLAMATION_MARK_OP: 		"!" > 	// boolean not
+|   < PLUS_SIGN_OP: 			"+" >  	// not something like KLEENE_PLUS_OP 
+										//	(need addition as well)
+|   < MINUS_SIGN_OP: 			"-" >
+|   < ASTERISK_OP: 				"*" >   // not something like KLEENE_STAR_OP 
+										//	(need multiplication as well)
+|   < SLASH_OP: 				"/" >
+|   < PERCENT_OP: 				"%" >
+|   < EPSILON: 					"\u03F5" > // GREEK LUNATE EPSILON SYMBOL
+       // LUNATE EPSILON SYMBOL for use only in mathematical formulas, 
+	   // never in Greek text; use in Kleene for empty string (still, Unicode
+	   // marks it as a "letter", so exclude it from UNICODE_ID_LETTER
+
+		// note that longer matches starting # in NON_INITIAL state
+		//	will automatically have precedence
+|	< WORD_BOUNDARY: 			"#" >
 		{
-			input_stream.backup(1) ;
-
-// note that longer matches starting # will automatically have precedence
-//|	< WORD_BOUNDARY: "#" >
-//		{
 			// give it a special internal multichar image
 			// N.B. cannot be __@#@, which would exclude the symbols from
 			//	the promotion of OTHER
@@ -1459,44 +1494,151 @@ TOKEN: {
 			// temporary value, changed to **@#@ in the interpreter
 		}
 
-// infix regexp operator, union
-|   < VERTICAL_BAR_OP: "|" >
+// strings of 2 characters
 
-// infix regexp operator, intersection; 
-|   < AMPERSAND: "&" >
+|   < LSQUARE_CIRCUMFLEX: 		"[^" >   : IN_SQUARE_BRACKETS
 
-// new (0.9.2.0+) function-name sigil
-|	< CIRCUMFLEX: "^" >
+	// see also RIGHT_RULE_ARROW
+|   < RIGHT_RULE_ARROW_ASCII: 	"->" >
 
+	// see also LEFT_RULE_ARROW
+|   < LEFT_RULE_ARROW_ASCII:  	"<-" >
+
+|   < RESTRICTION_ARROW_ASCII: 	"=>" >
+|   < BOOLEAN_OR_OP: 			"||" >
+|   < BOOLEAN_AND_OP: 			"&&" >
+|   < BOOLEAN_LESS_EQUAL_OP: 	"<=" >
+|   < BOOLEAN_GREATER_EQUAL_OP: ">=" >
+|   < BOOLEAN_EQUAL_OP: 		"==" >
+|   < BOOLEAN_NOT_EQUAL_OP: 	"!=" >
+
+//|   < DOUBLE_ASTERISK: "**" >  // not used now
+
+// strings of 3 characters
+
+	// KRB reconsider this one (aesthetics)
+|	< MARKUP_OP: 					"~~~" >	
+
+|   < ELEMENT_OF_OP_ASCII: 			"_E_" >
+|	< DOUBLE_UNDERSCORE_OP_ASCII1: 	"_2_" >	// ASCII alternative
+|	< DOUBLE_UNDERSCORE_OP_ASCII2: 	"_:_" > // ASCII alternative
+|   < COMPOSITION_OP_ASCII: 		"_o_" >
+|   < EPSILON_ASCII: 				"_e_" >
+
+// strings of 5 characters
+
+|	< MAX_L2R_DIRECTIVE:	"{max}" >
+|	< MIN_L2R_DIRECTIVE:	"{min}" >
+
+	// for (rare) right-to-left behavior, just spell
+	//	max and min backwards (right to left)
+|	< MAX_R2L_DIRECTIVE:	"{xam}" >
+|	< MIN_R2L_DIRECTIVE:	"{nim}" >
+}
+
+
+// for non-initial tokens based on regular expressions
+< NON_INITIAL >
+TOKEN: {
+// Use just plain # to
+// mark word boundary in rules and restriction expressions (=>)
+// The trick is to
+// match # that is not part of a name like #num or #^numFunc() or #@name
+// KRB:  does it have to be done this way? basically want to 
+// call it a WORD_BOUNDARY unless the following character is "^",
+// "@" or any of <UNICODE_ID_LETTER> (a large list)
+// The following has # followed by space, rule punctuation, or a number of
+// characters that can start a regular expression, including Unicode tilde 223C
+// and the lunate Epsilon 03F5---then backup to retokenize that last character matched;
+// But longer matches should have precedence, so this shouldn't be necessary if
+// #num, #^name, #@name are matched as tokens in the NON_INITIAL state
+//	< WORD_BOUNDARY: "#" 
+//						( " " 
+//						| ";" 
+//						| "|" 
+//						| "_" 
+//						| "," 
+//						| "(" 
+//						| ")" 
+//						| "." 
+//						| "\\" 
+//						| "$" 
+//						| "\"" 
+//						| "[" 
+//						| "'" 
+//						| "<" 
+//						| "~" 
+//						| "\u223C" 
+//						| "\u03F5" 
+//						) >
+//		{
+//			input_stream.backup(1) ;
+
+
+	// for optional right-arrow rule  a ->? b / l _ r
+//    < RIGHT_RULE_ARROW_OPT:   ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
+
+	// for right-arrow-rule, max, left-to-right behavior
+	// a+ {max}-> b / l _ r   or   a+ {maxl2r}-> b / l _ r
+//|   < RIGHT_RULE_ARROW_MAX_L2R:   <LCURLY> (<WHITESPACE>)* ( "max" | "maxl2r" )
+//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+	// for right-arrow-rule, max, right-to-left behavior
+	// a+ {maxr2l}-> b / l _ r
+//|   < RIGHT_RULE_ARROW_MAX_R2L:       <LCURLY> (<WHITESPACE>)* "maxr2l"
+//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+ 	//  {min} and {minl2r} are equivalent
+	//  for right-arrow-rule, min, left-to-right behavior
+	//  a+b+ {min}-> b / l _ r    or  a+b+ {minl2r}-> b / l _ r
+//|   < RIGHT_RULE_ARROW_MIN_L2R:       <LCURLY> (<WHITESPACE>)* ( "min" | "minl2r" )
+//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+	//  for right-arrow-rule, min, right-to-left behavior
+	//  a+b+ {minr2l}-> b / l _ r
+//|   < RIGHT_RULE_ARROW_MIN_R2L:       <LCURLY> (<WHITESPACE>)* "minr2l"
+//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+	// for left-arrow-rule optional
+	// a <-? b / l _ r
+//|   < LEFT_RULE_ARROW_OPT:   "\u2190" (<WHITESPACE>)* "?" >    
+//|   < LEFT_RULE_ARROW_OPT_ASCII: "<-" (<WHITESPACE>)* "?" >
+
+	//  <-{max} and <-{maxl2r} are equivalent
+	//  for left-arrow-rule, max, left-to-right behavior
+	//  a <-{max} b+ / l _ r
+//|   < LEFT_RULE_ARROW_MAX_L2R: ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITESPACE>)* ( "max" | "maxl2r" ) (<WHITESPACE>)* <RCURLY> >
+
+	//  for left-arrow-rule, max, right-to-left behavior
+	//  a <-{maxr2l} b+ / l _ r
+//|   < LEFT_RULE_ARROW_MAX_R2L:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITESPACE>)* "maxr2l" (<WHITESPACE>)* <RCURLY> >
+
+	//  <-{min} and <-{minl2r} are equivalent
+	//  for left-arrow-rule, min, left-to-right behavior
+	//  a <-{min} a+b+ / l _ r
+//|   < LEFT_RULE_ARROW_MIN_L2R:  ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITESPACE>)* ( "min" | "minl2r" ) (<WHITESPACE>)* <RCURLY>  >
+
+	//  for left-arrow-rule, min, right-to-left behavior
+	//  a <-{minr2l} a+b+ / l _ r
+//|   < LEFT_RULE_ARROW_MIN_R2L:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITESPACE>)* "minr2l" (<WHITESPACE>)* <RCURLY>  >
+
+//|	
+	// plain "where" is equivalent to "where matched"
+	< WHERE_MATCHED_LCURLY: "{" ( <WHITESPACE> )* "where" ( ( <WHITESPACE> )+ "matched" )? >
+|   < WHERE_MIXED_LCURLY:   "{" ( <WHITESPACE> )* "where" (<WHITESPACE>)+ "mixed" >
 |   < HEX_INT_LITERAL: ( "0x" | "0X" ) ( <HEX_DIGIT> )+ >
         {
             matchedToken.image = image.substring(2) ;
         }
 |   < DEC_FLOAT_LITERAL: ( ( <DECIMAL_DIGIT> )+ "." ( <DECIMAL_DIGIT> )* 
                          | "." ( <DECIMAL_DIGIT> )+
-			 )
+			 			 )
     >
 |   < DEC_INT_LITERAL: ( <DECIMAL_DIGIT> )+ >
-|   < BOOLEAN_OR_OP: "||" >
-|   < BOOLEAN_AND_OP: "&&" >
-
-// prefix num/boolean operator
-|   < EXCLAMATION_MARK_OP: "!" >    // boolean not
-
-|   < BOOLEAN_LESS_EQUAL_OP: "<=" >
-|   < BOOLEAN_GREATER_EQUAL_OP: ">=" >
-|   < BOOLEAN_EQUAL_OP: "==" >
-|   < BOOLEAN_NOT_EQUAL_OP: "!=" >
-|   < PLUS_SIGN_OP: "+" >  // not something like KLEENE_PLUS_OP (need addition as well)
-|   < MINUS_SIGN_OP: "-" >
-|   < ASTERISK_OP: "*" >   // not something like KLEENE_STAR_OP (need multiplication as well)
-|   < SLASH_OP: "/" >
-|   < PERCENT_OP: "%" >
-//|   < DOUBLE_ASTERISK: "**" >
-|   < EPSILON: "\u03F5" > // GREEK LUNATE EPSILON SYMBOL
-       // for use only in mathematical formulas, never in Greek text
-	   // use in Kleene for empty string
-|   < EPSILON_ASCII: "_e_" >
 }
 
 // iterator state is for:   foreach ($n in $@list) { ... }
@@ -1601,7 +1743,9 @@ TOKEN: {
 |	< NET_SUBST_SYMBOL_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol!" >
 |	< NET_SUBST_SYMBOL_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol" >
 
-| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__readXML" >
+| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__readXml" >
+
+| 	< NET_RAND_GEN_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__randGen" >
 
 |	< NET_TO_STRING_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__toString" >
 |   < NET_IMPLODE_FUNC_ID:    <NET_PREFIX> <CIRCUMFLEX> "__implode" >
@@ -1651,6 +1795,8 @@ TOKEN: {
 // boolean functions
 |	< LNG_IS_RTN_FUNC_ID:	<NUM_FUNC_PREFIX>         "__isRtn">
 |	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isCyclic">
+|	< LNG_IS_UBOUNDED_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isUBounded">
+|	< LNG_IS_LBOUNDED_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isLBounded">
 |	< LNG_IS_ACCEPTOR_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isAcceptor">
 |	< LNG_IS_TRANSDUCER_FUNC_ID:	<NUM_FUNC_PREFIX> "__isTransducer">
 
@@ -1919,13 +2065,14 @@ TOKEN: {
 		)* > : NON_INITIAL
 
 //|   < NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> 
+// can't use NUM_PREFIX because the # needs to be tokenizable as word boundary
 |   < NUM_ID: "#" <UNICODE_ID_LETTER> 
         ( <UNICODE_ID_LETTER> 
 		| <DECIMAL_DIGIT> 
 		| "_"
 		)* > : NON_INITIAL
 
-|   < NUM_FUNC_ANON:  <NUM_FUNC_PREFIX> (<WHITESPACE>)* "(">
+|   < NUM_FUNC_ANON:  <NUM_FUNC_PREFIX> (<WHITESPACE>)* "(" >
         {
 		 input_stream.backup(1) ;
 	     in_parenthesized = true ;
@@ -2362,26 +2509,23 @@ TOKEN: {
 }
 
 
-
 // "Private Regular Expressions" are used only as helpers in matching
 // other tokens:  marked with initial #
 <*>
 TOKEN: {
     < #NET_PREFIX:  "$" >
-//|   < #NUM_PREFIX:  "#" >		// caused problems with word-boundary in
+
+//|   < #NUM_PREFIX:  "#" >		// caused problems with # word-boundary in
 //								// rule contexts
+
 |   < #NUM_FUNC_PREFIX:  "#^" >
 |	< #NUM_LIST_PREFIX:  "#@" >
+
 |   < #LIST_PREFIX:  "@" >
 
-|   < #WHITESPACE:        ( " " | "\t" | "\n" )+ >
+|   < #WHITESPACE:        ( " " | "\t" | "\n" ) >
 |   < #DECIMAL_DIGIT:     [ "0"-"9" ] >
 |   < #HEX_DIGIT:         [ "0"-"9", "a"-"f", "A"-"F" ] >
-
-//|   < #UNICODE_ID_LETTER: [ "A"-"Z", "a"-"z" ] >
-// KRB:  Fill out UNICODE_ID_LETTER with
-// all Unicode chars that are formally designated as letter AND
-// can validly appear in Kleene IDs
 
 |  < #UNICODE_ID_LETTER: [
 "\u0041" - "\u005A" , 	// Latin
@@ -2404,7 +2548,8 @@ TOKEN: {
 "\u0388" - "\u038A" ,
 "\u038C" ,
 "\u038E" - "\u03A1" ,
-"\u03A3" - "\u03F5" ,
+"\u03A3" - "\u03F4" ,	// do not include 03F5 GREEK LUNATE EPSILON SYMBOL 
+						// (used in Kleene for the empty string)
 "\u03F7" - "\u03FF" ,
 "\u0400" - "\u0481" ,  // Cyrillic
 "\u048A" - "\u0523" 
@@ -2440,9 +2585,7 @@ TOKEN: {
 //"\u0993" - "\u09A8" ,
 //"\u09AA" - "\u09B0" 
 ] >
-
 }
-
 
 // Emergency catch-all for tokenization
 // make sure that any file will tokenize without throwing a
@@ -2532,6 +2675,10 @@ int stmt() throws Exception: {}
 					case BAD_TOKEN2: return 0 ;
 					case BAD_TOKEN3: return 0 ;
 					case BAD_TOKEN4: return 0 ;
+					case BAD_TOKEN5: return 0 ;
+					case BAD_TOKEN6: return 0 ;
+					case BAD_TOKEN7: return 0 ;
+					case BAD_TOKEN8: return 0 ;
 					// basically handle as an empty statement
 	      		}
        		}
@@ -2636,6 +2783,9 @@ void statement(): {}
 |	minimize_statement()
 |	synchronize_statement()
 
+| 	rand_input_statement()
+|	rand_output_statement()
+
 |   draw_statement()
 |	sigma_statement()
 |   test_statement()
@@ -2652,6 +2802,7 @@ void statement(): {}
 |	exception_statement()
 |   info_statement()
 |	writexml_statement()
+|	writexml_state_oriented_statement()
 |	writedot_statement()
 |   source_statement()   // run a Kleene source file
 
@@ -2673,6 +2824,10 @@ void empty_statement() #empty_statement : {}
 |	<BAD_TOKEN2>
 |	<BAD_TOKEN3>
 |	<BAD_TOKEN4>
+|	<BAD_TOKEN5>
+|	<BAD_TOKEN6>
+|	<BAD_TOKEN7>
+|	<BAD_TOKEN8>
 }
 
 void quit_statement() #quit_statement : {}
@@ -3000,16 +3155,20 @@ void continue_statement() #continue_statement: {}
 
 void foreach_net_iteration_statement() #foreach_net_iteration_statement: {}
 {
-	<FOREACH_RW> <LPAREN> iterator_net_id() <ITERATOR_IN> net_list_exp() 
-	<RPAREN> 
-	( loop_block() | statement() ) 
+	<FOREACH_RW> 
+		<LPAREN> iterator_net_id() 
+			( <ITERATOR_IN> | <ITERATOR_IN2> | <ITERATOR_IN3> ) net_list_exp() 
+		<RPAREN> 
+		( loop_block() | statement() ) 
 }
 
 void foreach_num_iteration_statement() #foreach_num_iteration_statement: {}
 {
-	<FOREACH_RW> <LPAREN> iterator_num_id() <ITERATOR_IN> num_list_exp() 
-	<RPAREN> 
-	( loop_block() | statement() ) 
+	<FOREACH_RW> 
+		<LPAREN> iterator_num_id() 
+			( <ITERATOR_IN> | <ITERATOR_IN2> | <ITERATOR_IN3> ) num_list_exp() 
+		<RPAREN> 
+		( loop_block() | statement() ) 
 }
 
 // Housekeeping and meta-commands
@@ -3027,6 +3186,23 @@ void optimize_statement() #optimize_statement: {}
 	net_id() ( ( <COMMA_OP> )? net_id() )* 
 	<SEMICOLON>
 }
+
+void rand_input_statement() #rand_input_statement: {}
+{
+	( <RAND_INPUT1_RW> | <RAND_INPUT2_RW> | <RAND_INPUT3_RW> | <RAND_INPUT4_RW> )
+	regexp()
+	( <COMMA_OP> numexp() ( <COMMA_OP> numexp() )? )?
+	<SEMICOLON>
+}
+
+void rand_output_statement() #rand_output_statement: {}
+{
+	( <RAND_OUTPUT1_RW> | <RAND_OUTPUT2_RW> | <RAND_OUTPUT3_RW> | <RAND_OUTPUT4_RW> )
+	regexp()
+	( <COMMA_OP> numexp() ( <COMMA_OP> numexp() )? )?
+	<SEMICOLON>
+}
+
 
 void garbage_collect_statement() #garbage_collect_statement: {}
 {
@@ -3244,6 +3420,18 @@ void writexml_statement() #writexml_statement: {}
 	<WRITEXML_RW> regexp() ( <COMMA_OP> regexp() ( <COMMA_OP> regexp() )?)? <SEMICOLON>
 }
 
+void writexml_state_oriented_statement() #writexml_state_oriented_statement: {}
+{
+	// usually write out state-oriented XML to support generation of Java, etc. code
+	//                           regexp, filepath,    name, encoding
+	//					e.g.     $mynet, "mynet.xml", "French", "UTF-8"
+	<WRITEXML_STATE_ORIENTED_RW> regexp() ( <COMMA_OP> regexp() 
+												( <COMMA_OP> regexp() 
+													( <COMMA_OP> regexp() )?
+												)?
+										  )? <SEMICOLON>
+}
+
 void writedot_statement() #writedot_statement: {}
 {
 	// regexp, filepath, encoding
@@ -3398,6 +3586,8 @@ void primary_numexp(): {}
 // boolean function calls
 |	lng_is_rtn_func_call()			// __isRtn()
 |	lng_is_cyclic_func_call()		// __isCyclic()
+|	lng_is_ubounded_func_call()		// __isUBounded()
+|	lng_is_lbounded_func_call()		// __isLBounded()
 |	lng_is_acceptor_func_call()		// __isAcceptor()
 |	lng_is_transducer_func_call()	// __isTransducer()
 
@@ -3550,7 +3740,82 @@ void poss_rule_exp() :
 
 		// 1 node on the jjtree stack
 		// must be a rule left arrow here
-		(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+		(  
+			// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MAX_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_R2L>
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MAX_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						    where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l(rule_section_count)
+
+		|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				(
 					// Catch a parsing problem found by Paola
 					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -3570,52 +3835,11 @@ void poss_rule_exp() :
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
 					// where clauses are also optional, grouped, if present under #where_clauses
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
+								| <WHERE_MIXED_LCURLY> )
+						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
-		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
-		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
 		)
 
 	| 	unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
@@ -3639,8 +3863,21 @@ void poss_rule_exp() :
 		// N.B. this disjunction here is optional ( ... )?
 		(  
 			// right-arrow rules:  N.B. IF EDITED, SEE rule() AND MAKE PARALLEL EDITS
+		   LOOKAHEAD(2)
+		   // old <RIGHT_RULE_ARROW_OPT>
+		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()		
+				#rule_lhs(2) { rule_section_count = 1 ; }
 
-		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+
+		|  ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
 				// KRB:  here possibility of markup rules
 				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
@@ -3652,54 +3889,149 @@ void poss_rule_exp() :
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
 				// zero or more where clauses
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
-		|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_OPT_ASCII> )
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()		
-				#rule_lhs(2) { rule_section_count = 1 ; }
 
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
-				#rule_right_arrow_opt(rule_section_count)
-		|  ( <RIGHT_RULE_ARROW_MAX_L2R> | <RIGHT_RULE_ARROW_MAX_L2R_ASCII> )
+		|   // old <RIGHT_RULE_ARROW_MAX_L2R> 
+			<MAX_L2R_DIRECTIVE>
+			// followed by
+			( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 				
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_max_l2r(rule_section_count)
-		|  ( <RIGHT_RULE_ARROW_MIN_L2R> | <RIGHT_RULE_ARROW_MIN_L2R_ASCII> )
+
+		|   // old <RIGHT_RULE_ARROW_MAX_R2L> 
+				<MAX_R2L_DIRECTIVE> 
+				// followed by
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_r2l(rule_section_count)
+
+		|  	// old <RIGHT_RULE_ARROW_MIN_L2R> 
+				<MIN_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_min_l2r(rule_section_count)
+
+		|  	// old <RIGHT_RULE_ARROW_MIN_R2L>
+				<MIN_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_r2l(rule_section_count)
 
 
 			// left-arrow rules    a <- b / l _ r where ...
+
+		|  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+			LOOKAHEAD(2)
+			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_L2R>
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<MAX_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MAX_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l(rule_section_count)
 
 		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -3719,56 +4051,12 @@ void poss_rule_exp() :
 
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
-		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-				#rule_lhs_upper(1)
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
 
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-
-		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-				#rule_lhs_upper(1)
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
-
-		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
 
 			// left-arrow markup rules
 
@@ -3782,7 +4070,82 @@ void poss_rule_exp() :
 			// after parsing  Y ~~~ Z here
 			// there must now be a left-rule-arrow of some kind
 
-			(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			(  
+			  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_opt(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+				LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<MAX_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MAX_R2L>
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MAX_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_r2l(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MIN_L2R>
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_r2l(rule_section_count)
+
+			|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 					(
 						// Catch a parsing problem found by Paola
 						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -3799,53 +4162,11 @@ void poss_rule_exp() :
 
 						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-						( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+						( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
 						#rule_left_arrow_oblig(rule_section_count)
 					)
-			|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_opt(rule_section_count)
-			|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r(rule_section_count)
-
-			|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r(rule_section_count)
 			)
 
 			// language-restriction expression
@@ -3863,7 +4184,7 @@ void poss_rule_exp() :
 // special productions for alternation rules and language-restriction expressions
 
 // rule() is called only for $^parallel(rule, rule ...)
-// in this case, the daughters must be alternation rules
+// in this case, the daughters must all be in alternation-rule syntax
 
 void rule() :
 { int rule_section_count = 0 ; 
@@ -3882,7 +4203,82 @@ void rule() :
 
 		// 1 node on the jjtree stack
 		// must be a rule left arrow here
-		(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+		(  
+			// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<MAX_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MAX_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l(rule_section_count)
+
+		|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				(
 					// Catch a parsing problem found by Paola
 					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -3902,52 +4298,11 @@ void rule() :
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
 					// where clauses are also optional, grouped, if present under #where_clauses
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
-		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
-		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
 		)
 
 
@@ -3955,10 +4310,24 @@ void rule() :
 
 		// N.B. here the following parenthesized expression is not optional; this production
 		// is called when you really need a rule, i.e. inside $^parallel(rule, rule, ...)
-		(  
+		(
 			// right-arrow rules:  N.B. IF EDITED, SEE poss_rule_exp() AND MAKE PARALLEL EDITS
 
-		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+		  	LOOKAHEAD(2)
+			// old <RIGHT_RULE_ARROW_OPT>
+		 	( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+
+		|  ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
 				// KRB: allow markup here
 				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
@@ -3970,56 +4339,146 @@ void rule() :
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
 				// zero or more where clauses
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
 
-		|  ( <RIGHT_RULE_ARROW_OPT> | <RIGHT_RULE_ARROW_OPT_ASCII> )
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )? 
-				#rule_right_arrow_opt(rule_section_count)
-
-		|  ( <RIGHT_RULE_ARROW_MAX_L2R> | <RIGHT_RULE_ARROW_MAX_L2R_ASCII> )
+		|   // old <RIGHT_RULE_ARROW_MAX_L2R> 
+				<MAX_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 				
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_max_l2r(rule_section_count)
-		|  ( <RIGHT_RULE_ARROW_MIN_L2R> | <RIGHT_RULE_ARROW_MIN_L2R_ASCII> )
+
+		|  	// old <RIGHT_RULE_ARROW_MAX_R2L> 
+				<MAX_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_r2l(rule_section_count)
+
+		|  	// old <RIGHT_RULE_ARROW_MIN_L2R>
+				<MIN_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_min_l2r(rule_section_count)
 
+		|  	// old <RIGHT_RULE_ARROW_MIN_R2L> 
+				<MIN_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_r2l(rule_section_count)
 
 			// left-arrow rules
+
+		|  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+			LOOKAHEAD(2)
+			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_L2R>
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<MAX_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do NOT allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )  
+				<MAX_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do NOT allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l(rule_section_count)
+
+		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r(rule_section_count)
+
+		|  	// OLD <LEFT_RULE_ARROW_MIN_R2L> 
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MIN_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l(rule_section_count)
 
 		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4039,56 +4498,13 @@ void rule() :
 
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
-		|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-				#rule_lhs_upper(1)
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
 
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-
-		|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-				#rule_lhs_upper(1)
-				// KRB: do NOT allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
-
-		|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-						   |<WHERE_MATCHED_DIRECTIVE>
-						   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-						   |<WHERE_MIXED_DIRECTIVE>
-						   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
 
 
 			// left-arrow markup rules
@@ -4102,7 +4518,82 @@ void rule() :
 			// after parsing  Y ~~~ Z here
 			// there must now be a left-rule-arrow of some kind
 
-			(  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			(  
+				// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_opt(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+					<MAX_L2R_DIRECTIVE>
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r(rule_section_count)
+
+			|  	// OLD <LEFT_RULE_ARROW_MAX_R2L> 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MAX_R2L_DIRECTIVE>
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_r2l(rule_section_count)
+
+			|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_L2R_DIRECTIVE>
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r(rule_section_count)
+
+			|  	// OLD <LEFT_RULE_ARROW_MIN_R2L> 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_R2L_DIRECTIVE>
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_r2l(rule_section_count)
+
+			|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 					(
 						// Catch a parsing problem found by Paola
 						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -4119,54 +4610,11 @@ void rule() :
 
 						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-						( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
+						( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
 						#rule_left_arrow_oblig(rule_section_count)
 					)
-			|  ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-					// KRB: do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_opt(rule_section_count)
-
-			|  ( <LEFT_RULE_ARROW_MAX_L2R> | <LEFT_RULE_ARROW_MAX_L2R_ASCII> )
-					// KRB: do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r(rule_section_count)
-
-			|  ( <LEFT_RULE_ARROW_MIN_L2R> | <LEFT_RULE_ARROW_MIN_L2R_ASCII> )
-					// KRB:  do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_DIRECTIVE_DEFAULT>
-							   |<WHERE_MATCHED_DIRECTIVE>
-							   |<WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-							   |<WHERE_MIXED_DIRECTIVE>
-							   |<WHERE_MIXED_DIRECTIVE_UNDERSCORE>) where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r(rule_section_count)
 			)
 		)
 	)
@@ -4218,7 +4666,8 @@ void rule_context() :
 		  #one_level_rule_context(context_sections)
 		|
 		  ( <DOUBLE_UNDERSCORE_OP>
-		  | <DOUBLE_UNDERSCORE_OP_ASCII> 
+		  | <DOUBLE_UNDERSCORE_OP_ASCII1> 
+		  | <DOUBLE_UNDERSCORE_OP_ASCII2> 
 		  ) 
 		  ( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 2 ; } )?
 		  #two_level_rule_context(context_sections)
@@ -4233,7 +4682,8 @@ void rule_context() :
 
 |   // there might just be a double underscore, and then an optional right context
 	( <DOUBLE_UNDERSCORE_OP>
-	| <DOUBLE_UNDERSCORE_OP_ASCII> 
+	| <DOUBLE_UNDERSCORE_OP_ASCII1> 
+	| <DOUBLE_UNDERSCORE_OP_ASCII2> 
 	) 
 	( LOOKAHEAD(1) unioned_exp() #right_rule_context(1) { context_sections = 1 ; } )?
 	#two_level_rule_context(context_sections)
@@ -4253,21 +4703,14 @@ void where_clause(): {}
 
 void where_matched_clause() #where_matched_clause : {}
 {
-    ( <WHERE_MATCHED_DIRECTIVE>
-	| <WHERE_MATCHED_DIRECTIVE_DEFAULT> 
-	| <WHERE_MATCHED_DIRECTIVE_UNDERSCORE>
-	) 
-	<LCURLY> 
+    <WHERE_MATCHED_LCURLY>
 		elmt_of_net_list_exp() ( LOOKAHEAD(2) (<COMMA_OP>)? elmt_of_net_list_exp() )* 
 	<RCURLY>
 }
 
 void where_mixed_clause() #where_mixed_clause : {}
 {
-    ( <WHERE_MIXED_DIRECTIVE>   
-	| <WHERE_MIXED_DIRECTIVE_UNDERSCORE>
-	)
-	<LCURLY> 
+    <WHERE_MIXED_LCURLY>   
 		elmt_of_net_list_exp() ( LOOKAHEAD(2) (<COMMA_OP>)? elmt_of_net_list_exp() )* 
 	<RCURLY>
 }
@@ -4473,7 +4916,8 @@ void primary_regexp():
 | net_rm_weight_func_call()
 | net_subst_symbol_dest_func_call()
 | net_subst_symbol_func_call()
-| net_read_xml_call()
+| net_read_xml_func_call()
+| net_rand_gen_func_call()
 
 | net_start_func_call()
 | net_parallel_func_call()
@@ -4722,11 +5166,18 @@ void net_subst_symbol_func_call() #net_subst_symbol_func_call: {}
 	<NET_SUBST_SYMBOL_FUNC_ID> regexp_three_arg_list()
 }
 
-void net_read_xml_call() #net_read_xml_call: {}
+void net_read_xml_func_call() #net_read_xml_func_call: {}
 {
 	<NET_READ_XML_FUNC_ID> regexp_one_arg_list()
-	// The built-in $^__readXML requires 1 argument: representing the filepath
-	// This $^__readXML is wrapped as $^readXML in ~/.kleene/global/predefined.kl, 
+	// The built-in $^__readXml requires 1 argument: representing the filepath
+	// This $^__readXml is wrapped as $^readXml in ~/.kleene/global/predefined.kl, 
+}
+
+void net_rand_gen_func_call() #net_rand_gen_func_call: {}
+{
+	<NET_RAND_GEN_FUNC_ID> regexp_numexp_numexp_arg_list()
+	// 2nd arg is npath (the number of paths)
+	// 3rd arg is max_length (max length of a path)
 }
 
 void net_start_func_call() #net_start_func_call: {}
@@ -4774,6 +5225,16 @@ void lng_is_rtn_func_call() #lng_is_rtn_func_call: {}
 void lng_is_cyclic_func_call() #lng_is_cyclic_func_call: {}
 {
 	<LNG_IS_CYCLIC_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_ubounded_func_call() #lng_is_ubounded_func_call: {}
+{
+	<LNG_IS_UBOUNDED_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_is_lbounded_func_call() #lng_is_lbounded_func_call: {}
+{
+	<LNG_IS_LBOUNDED_FUNC_ID> regexp_one_arg_list() 
 }
 
 void lng_is_acceptor_func_call() #lng_is_acceptor_func_call: {}
@@ -5423,6 +5884,11 @@ void regexp_one_plus_arg_list() : {}
 void regexp_numexp_arg_list() : {}
 {
 	<LPAREN> regexp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void regexp_numexp_numexp_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> numexp() <COMMA_OP> numexp() <RPAREN>
 }
 
 void regexp_regexp_numexp_arg_list() : {}

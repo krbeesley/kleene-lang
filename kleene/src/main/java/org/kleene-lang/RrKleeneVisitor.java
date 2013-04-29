@@ -377,6 +377,10 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // not possible?
 	  return data ;
   }
+  public Object visit(ASTwritexml_state_oriented_statement node, Object data) {
+	  // not possible?
+	  return data ;
+  }
   public Object visit(ASTwritedot_statement node, Object data) {
 	  // not possible?
 	  return data ;
@@ -562,7 +566,15 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }  
+  public Object visit(ASTrule_right_arrow_max_r2l node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
   public Object visit(ASTrule_right_arrow_min_l2r node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_right_arrow_min_r2l node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -578,7 +590,15 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
+  public Object visit(ASTrule_left_arrow_max_r2l node, Object data) {
+	  // leaf node
+	  return data ;
+  }
   public Object visit(ASTrule_left_arrow_min_l2r node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_r2l node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -667,6 +687,14 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   public Object visit(ASTdifference_exp node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTrand_input_statement node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTrand_output_statement node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -890,7 +918,11 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnet_read_xml_call node, Object data) {
+  public Object visit(ASTnet_read_xml_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_rand_gen_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -928,6 +960,14 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   public Object visit(ASTlng_is_cyclic_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTlng_is_ubounded_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTlng_is_lbounded_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }

@@ -144,6 +144,8 @@ public class OpenFstLibraryWrapper
 	private static native boolean isEmptyLanguageNative(long fst) ;
 	private static native boolean isCyclicNative(long fst) ;
 	private static native boolean isAcyclicNative(long fst) ;
+	private static native boolean isUBoundedNative(long fst) ;
+	private static native boolean isLBoundedNative(long fst) ;
 
 	private static native boolean isStringNative(long fst) ; 
 	// i.e. just one-string language
@@ -166,6 +168,8 @@ public class OpenFstLibraryWrapper
 	private static native long shortestPathNative(long fst, int nshortest) ;
 	private static native void inputProjectionInPlaceNative(long fst) ;
 	private static native void outputProjectionInPlaceNative(long fst) ;
+
+	private static native long randGenNative(long fst, long npathval, long max_lengthval) ;
 
 	private static native void rmEpsilonInPlaceNative(long fst) ;  
 	// std OpenFst RmEpsilon works in place (destructive)
@@ -211,6 +215,7 @@ public class OpenFstLibraryWrapper
 	private static native int    getSingleArcLabelNative(long fst) ;
 
 	private static native void fst2xmlNative(long fst, FstXmlWriter o, int cpv) ;
+	private static native void fst2xmlStateOrientedNative(long fst, FstXmlWriterStateOriented o, int cpv) ;
 	private static native void fst2dotNative(long fst, FstDotWriter o) ;
 
 	//private static native void checkSapRtnMappingsNative(long fst,
@@ -1275,7 +1280,7 @@ public class OpenFstLibraryWrapper
 		a = promoteSigmaOther(a, b) ;
 		b = promoteSigmaOther(b, a) ;
 
-		// The inquired sorting of Input arcs on the second arg (or the
+		// The required sorting of Input arcs on the second arg (or the
 		// output arcs of the first arg) is now done in C++ in the 
 		// native function
 		Fst resultFst = new Fst(differenceNative(a.getFstPtr(), b.getFstPtr())) ; 
@@ -1375,6 +1380,10 @@ public class OpenFstLibraryWrapper
 		fst2xmlNative(a.getFstPtr(), writer, startPuaCpv) ;
 	}
 
+	public void Fst2xmlStateOriented(Fst a, FstXmlWriterStateOriented writer, int startPuaCpv) {
+		fst2xmlStateOrientedNative(a.getFstPtr(), writer, startPuaCpv) ;
+	}
+
 	public int[] GetLabels(Fst a) {
 		return getLabelsNative(a.getFstPtr()) ;
 	}
@@ -1425,7 +1434,8 @@ public class OpenFstLibraryWrapper
 	}
 
 	public Fst InputProjection(Fst a) {
-		// not destructive, but need to copy the argument
+		// not destructive from the Kleene point of view;
+		// but need to copy the argument
 		// only if it's from the symbol table
 		if (a.getFromSymtab()) {
 			a = CopyFst(a) ;
@@ -1522,6 +1532,12 @@ public class OpenFstLibraryWrapper
 	}
 	public boolean IsAcyclic(Fst a) {
 		return isAcyclicNative(a.getFstPtr()) ;
+	}
+	public boolean IsUBounded(Fst a) {
+		return isUBoundedNative(a.getFstPtr()) ;
+	}
+	public boolean IsLBounded(Fst a) {
+		return isLBoundedNative(a.getFstPtr()) ;
 	}
 	public boolean IsString(Fst a) {
 		// encodes a language of 1 string
@@ -1621,7 +1637,8 @@ public class OpenFstLibraryWrapper
 	}
 
 	public Fst OutputProjection(Fst a) {
-		// not destructive, but need to copy the argument
+		// not destructive from the Kleene point of view;
+		// but need to copy the argument
 		// only if it's from the symbol table
 		if (a.getFromSymtab()) {
 			a = CopyFst(a) ;
@@ -1793,6 +1810,18 @@ public class OpenFstLibraryWrapper
 	public void SynchronizeInPlace(Fst a) {
 		checker.SynchronizeInPlace(a) ;
 		synchronizeInPlaceNative(a.getFstPtr()) ;
+	}
+
+	public Fst RandGen(Fst fst, long npathval, long max_lengthval) {
+		// cf.  Difference (we're getting back a subset of the orig Fst)
+
+		Fst resultFst = new Fst(randGenNative(fst.getFstPtr(), npathval, max_lengthval)) ;
+		if (!isEmptyLanguageNative(resultFst.getFstPtr())) {
+			addSigmaOther(resultFst, fst) ;
+		}
+		CorrectSigmaOtherInPlace(resultFst) ;
+		ConnectInPlace(resultFst) ;	// calls Optimize
+		return resultFst ;
 	}
 
 

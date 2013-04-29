@@ -1,3 +1,29 @@
+
+Kleene FSM diagrams
+
+1.  writeDot
+	creates a .dot file
+2.
+
+$ open -a Graphviz Foo.dot
+File > Export    as pdf
+creates Foo.pdf
+
+3.  Open using Preview
+
+$ open Foo.pdf
+click the 'Select' icon
+drag a box around the selection
+Cmd-K   (for crop)
+Save
+
+In the XeTeX code
+:r includegraphics
+
+
+
+
+
 To convert .ps to .pdf
 
 $ ps2pdf13 foo.ps foo.pdf

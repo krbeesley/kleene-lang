@@ -88,7 +88,7 @@ enum RuleObligType {
 	OBLIG, OPT ;
 }
 enum RuleMatchType {
-	ALL, MAX_L2R, MIN_L2R ; //, MAX_R2L, MIN_R2L ; not implemented yet
+	ALL, MAX_L2R, MIN_L2R, MAX_R2L, MIN_R2L ;
 }
 enum RuleContextLevels {
 	ONE, TWO ;
@@ -232,28 +232,30 @@ class RuleSyntacticParts {
 
 	private RuleArrowType arrowType ;  	// RuleArrowType.LEFT  or .RIGHT
 	private RuleObligType obligType ;	// RuleObligType.OBLIG or .OPT
-	private RuleMatchType matchType ;	// RuleMatchType.ALL, .MAX_L2R, .MIN_L2R, .MAX_R2L, .MIN_R2L
-								//    the R2L types aren't done yet (are they doable?)
+	private RuleMatchType matchType ;	// RuleMatchType.ALL, .MAX_L2R, 
+										//	.MIN_L2R, .MAX_R2L, .MIN_R2L
 	private RuleMapType   mapType ;		// RuleMapType.MAP or .MARKUP
 
-	// A straightforward mapping rule always has LHS upper and lower ASTs, usually set by
-	// the constructor
+	// A straightforward mapping rule always has LHS upper and lower ASTs, 
+	// usually set by the constructor.  Both set for a straightforward
+	// mapping rule.  Only one set for a markup rule.
 	private ASTrule_lhs_upper lhsUpper ;
 	private ASTrule_lhs_lower lhsLower ;
 
-	// A markup rule will have one of the above set to null, with these two ASTs set to non-null
-	// values
+	// A markup rule will have exactly one of the above set to null, 
+	// with these two ASTs set to non-null values
 	private ASTleft_markup_insertion  	leftMarkupInsertion ;
 	private ASTright_markup_insertion	rightMarkupInsertion ;
 
-	// for the RHS contexts, if any
+	// for the RHS contexts, if any (constructors set it to null)
 	private ArrayList<RuleContextSyntacticParts> contexts ;
 
-	// for the where_clauses, if any
+	// for the where_clauses, if any (constructors set it to null)
 	private ArrayList<ArrayList<RuleLocalVarSetting>> localVarSettings ;
 
 	// constructors
 	
+	// constructor for straightforward mapping rules
 	public RuleSyntacticParts(	ASTrule_lhs_upper lhsUpper, 
 								ASTrule_lhs_lower lhsLower) {
 		// a straightforward rule always has a LHS with upper and lower
@@ -308,10 +310,10 @@ class RuleSyntacticParts {
 		this.obligType = obligType ;
 	}
 	void setMatchType (RuleMatchType matchType) {	//	.ALL, .MAX_L2R,   .MAX_R2L
-													// 		  .MIN_L2R or .MAX_R2L
+													// 		  .MIN_L2R or .MIN_R2L
 		this.matchType = matchType ;
 	}
-	void setMapType (RuleMapType mapType) {
+	void setMapType (RuleMapType mapType) {			// .MAP or .MARKUP
 		this.mapType = mapType ;
 	}
 
@@ -497,9 +499,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// At one time, at least, it appeared that OpenFst was not
 		// perceiving correctly that Two contained epsilons after the
 		// call to SubstEpsilonInPlace()
-		Two = lib.Concat(Two, lib.EmptyStringLanguageFst()) ; 
+		Two = lib.Concat(Two, lib.EmptyStringLanguageFst()) ;
 
-		lib.OptimizeInPlace(Two) ;
+		// KRB changed to OptimizeInPlaceForce from OptimizeInPlace
+		lib.OptimizeInPlaceForce(Two) ;
 
 		// Compute Fst Three
 
@@ -535,7 +538,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			}
 		}
 		Three = lib.Concat(Three, lib.EmptyStringLanguageFst()) ;
-		lib.OptimizeInPlace(Three) ;
+		// KRB:  changed to OptimizeInPlaceForce from OptimizeInPlace
+		lib.OptimizeInPlaceForce(Three) ;
 
 		return Three ;
 	}
@@ -573,7 +577,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 									lib.OneArcFst(hulden.restDelimSym),
 									rightContext
 								) ;
-		lib.OptimizeInPlace(resultFst) ;
+		// KRB: changed to OptimizeInPlaceForce from OptimizeInPlace
+		lib.OptimizeInPlaceForce(resultFst) ;
 
 		return resultFst ;
 	}
@@ -796,7 +801,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		listOutputStrings("Generation results:", resultFst, data) ;
 	}
 
-	void writeXMLhelper(Fst fst, String fullpath, String encoding) {
+	void writeXmlHelper(Fst fst, String fullpath, String encoding) {
 		FstXmlWriter fstXmlWriter = 
 			new FstXmlWriter(lib.ArcType(fst),
 							fst.getSigma(), 
@@ -819,6 +824,36 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// to convert the int-value labels to strings.
 
 		lib.Fst2xml(fst, fstXmlWriter, symmap.getStartPuaCpv()) ;
+	}
+
+	void writeXmlHelperStateOriented(Fst fst, String fullpath, String name, String encoding) {
+		// see if it has any input/upper epsilon loops
+		boolean ubounded = lib.IsUBounded(fst) ;
+
+		FstXmlWriterStateOriented fstXmlWriterStateOriented = 
+			new FstXmlWriterStateOriented(lib.ArcType(fst),
+							fst.getSigma(), 
+							symmap, 
+							fst.getContainsOther(), 
+							ubounded,
+							new File(fullpath),
+							name,
+							encoding) ;
+
+		// Call Fst2xmlStateOriented to iterate through the native Fst 
+		//	states and arcs.  (I can't do this from Java.) It will make calls
+		// back to methods in the fstXmlWriterStateOriented to do the actual output 
+		//	to file.
+		// (The C++ code has iterators, but Unicode file output 
+		//	from C++ is not
+		// worth the trouble.  Even if the C++ code were written to 
+		//	write the XML
+		// directly, it would still have to make calls back to the 
+		//	symmap method
+		// .getsym(i)
+		// to convert the int-value labels to strings.
+
+		lib.Fst2xmlStateOriented(fst, fstXmlWriterStateOriented, symmap.getStartPuaCpv()) ;
 	}
 
 	private Fst xml2fst(String filepath) throws Exception {
@@ -3051,11 +3086,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 	Fst compileRuleSemanticParts(ArrayList<RuleSemanticParts> listOfSemanticParts) {
 
-		// cf. interpRule.java.old
-		//
-		// The rule parts are potentially multiple RuleSemanticParts objects,
-		// used to define three finite-state machines that are eventually intersected:
-		// Base & Context & Constraints
+		// The listOfSemanticParts contains potentially multiple RuleSemanticParts 
+		// objects, which are to be compiled in parallel.  The information in the
+		// possible multiple RuleSemanticParts is used to define three finite-state
+		// machines that are eventually intersected: Base & Context & Constraints
+		// to make the final Fst result representing all the RuleSemanticParts.
 
 		// Initialize some structures for collecting Base, Context and Constraints
 		// (or parts thereof) for _all_ the rules being compiled in parallel.
@@ -3070,11 +3105,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// 			(  (a* - "") -> b, "" -> b  )
 
 		// In the definition of Base there is one CP(A,B), i.e. hulden.CP(upper, lower), 
+		// or CPMarkup...(X, Y, Z)
 		// representing the LHS, for each semantic rule; the CPs for all the parallel
 		// rules are _unioned_ together in the computation of Base, so
 		// start with an empty-language fst and union all the CPs into it.
-		// (For markup rules, CPM(X, Y, Z) replaces CP(A,B).)
-		//
 
 		Fst BaseUnionOfCPs = lib.EmptyLanguageFst() ;
 
@@ -3082,12 +3116,13 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// which may have multiple context parts (one for each individual context
 		// in all the parallel rules).  To accomplish this for a set of parallel
 		// rules, each context L _ R is interpreted as [L x \x* x R], 
-		// where x is a special restriction delimiter (here **RD).  These networks, 
+		// where x is a special restriction delimiter.  These networks, 
 		// one for each context, get unioned together, and then at the end
 		// the resulting unionOfContexts is surrounded with \x*, i.e. 
 		// [\x* unionOfContexts \x*]
 		// Start with a unionOfContexts that is the empty language and union all
-		// the [L x \x* x R] parts into it.
+		// the [L x \x* x R] parts into it.  The surrounding \x* and \x* will be
+		// added later.
 
 		Fst unionOfContexts = lib.EmptyLanguageFst() ;
 
@@ -3102,17 +3137,22 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// iterate through the list of (parallel) RuleSemanticParts objects
 		for (Iterator<RuleSemanticParts> iter = listOfSemanticParts.iterator(); 
 			 iter.hasNext() ; ) {
+
 			RuleSemanticParts rsempt = iter.next() ;
 
-			// Uppercase letters used here for variables to facilitate comparison with
-			// Hulden's rule-compilation examples.
+			// Uppercase letters A and B used here for variables to facilitate 
+			// comparison with Hulden's rule-compilation examples.
 			
-			// used here for straightforward rewrite rules
+			// Symbols A and B are used herein for straightforward rewrite rules
 			Fst A = null ;	// upper LHS
 			Fst B = null ;	// lower LHS
 
-			// used for markup rules
+			// Symbols X, Y and Z are used for markup rules (X is the "input" 
+			// expression, which could be upper or lower
+			// 	depending on the rule arrow direction; Y is always the left insertion,
+			// 	Z is always the right insertion) either
 			// X -> Y ... Z
+			// or
 			// Y ... Z <- X
 			Fst X = null ;	// input side (upper or lower)
 			Fst Y = null ;	// leftMarkupInsertion
@@ -3123,7 +3163,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			RuleObligType obligType = rsempt.getObligType() ;
 			//							RuleObligType.OBLIG or .OPT
 			RuleMatchType matchType = rsempt.getMatchType() ;
-			//							RuleMatchType.ALL, .MAX_L2R, .MIN_L2R
+			//							RuleMatchType.ALL, .MAX_L2R, .MIN_L2R, .MAX_R2L, .MIN_R2L
 			RuleMapType mapType = rsempt.getMapType() ;
 			//							RuleMapType.MAP or .MARKUP
 			boolean epenthesis = rsempt.getEpenthesis() ;
@@ -3134,10 +3174,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				// Note that CleanupSpecialSymbolsAction was called on all these parts when
 				// the RuleSemanticParts was created
 				if (arrowType == RuleArrowType.RIGHT) {
-					// the input is the upper side
+					// the input is the upper left-hand side
 					X = rsempt.getUpperLhs() ;
 				} else {
-					// the input is the lower side
+					// the input is the lower left-hand side
 					X = rsempt.getLowerLhs() ;
 				}
 				X.setFromSymtab(true) ;
@@ -3161,45 +3201,83 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				B.setFromSymtab(true) ;
 			}
 
-			// UnionIntoFirstInPlace() is destructive of the first argument, as desired here.
-		
-			Fst cp = null ;
+			Fst cp = null ;		// the "cross-product" of the left-hand-side expressions
 			
 			if (mapType == RuleMapType.MAP) {
-				// It's a straightforward mapping rule
+				// It's a straightforward mapping rule, compute hulden.CP()
 				cp = hulden.CP(A, B) ;
 			} else {
 				// It's a Markup Rule--use a different CPMarkup
 				if (arrowType == RuleArrowType.RIGHT) {
 					// right-arrow Markup Rule:		X  ->  Y ... Z
+
 					cp = hulden.CPMarkupRightArrow(X,Y,Z) ;
+
 				} else {
 					// left-arrow Markup Rule:  	Y ... Z  <-  X
 					cp = hulden.CPMarkupLeftArrow(X,Y,Z) ;
 				}
 			}
 			cp.setFromSymtab(true) ;
+
 			// union this cp into the BaseUnionOfCPs
+			// UnionIntoFirstInPlace() is destructive of the first argument, as desired here.
 			BaseUnionOfCPs = lib.UnionIntoFirstInPlace(BaseUnionOfCPs, cp) ;
 
-			// Now get the contexts
+			// Now get the contexts of the current rule
 			ArrayList<RuleContextSemanticParts> contexts = rsempt.getContexts() ;
 
 			// iterate through the contexts for the current SemanticRuleParts
 			for (Iterator<RuleContextSemanticParts> rciter = contexts.iterator(); rciter.hasNext(); ) {
 				RuleContextSemanticParts rcsp = rciter.next() ;
-				// CleanupSpecialSymbolsContext was called on the four context
+				// CleanupSpecialSymbolsContext was called on the context
 				// parts when the RuleContextSemanticParts was created
+				
+				Fst leftUpperContext = rcsp.getLeftUpperContext() ;
+				if (leftUpperContext != null)
+					leftUpperContext.setFromSymtab(true) ;
+				Fst leftLowerContext = rcsp.getLeftLowerContext() ;
+				if (leftLowerContext != null)
+					leftLowerContext.setFromSymtab(true) ;
+				Fst rightUpperContext = rcsp.getRightUpperContext() ;
+				if (rightUpperContext != null)
+					rightUpperContext.setFromSymtab(true) ;
+				Fst rightLowerContext = rcsp.getRightLowerContext() ;
+				if (rightLowerContext != null)
+					rightLowerContext.setFromSymtab(true) ;
 
-				Fst leftUpperContext = hulden.Upper(rcsp.getLeftUpperContext()) ;
-				leftUpperContext.setFromSymtab(true) ;
-				Fst leftLowerContext = hulden.Lower(rcsp.getLeftLowerContext()) ;
-				leftLowerContext.setFromSymtab(true) ;
+				Fst finalLeftContext = lib.EmptyStringLanguageFst() ;
+				Fst finalRightContext = lib.EmptyStringLanguageFst() ;
+				// left as the empty string language for missing two-level
+				// contexts
 
-				Fst rightUpperContext = hulden.Upper(rcsp.getRightUpperContext()) ;
-				rightUpperContext.setFromSymtab(true) ;
-				Fst rightLowerContext = hulden.Lower(rcsp.getRightLowerContext()) ;
-				rightLowerContext.setFromSymtab(true) ;
+				if (leftUpperContext != null) {
+					if (leftLowerContext != null) {
+						// an overt left context in a two-level context
+						finalLeftContext = lib.Intersect(hulden.Upper(leftUpperContext), hulden.Lower(leftLowerContext)) ;
+					} else {
+						// an overt upper left context in a one-level context
+						finalLeftContext = hulden.Upper(leftUpperContext) ;
+					}
+				} else if (leftLowerContext != null) {
+					finalLeftContext = hulden.Lower(leftLowerContext) ;
+				}
+
+				if (rightUpperContext != null) {
+					if (rightLowerContext != null) {
+						// an overt right context in a two-level context
+						finalRightContext = lib.Intersect(hulden.Upper(rightUpperContext), hulden.Lower(rightLowerContext)) ;
+					} else {
+						// an overt upper right context in a one-level context
+						finalRightContext = hulden.Upper(rightUpperContext) ;
+					}
+				} else if (rightLowerContext != null) {
+					finalRightContext = hulden.Lower(rightLowerContext) ;
+				}
+
+				finalLeftContext.setFromSymtab(true) ;
+				finalRightContext.setFromSymtab(true) ;
+
 
 				Fst dfs = hulden.DeleteFirstSymbol(cp) ;
 
@@ -3209,46 +3287,26 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				//              (Lu & Ll) _ DeleteFirstSymbol(CP(A,B)) (Ru & Rl)
 				//              or now possibly            CPMarkup(X,Y,Z)
 				//              both called just "cp" at this point
-
-				// one-level contexts
-				//Fst restContextFst = interpRestrictionContext(lib.CopyFst(L),
-				//											  lib.Concat(dfs, lib.CopyFst(R))
-				//	) ;
-		
-				//Fst leftIntersectedContext =  lib.Intersect(lib.CopyFst(leftUpper), 
-				//											lib.CopyFst(leftLower)) ;
-				//Fst rightIntersectedContext = lib.Intersect(lib.CopyFst(rightUpper), 
-				//											lib.CopyFst(rightLower)) ;
-
-				Fst leftIntersectedContext =  lib.Intersect(leftUpperContext, leftLowerContext) ;
-				leftIntersectedContext.setFromSymtab(true) ;
-
-				Fst rightIntersectedContext = lib.Intersect(rightUpperContext, rightLowerContext) ;
-
-				rightIntersectedContext.setFromSymtab(true) ;
+				// for missing two-level contexts, e.g.  a -> b / a:b 2_2
+				// the right context is just the empty string language
 
 				if (epenthesis) {
 					// then add an extra constraint for epenthesis
 					if (arrowType == RuleArrowType.RIGHT) {
-						leftIntersectedContext = hulden.EPContextL_RIGHT_ARROW(leftIntersectedContext) ;
-						leftIntersectedContext.setFromSymtab(true) ;
-						rightIntersectedContext = hulden.EPContextR_RIGHT_ARROW(rightIntersectedContext) ;
-						rightIntersectedContext.setFromSymtab(true) ;
+						finalLeftContext = hulden.EPContextL_RIGHT_ARROW(finalLeftContext) ;
+						finalLeftContext.setFromSymtab(true) ;
+						finalRightContext = hulden.EPContextR_RIGHT_ARROW(finalRightContext) ;
+						finalRightContext.setFromSymtab(true) ;
 					} else {
-						leftIntersectedContext = hulden.EPContextL_LEFT_ARROW(leftIntersectedContext) ;
-						leftIntersectedContext.setFromSymtab(true) ;
-						rightIntersectedContext = hulden.EPContextR_LEFT_ARROW(rightIntersectedContext) ;
-						rightIntersectedContext.setFromSymtab(true) ;
+						finalLeftContext = hulden.EPContextL_LEFT_ARROW(finalLeftContext) ;
+						finalLeftContext.setFromSymtab(true) ;
+						finalRightContext = hulden.EPContextR_LEFT_ARROW(finalRightContext) ;
+						finalRightContext.setFromSymtab(true) ;
 					}
 				}
 
-				//Fst restContextFst = interpRestrictionContext(
-				//				lib.CopyFst(leftIntersectedContext) ,
-				//				lib.Concat(dfs, lib.CopyFst(rightIntersectedContext))
-				//);
-				//
-				Fst leftRestrictionContext  = leftIntersectedContext ;
-				Fst rightRestrictionContext = lib.Concat(dfs, rightIntersectedContext) ;
+				Fst leftRestrictionContext  = finalLeftContext ;
+				Fst rightRestrictionContext = lib.Concat(dfs, finalRightContext) ;
 
 				// interpRestrictionContext makes sure that the two context parts do
 				// not contain the restDelimSym (shown as x here), and returns
@@ -3279,27 +3337,24 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						// rules like a* {min} -> b  during interpretation.
 					} else {
 
-						Fst difference ;
-						
+						Fst inputFst = null ;	
 						if (arrowType == RuleArrowType.RIGHT) {
 							// in a rightArrow obligatory rule, need to  
 							// make sure that no unrewritten As occur
 							// in the context (or unrewritten X in a Markup rule)
-							Fst inputFst = (mapType == RuleMapType.MAP) ? A : X ;
-							difference = lib.Difference(	inputFst,
-															lib.EmptyStringLanguageFst()
-													   ) ;
+							inputFst = (mapType == RuleMapType.MAP) ? A : X ;
 						} else {
 							// for a left-arrow rule, the B (or X) is the input
-							Fst inputFst = (mapType == RuleMapType.MAP) ? B : X ;
-							difference = lib.Difference(	inputFst,
-															lib.EmptyStringLanguageFst()
-													   ) ;
+							inputFst = (mapType == RuleMapType.MAP) ? B : X ;
 						}
+						Fst difference = lib.Difference(	inputFst,
+															lib.EmptyStringLanguageFst()
+															) ;
 						difference.setFromSymtab(true) ;
 
 						unrewritten = hulden.Unrewritten(difference) ;
 						// suitable for matchType == RuleMatchType.ALL
+						unrewritten.setFromSymtab(true) ;
 
 						if (matchType == RuleMatchType.MAX_L2R) {
 							// need to add more constraints
@@ -3313,33 +3368,25 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 															hulden.Shortest(difference),
 															hulden.Leftmost(difference)
 														) ;
+						} else if (matchType == RuleMatchType.MAX_R2L) {
+							unrewritten = lib.Union3Fsts(	unrewritten,
+															hulden.Longest(difference),
+						 									hulden.Rightmost(difference)
+						 								) ;
+						} else if (matchType == RuleMatchType.MIN_R2L) {
+							unrewritten = lib.Union3Fsts(	unrewritten,
+							 								hulden.Shortest(difference),
+															hulden.Rightmost(difference)
+														) ;
 						}
-						// Unclear if these are possible in such a simple approach.
-						// else if (matchType == RuleMatchType.MAX_R2L) {
-						//  unrewritten = lib.Union3Fsts(	unrewritten,
-						//  								hulden.Longest(difference),
-						//  								hulden.Rightmost(difference)
-						//  								) ;
-						//  } else if (matchType == RuleMatchType.MIN_R2L) {
-						//  unrewritten = lib.Union3Fsts(	unrewritten,
-						//  								hulden.Shortest(difference),
-						//  								hulden.Rightmost(difference)
-						//  								) ;
-						//  }
 					}
 
-					//Fst notContain = hulden.NotContain(lib.Concat3Fsts(
-					//						 			lib.CopyFst(L),
-					//									unrewritten,
-					//									lib.CopyFst(R)
-					//									) ;
-				
 					// get the "NotContain" constraint for one context (in an obligatory rule)
 					Fst notContain = hulden.NotContain(
 							lib.Concat3Fsts(
-									leftIntersectedContext,
+									finalLeftContext,
 									unrewritten,
-									rightIntersectedContext
+									finalRightContext
 							)
 					) ;
 
@@ -3385,7 +3432,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// Constraints makes sure that no unrewritten upper appears in a 
 		//     context where it should be rewritten.  
 		// Optional rules ->? do not use these Constraints.
-
+		
 		Fst AlternationRule = lib.Intersect3Fsts(Base, Context, Constraints) ;
 
 		Fst CleanAlternationRule = hulden.CleanupRule(AlternationRule) ;
@@ -3436,7 +3483,10 @@ class RuleSemanticParts {
 	private Fst upperLhs = null ;
 	private Fst lowerLhs = null ;
 
-	// a Markup rule will have both of the following non-null, and one of the above null
+	// a Markup rule will have both of the following non-null, 
+	// and one of the above null;  when these are set (by 
+	// compileRuleInCurrentFrame) CleanupSpecialSymbolsAction
+	// is called.
 	private Fst leftMarkupInsertion = null ;
 	private Fst rightMarkupInsertion = null ;
 
@@ -3549,63 +3599,96 @@ class RuleSemanticParts {
 }
 
 	ArrayList<RuleContextSemanticParts> compileRuleSyntacticContexts(RuleSyntacticParts rsynp, InterpData data) {
+		// Handle the set of contexts for one rule.
 		// Each syntactic context gets translated into one semantic context
 		//
-		// get the ArrayList of RuleContextSyntacticParts from the RuleSyntacticParts
-		// object
+		// Get the ArrayList of RuleContextSyntacticParts from the RuleSyntacticParts
+		// object.  Each RuleContextSyntacticParts contains two unevaluated ASTs:
+		// leftRuleContext and rightRuleContext (each can be null) and levels (ONE or TWO)
 		ArrayList<RuleContextSyntacticParts> contexts = rsynp.getContexts() ;
 
 		// the result will be a parallel ArrayList of RuleContextSemanticParts
 		ArrayList<RuleContextSemanticParts> result = new ArrayList<RuleContextSemanticParts>() ;
 
-		if (contexts == null) {
-			// then rule looks like a -> b
-			// equivalent to
-			// a -> b / .* _ .*
-			// KRB text
-			//result.add(new RuleContextSemanticParts(lib.EmptyStringLanguageFst(),
-			//										lib.EmptyStringLanguageFst(),
-			//										lib.EmptyStringLanguageFst(),
-			//									lib.EmptyStringLanguageFst())
-			//		   ) ;
-			result.add(new RuleContextSemanticParts(lib.UniversalLanguageFst(),
-													lib.UniversalLanguageFst(),
-													lib.UniversalLanguageFst(),
-													lib.UniversalLanguageFst())
-					   ) ;
+		// the arrowType is the same for the whole rule
+		RuleArrowType arrowType = rsynp.getArrowType() ;
 
+		if (contexts == null) {
+			// then the original rule looks like a -> b  with no overt context(s) at all, 
+			// equivalent to
+			// a -> b /  _      a <- b /  _
+			// or  
+			// a -> b / "" _ ""     a <- b /  "" _ ""
+			// These last forms are what we need to model here for Hulden's algorithms.
+			// Always pretend that there is one one-level context with empty-string left and right
+			if (arrowType == RuleArrowType.RIGHT) {
+				// order of arguments is leftUpper, leftLower, rightUpper, rightLower
+				// set the upper contexts to the empty string language
+				result.add(new RuleContextSemanticParts(lib.EmptyStringLanguageFst(),
+														null,
+														lib.EmptyStringLanguageFst(),
+														null)) ;
+			} else {
+				// for a left-arrow rule
+				// set the lower contexts to the empty string language
+				result.add(new RuleContextSemanticParts(null,
+														lib.EmptyStringLanguageFst(),
+														null,
+														lib.EmptyStringLanguageFst())) ;
+			}
+
+			// and we're done
 			return result ;
 		}
+
+		// Reaching here, there was at least one overt syntactic context, 
+		// but it could be empty like
+		// a -> b / _     or   a <- b /  _
+		// or partially empty like  a -> b / l _    or   a -> b /  _  r
+		// or  a -> b /  l _ r
 
 		for (Iterator<RuleContextSyntacticParts> iter = contexts.iterator(); iter.hasNext(); ) {
 			RuleContextSyntacticParts context = iter.next() ;
 
+			// each context can be one-level or two-level
 			RuleContextLevels levels = context.getLevels() ;
 
-			RuleArrowType arrowType = rsynp.getArrowType() ;
+			// default, start by setting all 4 semantic context parts (FSTs) to null
+			Fst leftUpperContext 	= null ;
+			Fst leftLowerContext 	= null ;
+			Fst rightUpperContext 	= null ;
+			Fst rightLowerContext 	= null ;
 
-			// default, set all 4 semantic context parts to the Empty String Language
-			//Fst leftUpperContext 	= lib.EmptyStringLanguageFst() ;
-			//Fst leftLowerContext 	= lib.EmptyStringLanguageFst() ;
-			//Fst rightUpperContext 	= lib.EmptyStringLanguageFst() ;
-			//Fst rightLowerContext 	= lib.EmptyStringLanguageFst() ;
-
-			// default, set all 4 semantic context parts to the Universal Language
-			Fst leftUpperContext 	= lib.UniversalLanguageFst() ;
-			Fst leftLowerContext 	= lib.UniversalLanguageFst() ;
-			Fst rightUpperContext 	= lib.UniversalLanguageFst() ;
-			Fst rightLowerContext 	= lib.UniversalLanguageFst() ;
-
-
-			// Each syntactic (AST) context has a maximum of two context parts,
-			// a left and a right context, either or both possibly null.
-			// Both null in a rule like a -> b /  _
-			// In the syntax, the right and left context are just regexps;
+			// In the syntax, the right and left context ASTs are just regexps;
 			// We don't know if they're acceptors or transducers until 
 			// they're evaluated.
 
 			ASTleft_rule_context leftRuleContextAst = context.getLeftRuleContext() ;
 			ASTright_rule_context rightRuleContextAst = context.getRightRuleContext() ;
+
+			if (leftRuleContextAst == null && rightRuleContextAst == null) {
+				// overt but empty context, e.g. a -> b /  _  or   a <- b / _ 
+				// Pretend that we have  a -> b / "" _ ""     or   a <- b / "" _ ""
+				// If the context is two-level, leave the nulls
+				// but if the context is one-level, then insert the empty string languages
+				if (levels == RuleContextLevels.ONE) {
+					if (rsynp.getArrowType() == RuleArrowType.RIGHT) {
+						// set the upper contexts to the empty string language
+						result.add(new RuleContextSemanticParts(lib.EmptyStringLanguageFst(),
+																null,
+																lib.EmptyStringLanguageFst(),
+																null)) ;
+					} else {
+						// for a left-arrow rule
+						// set the lower contexts to the empty string language
+						result.add(new RuleContextSemanticParts(null,
+																lib.EmptyStringLanguageFst(),
+																null,
+																lib.EmptyStringLanguageFst())) ;
+					}
+				}
+				continue ;
+			}
 
 			if (leftRuleContextAst != null) {
 				// then evaluate it
@@ -3631,6 +3714,19 @@ class RuleSemanticParts {
 					leftUpperContext = lib.InputProjection(leftContext) ;
 					leftLowerContext = lib.OutputProjection(leftContext) ;
 				}
+			} else {
+				// the left context is empty:  a -> b /  _  r  or   a <- b /  _  r
+				// Handle it like  a -> b / "" _ r    or   a <- b / ""  _  r
+				// If it's a two-level context, just leave leftUpperContext and
+				// leftLowerContext set to null for Hulden's algorithms
+				if (levels == RuleContextLevels.ONE) {
+					if (arrowType == RuleArrowType.RIGHT) {
+						leftUpperContext = lib.EmptyStringLanguageFst() ;
+					} else {
+						// for a left-arrow rule
+						leftLowerContext = lib.EmptyStringLanguageFst() ;
+					}
+				}
 			}
 
 			if (rightRuleContextAst != null) {
@@ -3655,16 +3751,46 @@ class RuleSemanticParts {
 					rightUpperContext = lib.InputProjection(rightContext) ;
 					rightLowerContext = lib.OutputProjection(rightContext) ;
 				}
+			} else {
+				// the right context is empty:  a -> b / l  _    or  a <- b / l _
+				// Handle it like a -> b / l _ ""  or  a <-b / l _ ""
+				// If it's a two-level context, just leave leftUpperContext and
+				// leftLowerContext set to null for Hulden's algorithms
+				if (levels == RuleContextLevels.ONE) {
+					if (arrowType == RuleArrowType.RIGHT) {
+						rightUpperContext = lib.EmptyStringLanguageFst() ;
+					} else {
+						rightLowerContext = lib.EmptyStringLanguageFst() ;
+					}
+				}
 			}
 
-			Fst Lu = hulden.CleanupSpecialSymbolsContext(leftUpperContext) ;
-			Lu.setFromSymtab(true) ;
-			Fst Ll = hulden.CleanupSpecialSymbolsContext(leftLowerContext) ;
-			Ll.setFromSymtab(true) ;
-			Fst Ru = hulden.CleanupSpecialSymbolsContext(rightUpperContext) ;
-			Ru.setFromSymtab(true) ;
-			Fst Rl = hulden.CleanupSpecialSymbolsContext(rightLowerContext) ;
-			Rl.setFromSymtab(true) ;
+			// make sure that none of the context parts contains special
+			// characters used when compiling the rules
+
+			Fst Lu = leftUpperContext ;
+			if (Lu != null) {
+				Lu = hulden.CleanupSpecialSymbolsContext(Lu) ;
+			}
+			//Lu.setFromSymtab(true) ;
+
+			Fst Ll = leftLowerContext ;
+			if (Ll != null) {
+				Ll = hulden.CleanupSpecialSymbolsContext(Ll) ;
+			}
+			//Ll.setFromSymtab(true) ;
+
+			Fst Ru = rightUpperContext ;
+			if (Ru != null) {
+				Ru = hulden.CleanupSpecialSymbolsContext(Ru) ;
+			}
+			//Ru.setFromSymtab(true) ;
+
+			Fst Rl = rightLowerContext ;
+			if (Rl != null) {
+				Rl = hulden.CleanupSpecialSymbolsContext(Rl) ;
+			}
+			//Rl.setFromSymtab(true) ;
 
 			result.add(new RuleContextSemanticParts(Lu, Ll, Ru, Rl)) ;
 		}
@@ -3673,8 +3799,9 @@ class RuleSemanticParts {
 
 	ArrayList<RuleSemanticParts> compileRuleInCurrentFrame(RuleSyntacticParts rsynp, InterpData data) {
 		// Don't worry about the where clauses (localVarSettings in the rsynp) here;
-		// This method is called alled from compileRuleSyntacticParts, which takes care of the where
-		// clauses and setting the local variables (one set of them at a time)
+		// This method is called from compileRuleSyntacticParts, which takes care of
+		// the where clauses and setting the local variables 
+		// (one set of them at a time)
 		
 		// Usually return one RuleSemanticParts
 		// But if the input expression (upper in a right-arrow rule, lower in a
@@ -3688,11 +3815,15 @@ class RuleSemanticParts {
 		RuleMapType   mapType   = rsynp.getMapType() ;
 		
 		// the return value
-		ArrayList<RuleSemanticParts> oneOrTwoRuleSemanticParts = new ArrayList<RuleSemanticParts>() ;
+		ArrayList<RuleSemanticParts> oneOrTwoRuleSemanticParts = 
+										new ArrayList<RuleSemanticParts>() ;
 
-		// there's always one RuleSemanticParts returned, here called the "basicRuleSemanticParts"
-		// if the rule is an epenthesis rule, then a second RuleSemanticParts is returned as well
+		// there's always one RuleSemanticParts returned, here called the 
+		// "basicRuleSemanticParts" if the input expression matches the
+		// empty string, and is not just the empty string, 
+		// then a second RuleSemanticParts is returned as well
 		RuleSemanticParts basicRuleSemanticParts = new RuleSemanticParts() ;
+
 		basicRuleSemanticParts.setArrowType(arrowType) ;
 		basicRuleSemanticParts.setObligType(obligType) ;
 		basicRuleSemanticParts.setMatchType(matchType) ;
@@ -3701,7 +3832,8 @@ class RuleSemanticParts {
 		// Handle the LHS
 
 		if ( mapType == RuleMapType.MARKUP ) {
-			// Markup Rule; either the left insertion xor the right insertion could be syntactically missing
+			// Markup Rule; either the left insertion xor the right insertion 
+			// could be syntactically missing
 			Fst leftMarkupInsertion = null ;
 			if (rsynp.getLeftMarkupInsertion() != null) {
 				rsynp.getLeftMarkupInsertion().jjtAccept(this, data) ;
@@ -3766,8 +3898,8 @@ class RuleSemanticParts {
 
 			if (	(matchType == RuleMatchType.MAX_L2R)
 				||	(matchType == RuleMatchType.MIN_L2R)
-				//||  (matchType == RuleMatchType.MAX_R2L) // not implemented yet
-				//||  (matchType == RuleMatchType.MIN_R2L)
+				||  (matchType == RuleMatchType.MAX_R2L)
+				||  (matchType == RuleMatchType.MIN_R2L)
 				) {
 				throw new RuleSemanticException("The input expression to a {max} or {min} rule can match the empty string.") ;
 			}
@@ -3818,22 +3950,23 @@ class RuleSemanticParts {
 
 	ArrayList<RuleSemanticParts> compileRuleSyntacticParts(RuleSyntacticParts rsynp, InterpData data) {
 
-		// input is one RuleSyntacticParts object, created from one Rule AST.
+		// input is one RuleSyntacticParts object, representing one syntactic Rule AST.
 		// One RuleSyntacticParts object can result in multiple RuleSemanticParts
 		// objects because of where clauses and/or epenthesis.  They are returned
 		// as an ArrayList<RuleSemanticParts>
 	
 		ArrayList<RuleSemanticParts> result = new ArrayList<RuleSemanticParts>() ;
 
-		// get the local variables settings (if any, originally from where clauses)
+		// get the local variables settings (if any, originally from 'where' clauses)
 		ArrayList<ArrayList<RuleLocalVarSetting>> localVarSettings = rsynp.getLocalVarSettings() ;
 
 		if (localVarSettings != null) {
 			// There are local rule-var settings from where clauses.
 			// The settings will be done in a new Frame to prevent interference
-			// with existing variables.
+			// with existing variables in the current and higher frames.
 
 			env.allocateFrame() ;		// Push to a new Frame here
+										// (see env.releaseFrame() below)
 
 			ArrayList<RuleLocalVarSetting> oneSetOfSettings = null ;
 			for (int i = 0; i < localVarSettings.size(); i++) {
@@ -3851,15 +3984,17 @@ class RuleSemanticParts {
 				// then the compilation will result in two RuleSemanticParts objects because
 				// the epenthesis part is split into a separate parallel rule
 				ArrayList<RuleSemanticParts> oneOrTwoRuleSemanticParts = compileRuleInCurrentFrame(rsynp, data) ;
+				// add the RuleSemanticParts from these variable settings to the result
 				result.addAll(oneOrTwoRuleSemanticParts) ;
 			}
 				
 			env.releaseFrame() ;		// Pop back to orig frame here
 
 		} else {
-			// no local rule variables from where clauses
+			// simple case; no local rule variables from where clauses
 
 			ArrayList<RuleSemanticParts> oneOrTwoRuleSemanticParts = compileRuleInCurrentFrame(rsynp, data) ;
+			// add the RuleSemanticParts from these variable settings to the result
 			result.addAll(oneOrTwoRuleSemanticParts) ;
 		}
 
@@ -3874,9 +4009,11 @@ class RuleSemanticParts {
 		// a -> b / left _ right
 		// a -> b / l1 _ r1 || l2 _ r2 ...   (one rule with multiple contexts)
 		// 		With optional where clause(s)
+		// a -> b where { ... }
 		// a -> b / l _ r where {...}        (there can be multiple where clauses)
 		//
-		// Can also be a right-arrow Markup Rule with   X -> Y ... Z / ...
+		// rule_right_arrow_oblig can also be a right-arrow Markup Rule with   
+		// 		X -> Y ... Z / ...
 		
 		int daughterCount = node.jjtGetNumChildren() ;
 		// if 1, then rule_lhs only
@@ -3894,12 +4031,13 @@ class RuleSemanticParts {
 		// RuleSyntacticParts object
 
 		// set what we know from the rule arrow
-		ruleSyntacticParts.setArrowType(RuleArrowType.RIGHT) ;
-		ruleSyntacticParts.setObligType(RuleObligType.OBLIG) ;
-		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;
+		ruleSyntacticParts.setArrowType(RuleArrowType.RIGHT) ; 	// right-arrow, 
+																//    not left-arrow
+		ruleSyntacticParts.setObligType(RuleObligType.OBLIG) ;	// oblig not optional
+		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;	// not max or min
 
-		// Collect the parts from the rest of the AST, if any, starting
-		// at Child(1).
+		// Collect the rule parts from the rest of the AST, if any, starting
+		// at Child(1).  (Child(0), the rule_lhs, was just handled above)
 		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
 		for (int i = 1; i < daughterCount; i++) {
 			Object obj = node.jjtGetChild(i) ;
@@ -3916,23 +4054,30 @@ class RuleSemanticParts {
 			}
 		}
 
-		// the big advantage of the RuleSyntacticParts is that it organizes the local var
-		// settings for the where-clauses
+		// the big advantage of the RuleSyntacticParts is that it organizes the 
+		// local var settings for the where-clauses
 
-		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
-		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+		// now convert the one RuleSemanticParts object into a list of 
+		// RuleSemanticParts objects.  Can be one to many because of where-clauses 
+		// and/or epenthesis.
 
 		ArrayList<RuleSemanticParts> listOfRuleSemanticParts = 
 						compileRuleSyntacticParts(ruleSyntacticParts, (InterpData) data) ;
 
 		// If the mother node is ASTnet_parallel_func_call, 
 		// just push the listOfRuleSemanticParts.
-		// but if not, then convert the listOfRuleSemanticParts into an Fst and push the Fst
+		// But if not, then convert the listOfRuleSemanticParts into an Fst
+		// 	and push the Fst
 
 		Object mother = node.jjtGetParent() ;
 		if (mother instanceof ASTnet_parallel_func_call) {
+			// then just push the listOfRuleSemanticParts on the stack,
+			// to be popped off and used by net_parallel_func_call, which
+			// will call compileRuleSemanticParts
 			stack.push(listOfRuleSemanticParts) ;
 		} else {
+			// call compileRuleSemanticParts directly, and push the resulting
+			// single Fst on the stack
 			stack.push(compileRuleSemanticParts(listOfRuleSemanticParts)) ;
 		}
 
@@ -4008,14 +4153,14 @@ class RuleSemanticParts {
 		return data ;		
     }
 	public Object visit(ASTrule_right_arrow_max_l2r node, Object data) {
-		// a {max}-> b
+		// a {max}-> b   or     a {maxl2r}-> b  (equivalent)
 		// 		With optional context(s)
 		// a {max}-> b / left _ right
 		// a {max}-> b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
 		// 		With optional where clause(s)
 		// a {max}-> b / l _ r where {...}        (there can be multiple where clauses)
 		//
-		// Can also be a Markup Rule   X {max}-> Y ... Z / ...
+		// Can also be a Markup Rule   X {max}-> Y ~~~ Z / ...
 
 		int daughterCount = node.jjtGetNumChildren() ;
 		// if 1, then rule_lhs only
@@ -4074,8 +4219,76 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+	public Object visit(ASTrule_right_arrow_max_r2l node, Object data) {
+		// a {maxr2l}-> b
+		// 		With optional context(s)
+		// a {maxr2l}-> b / left _ right
+		// a {maxr2l}-> b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
+		// 		With optional where clause(s)
+		// a {maxr2l}-> b / l _ r where {...}        (there can be multiple where clauses)
+		//
+		// Can also be a Markup Rule   X {maxr2l}-> Y ~~~ Z / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs as the 0th child, 
+		// with upper and lower ASTs; evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_R2L) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+
 	public Object visit(ASTrule_right_arrow_min_l2r node, Object data) {
-		// a {min}-> b
+		// a {min}-> b   or    a {minl2r}-> b   (equivalent)
 		// 		With optional context(s)
 		// a {min}-> b / left _ right
 		// a {min}-> b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
@@ -4101,6 +4314,73 @@ class RuleSemanticParts {
 		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
 		rsynpt.setObligType(RuleObligType.OBLIG) ;
 		rsynpt.setMatchType(RuleMatchType.MIN_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_right_arrow_min_r2l node, Object data) {
+		// a {minr2l}-> b
+		// 		With optional context(s)
+		// a {minr2l}-> b / left _ right
+		// a {minr2l}-> b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
+		// 		With optional where clause(s)
+		// a {minr2l}-> b / l _ r where {...}        (there can be multiple where clauses)
+		//
+		// Can also be a Markup Rule   X  {minr2l}->  Y .. Z / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs as the 0th child, 
+		// with upper and lower ASTs; evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_R2L) ;
 
 		// Collect the parts from the rest of the AST, if any, starting
 		// at Child(1).
@@ -4277,7 +4557,7 @@ class RuleSemanticParts {
     }
 
 	public Object visit(ASTrule_left_arrow_max_l2r node, Object data) {
-		// a <-{max} b
+		// a <-{max} b   or   a <-{maxl2r}    (equivalent)
 		// 		With optional context(s)
 		// a <-{max} b / left _ right
 		// a <-{max} b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
@@ -4343,8 +4623,76 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+
+	public Object visit(ASTrule_left_arrow_max_r2l node, Object data) {
+		// a <-{maxr2l}  
+		// 		With optional context(s)
+		// a <-{maxr2l} b / left _ right
+		// a <-{maxr2l} b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
+		// 		With optional where clause(s)
+		// a <-{maxr2l} b / l _ r where {...}        (there can be multiple where clauses)
+		//
+		// Can also be a Markup Rule   Y ... Z  <-{maxr2l}  X  / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs as the 0th child, 
+		// with upper and lower ASTs; evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_R2L) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
 	public Object visit(ASTrule_left_arrow_min_l2r node, Object data) {
-		// a <-{min} b
+		// a <-{min} b   or    a <-{minl2r}  b    (equivalent)
 		// 		With optional context(s)
 		// a <-{min} b / left _ right
 		// a <-{min} b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
@@ -4410,6 +4758,75 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+
+	public Object visit(ASTrule_left_arrow_min_r2l node, Object data) {
+		// a <-{minr2l}  b 
+		// 		With optional context(s)
+		// a <-{minr2l} b / left _ right
+		// a <-{minr2l} b / l1 _ r1 || l2 _ r2 ...   (one rule with mult. contexts)
+		// 		With optional where clause(s)
+		// a <-{minr2l} b / l _ r where {...}        (there can be multiple where clauses)
+		//
+		// Can also be a Markup Rule  Y ... Z <-{minr2l}  X / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs as the 0th child, 
+		// with upper and lower ASTs; evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_R2L) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+
 
     public Object visit(ASTrestriction_exp node, Object data) {
 		// 2 daughters:  restriction_lhs
@@ -6117,16 +6534,16 @@ class RuleSemanticParts {
 		stack.push(resultFst) ;
 		return data ;
 	}
-	public Object visit(ASTnet_read_xml_call node, Object data) {
-		// just $^__readXML($filepath)  built-in
-		// wrapped with $^readXML($filepath)
-		// just one daughter for $^__readXML() (syntactically
+	public Object visit(ASTnet_read_xml_func_call node, Object data) {
+		// just $^__readXml($filepath)  built-in
+		// wrapped with $^readXml($filepath)
+		// just one daughter for $^__readXml() (syntactically
 		// constrained by the parser)
 		node.jjtGetChild(0).jjtAccept(this, data) ;
 		// leaves an Fst object on the stack
 		Fst pathFst = (Fst) stack.pop() ;
 
-		String userTyped = lib.GetSingleString(pathFst, "First arg to readXML must denote a language of exactly one string, denoting a file path") ;
+		String userTyped = lib.GetSingleString(pathFst, "First arg to readXml must denote a language of exactly one string, denoting a file path") ;
 
 		String fullpath = getFullpath(userTyped) ;
 
@@ -6137,12 +6554,50 @@ class RuleSemanticParts {
 		} catch (Exception e) {
 			// catch the hard Exception and
 			// throw a RuntimeException here, so that Kleene can recover
-			throw new FuncCallException("Problem in $^readXML() reading indicated file.") ;
+			throw new FuncCallException("Problem in $^readXml() reading indicated file.") ;
+		}
+		stack.push(resultFst) ;
+
+		return data ;
+	}
+	public Object visit(ASTnet_rand_gen_func_call node, Object data) {
+		// $^randGen($fst, npath, max_length)
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		Fst fst = (Fst) stack.pop() ;
+
+		long npath ;
+		long max_length ;
+
+		// second arg is the number of paths to leave in the resultFst
+		node.jjtGetChild(1).jjtAccept(this, data) ;
+		// leaves a Long or Double object on the stack
+		Object obj = stack.pop() ;
+
+		// get long from either Long or Double
+		if (obj instanceof Long) {
+			npath = ((Long)obj).longValue() ;
+		} else {
+			npath = ((Double)obj).longValue() ;
 		}
 
+		// third arg is the maximum length of any single path
+		node.jjtGetChild(2).jjtAccept(this, data) ;
+		// leaves a Long or Double object on the stack
+		obj = stack.pop() ;
+
+		// get long from either Long or Double
+		if (obj instanceof Long) {
+			max_length = ((Long)obj).longValue() ;
+		} else {
+			max_length = ((Double)obj).longValue() ;
+		}
+
+		// compute the random subset of fst
+		Fst resultFst = lib.RandGen(fst, npath, max_length) ;
 		stack.push(resultFst) ;
+
 		return data ;
-	} 
+	}
 	public Object visit(ASTnet_start_func_call node, Object data) {
 		// syntax:   $^start($>foo)   a built-in function-like regexp
 		// Not really implemented as a function, cannot be aliased, i.e.
@@ -6387,6 +6842,32 @@ class RuleSemanticParts {
 		Fst fst = (Fst) stack.pop() ;
 
 		if (lib.IsCyclic(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+	public Object visit(ASTlng_is_ubounded_func_call node, Object data) {
+		// just #^__isUBounded($net)  built-in, wrapped as #^isUBounded($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsUBounded(fst))
+			stack.push(new Long(1)) ;
+		else 
+			stack.push(new Long(0)) ;
+		return data ;
+	}
+	public Object visit(ASTlng_is_lbounded_func_call node, Object data) {
+		// just #^__isLBounded($net)  built-in, wrapped as #^isLBounded($net)
+		// should be just one daughter: arg_list with one net
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves an Fst object on the stack
+		Fst fst = (Fst) stack.pop() ;
+
+		if (lib.IsLBounded(fst))
 			stack.push(new Long(1)) ;
 		else 
 			stack.push(new Long(0)) ;
@@ -8405,6 +8886,122 @@ class RuleSemanticParts {
 
 		return data ;
     }
+
+	void rand_common(SimpleNode node, int projection, Object data) {
+		// node:
+		// required first arg is a regexp()
+		// optional second arg is numexp() (npathval, the number of desired paths)
+		// optional third arg is numexp() (max_lengthval)
+
+		// projection
+		// 0 for input projection
+		// 1 for output projection
+		// 2 for leave both projections (not implemented yet)
+		
+		// evaluate the first argument (a regexp())
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		Fst fst = (Fst)(stack.pop()) ;
+
+		long npathval = 15L ;	// arbitrary magic number, default
+		long max_lengthval = 50L ;	// arbitrary magic number, default
+		int displayLimit = 500 ;	// arbitrary magic number, default
+
+		int childCount = node.jjtGetNumChildren() ;
+
+		if (childCount > 1 ) {
+			// then npath is explicitly specified, e.g. 20
+			//  (the user wants 20 words printed out)
+			node.jjtGetChild(1).jjtAccept(this, data) ;
+			// will leave a Long or Double on the stack
+			Object obj = stack.pop() ;
+
+			if (obj instanceof Long) {
+				npathval = ((Long)obj).longValue() ;
+			} else {
+				npathval = ((Double)obj).longValue() ;
+			}
+		}
+
+		if (childCount > 2) {
+			// then max_length is also explicitly specified
+			node.jjtGetChild(2).jjtAccept(this, data) ;
+			// will leave a Long or Double on the stack
+			Object obj = stack.pop() ;
+
+			if (obj instanceof Long) {
+				max_lengthval = ((Long)obj).longValue() ;
+			} else {
+				max_lengthval = ((Double)obj).longValue() ;
+			}
+		}
+
+		// compute the random subset of fst
+		Fst resultFst = lib.RandGen(fst, npathval, max_lengthval) ;
+
+		String sepString = "\n" ;
+
+		long stringCount = lib.NumPaths(resultFst) ;
+		PseudoTerminalInternalFrame terminal = null ;
+		if (((InterpData)data).getInGUI()) {
+			terminal = ((InterpData)data).getGUI().getTerminal() ;
+		}
+
+		if (stringCount == 0) {
+			String msg = "(language is empty)" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		} else if (stringCount == -1) {
+			// then has loops, infinite language
+			// SHOULD NOT BE POSSIBLE HERE
+			String msg = "(language is infinite)" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		} else if (stringCount <= displayLimit) {
+			// then just list them (parameterize this figure later)
+			if (terminal != null) {
+				FstStringLister lister = new FstStringLister(terminal, symmap) ;
+				// native function;  second arg 0 is for input side, 1 for output side
+				lib.ListAllStrings(resultFst, projection, lister) ; 
+			} else {
+				FstSystemStringLister sysLister = new FstSystemStringLister(symmap, sepString) ;
+				lib.ListAllStrings(resultFst, projection, sysLister) ;
+			}
+		} else {
+			String msg = "(language exceeds displayLimit: " + displayLimit + ")" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		}
+	}
+	
+
+	public Object visit(ASTrand_input_statement node, Object data) {
+		// 0 for input projection
+		rand_common(node, 0, data) ;
+		return data ;
+	}
+	public Object visit(ASTrand_output_statement node, Object data) {
+		// 1 for output projection
+		rand_common(node, 1, data) ;
+		return data ;
+	}
+/*
+ * See rand_common above, can't currently handle both projections with ListAllStrings()
+	public Object visit(ASTrand_output_statement node, Object data) {
+		// 2 for both projections
+		rand_common(node, 2, data) ;
+		return data ;
+	}
+*/
+
     public Object visit(ASTnum_list_func_call node, Object data) {
 		// Usual Syntax:  #@^__tail(#@arr)    has a NumList value
 		//
@@ -10737,10 +11334,10 @@ class RuleSemanticParts {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst pathFst = (Fst)(stack.pop()) ;
 
-			path = lib.GetSingleString(pathFst, "Second arg to writeXML must denote a language of exactly one string.") ;
+			path = lib.GetSingleString(pathFst, "Second arg to writeXml must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
-				throw new KleeneArgException("Second arg to writeXML must denote a non-empty string") ;
+				throw new KleeneArgException("Second arg to writeXml must denote a non-empty string") ;
 			}
 		}
 
@@ -10749,10 +11346,10 @@ class RuleSemanticParts {
 			node.jjtGetChild(2).jjtAccept(this, data) ;
 			Fst encodingFst = (Fst)(stack.pop()) ;
 
-			encoding = lib.GetSingleString(encodingFst, "Second arg to writeXML must denote a language of exactly one string.") ;
+			encoding = lib.GetSingleString(encodingFst, "Second arg to writeXml must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
-				throw new KleeneArgException("Second arg to writeXML must denote a non-empty string") ;
+				throw new KleeneArgException("Second arg to writeXml must denote a non-empty string") ;
 			}
 		}
 
@@ -10761,7 +11358,60 @@ class RuleSemanticParts {
 		// note that the FstXmlWriter gets the filepath, so it knows where
 		// to write the file
 
-		writeXMLhelper(fst, fullpath, encoding) ;
+		writeXmlHelper(fst, fullpath, encoding) ;
+		
+		return data ;  
+	}
+	public Object visit(ASTwritexml_state_oriented_statement node, Object data) {
+		// One, two, three or four daughters: the first is required
+		// fst (, filepath (, name (, encoding )?)?)?
+		//   The first is a regexp that represents the Fst to be written as XML
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// Should leave an Fst object on the stack
+		Fst fst = (Fst)(stack.pop()) ;
+
+		String path = "out.xml" ;	// default name of output file
+		if (node.jjtGetNumChildren() >= 2) {
+			node.jjtGetChild(1).jjtAccept(this, data) ;
+			Fst pathFst = (Fst)(stack.pop()) ;
+
+			path = lib.GetSingleString(pathFst, "Second arg to writeXml must denote a language of exactly one string.") ;
+			
+			if (path.length() == 0) {
+				throw new KleeneArgException("Second arg to writeXml must denote a non-empty string") ;
+			}
+		}
+
+		String name = "Out" ;	// default name of code file, e.g. Out.java
+		if (node.jjtGetNumChildren() >= 3) {
+			node.jjtGetChild(2).jjtAccept(this, data) ;
+			Fst nameFst = (Fst)(stack.pop()) ;
+
+			name = lib.GetSingleString(nameFst, "Third arg to writeXml must denote a language of exactly one string.") ;
+			
+			if (name.length() == 0) {
+				throw new KleeneArgException("Third arg to writeXml must denote a non-empty string") ;
+			}
+		}
+
+		String encoding = "UTF-8" ;	// default
+		if (node.jjtGetNumChildren() == 4) {
+			node.jjtGetChild(3).jjtAccept(this, data) ;
+			Fst encodingFst = (Fst)(stack.pop()) ;
+
+			encoding = lib.GetSingleString(encodingFst, "Fourth arg to writeXml must denote a language of exactly one string.") ;
+			
+			if (encoding.length() == 0) {
+				throw new KleeneArgException("Fourth arg to writeXml must denote a non-empty string") ;
+			}
+		}
+
+		String fullpath = getFullpath(path) ;
+
+		// note that the FstXmlWriter gets the filepath, so it knows where
+		// to write the file
+
+		writeXmlHelperStateOriented(fst, fullpath, name, encoding) ;
 		
 		return data ;  
 	}
@@ -10778,10 +11428,10 @@ class RuleSemanticParts {
 			node.jjtGetChild(1).jjtAccept(this, data) ;
 			Fst pathFst = (Fst)(stack.pop()) ;
 
-			path = lib.GetSingleString(pathFst, "Second arg to writeDOT must denote a language of exactly one string.") ;
+			path = lib.GetSingleString(pathFst, "Second arg to writeDot must denote a language of exactly one string.") ;
 			
 			if (path.length() == 0) {
-				throw new KleeneArgException("Second arg to writeDOT must denote a non-empty string") ;
+				throw new KleeneArgException("Second arg to writeDot must denote a non-empty string") ;
 			}
 		}
 
@@ -10790,10 +11440,10 @@ class RuleSemanticParts {
 			node.jjtGetChild(2).jjtAccept(this, data) ;
 			Fst encodingFst = (Fst)(stack.pop()) ;
 
-			encoding = lib.GetSingleString(encodingFst, "Third arg to writeDOT must denote a language of exactly one string.") ;
+			encoding = lib.GetSingleString(encodingFst, "Third arg to writeDot must denote a language of exactly one string.") ;
 			
 			if (encoding.length() == 0) {
-				throw new KleeneArgException("Third arg to writeDOT must denote a non-empty string") ;
+				throw new KleeneArgException("Third arg to writeDot must denote a non-empty string") ;
 			}
 		}
 

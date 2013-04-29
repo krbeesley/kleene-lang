@@ -1,0 +1,70 @@
+\chapter{\acro{gui} \fsm{} Testing and \acro{other}}
+
+\label{app:test}
+
+In the Kleene \acro{gui}, using the \texttt{test} window, you can type in
+individual strings for generation or analysis, and see the output string
+or strings displayed in the terminal window.  When testing \fsm{}s
+containing \acro{other} (i.e.\@ unknown) labels, the output may at first
+be unintuitive. 
+
+The first step is to understand that the \texttt{test} function implements
+the formal algorithm for applying an \fsm{} to an input string.  For
+generation using \verb!$testFst!
+
+\begin{enumerate}
+\item
+The input string is built into a one-path \fsm{}; think of it as \verb!$input!.
+\item
+The input \fsm{} is composed ``on top of'' the \verb!$testFst!, i.e.\@ 
+\verb!($input _o_ $testFst!)
+\item
+Then the output side (also known as the lower side) of the composition is extracted, i.e.\@
+\verb!$^lowerside($input _o_ $testFst)!.  The result is an acceptor. 
+\item
+Then, if the result acceptor is not empty, and the number of paths is finite, the strings are listed in the
+terminal window.
+\end{enumerate}
+
+\noindent
+Similarly for analysis, the result acceptor is computed as 
+\verb!$^upperside($testFst _o_ $input)!.
+
+The second important point is that if the \fsm{} being tested contains
+\acro{other\_nonid}, then any output strings containing unknown characters
+will display as \acro{other\_id} rather than \acro{other\_nonid}.  This is
+because when a projection (an acceptor) is extracted, the
+\acro{other\_nonid} label cannot appear in an acceptor and is
+automatically converted to \acro{other\_id}.
+
+\begin{Verbatim}[fontsize=\small]
+$testFst = .:. ;
+draw $testFst ;
+$generationresult = $^lowerside(z _o_ $testFst) ;
+draw $result ;
+
+test $testFst ;	// and enter z on top for generation
+\end{Verbatim}
+
+\noindent
+In this example, the \verb!$testFst! \fsm{} will contain both
+\acro{other\_id} and \acro{other\_nonid} labels, but the
+\verb!$generationresult! \fsm{}, and the printed output of testing
+\verb!$testFst! using the \texttt{test} facility, and generating
+\texttt{z}, will contain \acro{other\_id} and not \acro{other\_nonid}.
+Again, the reason is that the application algorithm extracts a projection
+of the composition, and a projection is an acceptor and cannot contain
+\acro{other\_nonid}.
+
+The final important point in interpreting the output is to understand
+that the meaning/coverage of \acro{other\_id} in the result should be
+interpreted relative to the \verb!$generationresult! or
+\verb!$analysisresult! \fsm{}, which is automatically created and
+displayed when using \texttt{test}.
+
+Other kinds of testing, using external runtime code, cannot reasonably
+implement the formal composition-plus-projection-extraction method of
+application, and the results will be different.  In the future, the
+Kleene \texttt{test} facility may offer a choice between the current
+formal method and alternative methods used in runtime code.
+

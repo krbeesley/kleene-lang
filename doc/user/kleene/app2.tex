@@ -1,0 +1,165 @@
+\chapter{Optimization of Networks}
+
+\label{app:optimize}
+
+\section{Automatic Optimization}
+
+The default behavior of Kleene is to optimize each network by calling
+the OpenFst Determinize(), Minimize() and RmEpsilon() functions wherever
+these operations are mathematically safe.  Note that an operation that is
+mathematically safe can still overwhelm the available memory or
+take a very long time to complete.
+
+In the Kleene interpreter, the Java function \texttt{optimizeInPlace()}
+is automatically called to optimize each new network, and it in turn
+calls a native \CPP{} function called \texttt{optimizeInPlaceNative()},
+which calls the OpenFst functions 
+Determinize(), Minimize() and RmEpsilon(), where
+mathematically safe.
+
+\section{Suppressing Automatic Optimization}
+
+In some cases it may be desirable or necessary to suppress all or part of
+the automatic optimization that Kleene performs by default.  For example,
+developers and advanced users might want to see what a network looks like
+before and after optimization.  More critically, in real applications the
+networks can easily get very large, and it may be necessary to suppress
+some optimization, especially the determinization step, to keep the
+networks from blowing up in size and/or taking forever to finish.
+
+Kleene defines (in the system-supplied 
+start-up file \verb!~/.kleene/global/basic.kl!) the following three
+special numeric variables which are interpreted as booleans (true or
+false):
+
+\begin{itemize}
+\item
+\#KLEENEdeterminize
+\item
+\#KLEENEminimize
+\item
+\#KLEENErmepsilon
+\end{itemize}
+
+\noindent
+These variables display a naming convention that puts \textbf{KLEENE} in front
+of system variables that control the behavior of Kleene itself.
+
+These variables can be set and interrogated in the usual ways, e.g.
+
+\begin{Verbatim}[fontsize=\small]
+#KLEENEdeterminize = 0 ;	// to turn off just determinization
+#KLEENEdeterminize = 1 ;
+or equivalently
+#KLEENEdeterminize = #false ;  // given that #false is set to 0
+#KLEENEdeterminize = #true ;
+
+if (#KLEENEdeterminize) {
+    // then do something
+} else {
+    // do something else
+}
+\end{Verbatim}
+
+\noindent 
+These variables affect the behavior of the \texttt{optimizeInPlace()}
+algorithm, which is called routinely on newly created networks.
+
+Also defined in basic.kl are the following convenience functions:
+
+\begin{Verbatim}[fontsize=\small]
+^setOptimize(#bool)
+	which sets #KLEENEdeterminize, #KLEENEminimize and
+	#KLEENErmepsilon to the passed in #bool value, 
+	
+e.g.
+^setOptimize(#false) ;
+\end{Verbatim}
+
+\noindent
+also
+
+\begin{Verbatim}[fontsize=\small]
+^setDeterminize(#bool) ;
+^setMinimize(#bool) ;
+^setRmepsilon(#bool) ;
+\end{Verbatim}
+
+The global variables \verb!#KLEENEdeterminize!, \verb!#KLEENEminimize!
+and \verb!#KLEENErmepsilon!, defined in the global start-up file
+\texttt{basic.kl}, can be shadowed by user-defined variables of the same
+name that are local to function code blocks and stand-alone code blocks.
+So programmers can play the scope game when turning these variables on
+and off.
+
+\section{User-callable Optimization Functions}
+
+Kleene provides built-in net-valued functions that take a network
+argument and return a new optimized network as the result.  These
+functions are for use when the default optimization has been turned off.
+The non-destructive functions are
+
+\begin{Verbatim}[fontsize=\small]
+$^optimize(regexp)
+$^rmEpsilon(regexp)
+$^determinize(regexp)
+$^minimize(regexp)
+\end{Verbatim}
+
+\begin{Verbatim}[fontsize=\small]
+$^synchronize(regexp)
+\end{Verbatim}
+
+\noindent
+and the destructive versions are
+
+\begin{Verbatim}[fontsize=\small]
+$^optimize!(regexp)
+$^rmEpsilon!(regexp)
+$^determinize!(regexp)
+$^minimize!(regexp)
+\end{Verbatim}
+
+\begin{Verbatim}[fontsize=\small]
+$^synchronize!(regexp)
+\end{Verbatim}
+
+\noindent
+The \verb!$^optimize()! and \verb/$^optimize!()/ functions cause---where
+mathematically safe---determinization, minimization and epsilon-removal to
+be invoked.  More specific functions such as \verb!$^determinize()! and
+\verb/$^determinize!()/ are also performed only when the operation is
+mathematically safe.
+
+Kleene also supplies the following statements, which take one or more
+network-ID arguments, optionally separated by commas, and optimize them
+in place (destructively).
+
+\begin{alltt}
+optimize $a, $b, ... ;
+determinize $a, $b, ... ;
+minimize $a, $b, ... ;
+rmEpsilon $a, $b, ... ;
+\end{alltt}
+
+\begin{alltt}
+synchronize $a, $b, ... ;
+\end{alltt}
+
+Just as the \texttt{rmEpsilon} command and the \verb!$^rmEpsilon()!
+function remove two-sided \verb!$eps:$eps! arcs, the \texttt{synchronize}
+command and the \verb!$^synchronize()! function return networks with a
+minimal number of one-sided epsilon arcs.  For example, if the input
+network contains a four-arc path with the four labels \verb!a:$eps!,
+\verb!$eps:b!, \verb!c:$eps! and \verb!$eps:d!, in that sequence, the
+synchronized result path has only two labels, \verb!a:b! and \verb!c:d!.
+Note that the synchronized network is equivalent to the input
+network---i.e.\@ it encodes the exact same relation; so synchronization
+is a lossless way to minimize the arcs in a network.  As currently
+implemented, only acyclic networks can be synchronized. Cyclic
+networks can be synchronized only if the cycles (loops) themselves have
+equal input and output lengths, i.e.\@ only if the cycles do not contain
+one-sided epsilons.  KRB:  I'm not sure yet how to test a cyclic network to
+make sure that the loops are consistent with this restriction.
+
+

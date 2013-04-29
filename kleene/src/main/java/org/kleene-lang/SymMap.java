@@ -89,6 +89,9 @@ public class SymMap {
 
 	public SymMap () {
 		// default NFC, start with Plane 15 PUA (unlimited)
+		// officially Plane 15 PUA runs U+50000 to  U+FFFFD
+		// and Plane 16 PUA runs from  U+100000 to U+10FFFD
+		// but Kleene networks can hold up to Integer.MAX_VALUE as a "code point value"
 		this(Normalizer.NFC, 0xF0000, Integer.MAX_VALUE) ;
 	}
 
@@ -101,10 +104,16 @@ public class SymMap {
 	// (not formally restricted to the official PUA ranges--but assume it
 	// for now)
 	private int getNextPuaCpv() throws SymMapException {
-		// skip some reserved values in Plane 15 and Plane 16
-		if (nextPuaCpv == 0xFFFFF || nextPuaCpv == 0x10FFFF) {
+		// skip some reserved (non-characters) values in Plane 15 and Plane 16
+		// valid Plane 15 PUA runs from  U+F0000 to U+FFFFD
+		// valid Plane 15 PUA runs from U+ 
+		if (nextPuaCpv == 0xFFFFE || nextPuaCpv == 0x10FFFE) {
+			nextPuaCpv += 2 ;
+		}
+		else if (nextPuaCpv == 0xFFFFF || nextPuaCpv == 0x10FFFF) {
 			nextPuaCpv++ ;
 		}
+
 		if (nextPuaCpv > limitPua) {
 			throw new SymMapException("SymMap: exhausted designated range of PUA codepoints") ;
 		}

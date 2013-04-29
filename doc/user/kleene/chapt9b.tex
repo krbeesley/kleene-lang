@@ -1,0 +1,21 @@
+%\chapter{Implementation of \acro{sap} \acro{rtn}s}
+%
+%\label{app:rtn}
+%
+%Java \texttt{Fst} objects contain a boolean \texttt{isRtn} field that is
+%set to true if and only if the network contains one or more references to
+%subnetworks, either simple references of the form \verb!'$sub'!, which
+%translate to an identity-mapping arc label \verb!$sub:$sub!, or
+%crossproduct references of the form \verb!'$sub':""!, \verb!'$sub':$eps!,
+%\verb!"":'$sub'! or \verb!$eps:'$sub'! which translate to an arc label
+%with \verb!$sub! on one side and epsilon on the other side.  When the
+%\texttt{isRtn} field is true, the Kleene \texttt{info} command outputs
+%``\acro{sap} \acro{rtn}''.
+%
+%When operations are performed on networks, there are various semantic
+%constraints that must be respected, and the code to check these
+%constraints is now grouped in the file
+%\texttt{OpenFstLibraryChecker.java}.  The operations that are illegal or
+%restricted for \acro{rtn}s (see section~\ref{sec:saprtnrestrictions})
+%detect \acro{rtn}s and throw exceptions as appropriate.
+

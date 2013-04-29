@@ -1131,6 +1131,145 @@ Java_OpenFstLibraryWrapper_isCyclicNative
 	}
 }
 
+/*  My old approach
+bool findInputEpsilonLoop(StdVectorFst *fstp, StateId s, set<StateId> &stateSet) {
+	// try to find an input/upper epsilon loop from state s back
+	// to itself, or another loop on the way to s
+	
+	if (stateSet.find(s) != stateSet.end()) 
+		// found a loop
+		return true ;
+	// remember s as "visited"
+	stateSet.insert(s) ;
+	for (ArcIterator<StdVectorFst> aiter(*fstp, s) ;
+		!aiter.Done() ;
+		aiter.Next()) {
+		StdArc arc = aiter.Value() ;
+		// handle only arcs with epsilon on the input side
+		if (arc.ilabel != 0)
+			continue ;
+		// here the ilabel is 0 (epsilon)
+		// recursively look for an input epsilon loop from arc.nextstate
+		if (findInputEpsilonLoop(fstp, arc.nextstate, stateSet))
+				return true ;
+	}
+	return false ;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_isUBoundedNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr) {
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	set<StateId> stateSet ;	// reuse this set of "visited states"
+
+	// if the machine has no cycles at all, then it's ubounded (and lbounded)
+	if (fstp->Properties(kAcyclic, true))
+		return (jboolean) true ;
+
+	// loop through the states, looking for input/upper epsilon loops
+	for (StateIterator<StdVectorFst> siter(*fstp) ;
+		!siter.Done() ;
+		siter.Next()) {
+		stateSet.clear() ;
+		if (findInputEpsilonLoop(fstp, siter.Value(), stateSet))
+			// found an input epsilon loop, so not ubounded
+			return (jboolean) false ;
+	}
+	// no input epsilon loops found
+	return (jboolean) true ;
+}
+*/
+
+// new approach from PaulDixon on OpenFst forum ("HasInputEpsilonCycle")
+// His Original:
+// Using the OpenFst visitor to find a topological order on the 
+// epsilon input subgraph should work.
+/*
+template<class Arc>
+bool HasInputEpsilonCycle(const Fst<Arc>& fst) {
+  vector<typename Arc::StateId> order;
+  bool acyclic = false;
+  TopOrderVisitor<Arc> top_order_visitor(&order, &acyclic);
+  DfsVisit(fst, &top_order_visitor, InputEpsilonArcFilter<Arc>());
+  return !acyclic;
+}
+*/
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_isUBoundedNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr) {
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	vector<StateId> order ;
+	bool acyclic = false ;
+	TopOrderVisitor<StdArc> top_order_visitor(&order, &acyclic) ;
+	DfsVisit(*fstp, &top_order_visitor, InputEpsilonArcFilter<StdArc>()) ;
+	return acyclic ;	// opposite logic from PaulDixon example
+}
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_isLBoundedNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr) {
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	vector<StateId> order ;
+	bool acyclic = false ;
+	TopOrderVisitor<StdArc> top_order_visitor(&order, &acyclic) ;
+	DfsVisit(*fstp, &top_order_visitor, OutputEpsilonArcFilter<StdArc>()) ;
+	return acyclic ;	// opposite logic from PaulDixon example
+}
+
+/*  my old original approach, see new _isLBoundedNative above
+bool findOutputEpsilonLoop(StdVectorFst *fstp, StateId s, set<StateId> &stateSet) {
+	// try to find an output/lower epsilon loop from state s back
+	// to itself, or another loop on the way to s
+	
+	if (stateSet.find(s) != stateSet.end()) 
+		// found a loop
+		return true ;
+	// remember s as "visited"
+	stateSet.insert(s) ;
+	for (ArcIterator<StdVectorFst> aiter(*fstp, s) ;
+		!aiter.Done() ;
+		aiter.Next()) {
+		StdArc arc = aiter.Value() ;
+		// handle only arcs with epsilon on the output side
+		if (arc.olabel != 0)
+			continue ;
+		// here the olabel is 0 (epsilon)
+		// recursively look for an output epsilon loop from arc.nextstate
+		if (findOutputEpsilonLoop(fstp, arc.nextstate, stateSet))
+				return true ;
+	}
+	return false ;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_isLBoundedNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr) {
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	set<StateId> stateSet ;	// reuse this set of "visited states"
+
+	// if the machine has no cycles at all, then it's lbounded (and ubounded)
+	if (fstp->Properties(kAcyclic, true))
+		return (jboolean) true ;
+
+	// loop through the states, looking for output/lower epsilon loops
+	for (StateIterator<StdVectorFst> siter(*fstp) ;
+		!siter.Done() ;
+		siter.Next()) {
+		stateSet.clear() ;
+		if (findOutputEpsilonLoop(fstp, siter.Value(), stateSet))
+			// found an output epsilon loop, so not lbounded
+			return (jboolean) false ;
+	}
+	// no input epsilon loops found
+	return (jboolean) true ;
+}
+*/
+
 JNIEXPORT jboolean JNICALL
 Java_OpenFstLibraryWrapper_isEmptyLanguageNative
   (JNIEnv *env, jclass cls,
@@ -1765,6 +1904,34 @@ Java_OpenFstLibraryWrapper_outputProjectionInPlaceNative
 	Project((StdVectorFst *)(uintptr_t) fstPtr, PROJECT_OUTPUT) ;
     return ;
 }
+
+JNIEXPORT jlong JNICALL
+Java_OpenFstLibraryWrapper_randGenNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr, jlong npathval, jlong max_lengthval)
+{
+	// npathval is the number of paths to leave in the resultFst
+	// max_lengthval is the maximum length of a path
+
+	StdVectorFst * resultFst = new StdVectorFst() ;
+	
+	// Using the UniformArcSelector
+	RandGen(*((StdVectorFst *)(uintptr_t) fstPtr), resultFst, 
+			// N.B. space needed between > and >
+			RandGenOptions<UniformArcSelector<StdArc> > (UniformArcSelector<StdArc>(), 
+														(int) max_lengthval, 
+														(size_t) npathval)) ;
+
+	/* Using the LogProbArcSelector
+	RandGen(*((StdVectorFst *)(uintptr_t) fstPtr), resultFst, 
+			RandGenOptions<LogProbArcSelector<StdArc> > (LogProbArcSelector<StdArc>(), 
+														(int) max_lengthval, 
+														(size_t) npathval)) ;
+	*/
+
+    return (jlong)(uintptr_t) resultFst ;
+}
+
 
 JNIEXPORT jlong JNICALL
 Java_OpenFstLibraryWrapper_numPathsNative
@@ -2547,6 +2714,170 @@ Java_OpenFstLibraryWrapper_fst2xmlNative
 	}
 	// finally, terminate the XML
 	env->CallVoidMethod(fstXmlWriter, terminateXmlMID) ;
+}
+
+JNIEXPORT void JNICALL
+Java_OpenFstLibraryWrapper_fst2xmlStateOrientedNative
+	(JNIEnv *env, jclass cls,   // because it's a class (static) native method 
+								//	of Interpreter
+	 jlong fstPtr,              // the Java long representing a ptr to Fst 
+	 							//	on the C++ side
+	 jobject fstXmlWriterStateOriented, // the FstXmlWriterStateOriented object passed in--it knows
+	 							//  how to write the XML file
+	 jint lowestMcsCpv)			// any arc label (int) >= this value is a MCS
+{
+	// First need to get the class of the fstXmlWriterStateOriented object
+	jclass fstXmlWriterClass = env->GetObjectClass(fstXmlWriterStateOriented) ;
+	// then use this class to get the IDs of various named methods (used
+	// for callbacks)
+
+	jmethodID initializeXmlMID = env->GetMethodID(fstXmlWriterClass,
+												"initializeXml",
+												"()V") ;
+	if (initializeXmlMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID startStatesElmtMID = env->GetMethodID(fstXmlWriterClass,
+													"startStatesElmt",
+													"(II)V") ;
+	if (startStatesElmtMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID endStatesElmtMID = env->GetMethodID(fstXmlWriterClass,
+													"endStatesElmt",
+													"()V") ;
+	if (endStatesElmtMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID startStateElmtMID = env->GetMethodID(fstXmlWriterClass,
+													"startStateElmt",
+													"(I)V") ;
+	if (startStateElmtMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID startStateFinalElmtMID = env->GetMethodID(fstXmlWriterClass,
+													"startStateFinalElmt",
+													"(IF)V") ;
+	if (startStateFinalElmtMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID startStateFinalElmtNeutralWeightMID = env->GetMethodID(fstXmlWriterClass,
+													"startStateFinalElmtNeutralWeight",
+													"(I)V") ;
+	if (startStateFinalElmtNeutralWeightMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID endStateElmtMID = env->GetMethodID(fstXmlWriterClass,
+												"endStateElmt",
+												"()V") ;
+	if (endStateElmtMID == 0) {
+		return ;   // will cause a NoSuchMethodError to be thrown in Java
+	}
+
+	//
+
+	jmethodID writeArcElmtMID = env->GetMethodID(fstXmlWriterClass, 
+	 											"writeArcElmt", 
+												"(IIIF)V") ;
+	if (writeArcElmtMID == 0) {
+		return ;
+	}
+
+	//
+
+	// second version of writeArcElmtMID (I,I,I)V (no weight)
+	jmethodID writeArcElmtNeutralWeightMID = env->GetMethodID(fstXmlWriterClass,
+															  "writeArcElmt",
+															  "(III)V") ;
+	if (writeArcElmtNeutralWeightMID == 0) {
+		return ;
+	}
+
+	//
+
+	jmethodID terminateXmlMID = env->GetMethodID(fstXmlWriterClass,
+												"terminateXml",
+												"()V") ;
+	if (terminateXmlMID == 0) {
+		return ;
+	}
+
+	// convert the Long (from Java) into a StdVectorFst ptr
+	StdVectorFst *fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+
+	// The Call-Backs start here
+
+	// initialize the XML (headers, etc)
+	env->CallVoidMethod(fstXmlWriterStateOriented, initializeXmlMID) ;
+	
+	// start the <states> element, with attrs showing the start state and
+	// the total number of states
+	env->CallVoidMethod(fstXmlWriterStateOriented, startStatesElmtMID, (int) fstp->Start(), (int) fstp->NumStates()) ;
+
+	for (StateIterator<StdVectorFst> siter(*fstp); !siter.Done(); siter.Next()) {
+
+		// should count states from 0 (always--see OpenFst documentation), but
+		// state 0 is not necessarily the start state
+		StateId src_state_id = siter.Value() ;
+
+		TropicalWeight state_weight = fstp->Final(src_state_id) ;
+		if (state_weight != TropicalWeight::Zero()) {
+			// then it's a final state
+			if (state_weight == TropicalWeight::One()) {  // final state with neutral weight
+				env->CallVoidMethod(fstXmlWriterStateOriented, startStateFinalElmtNeutralWeightMID, (int) src_state_id) ;
+			} else {
+				// final state with non-neutral weight
+				env->CallVoidMethod(fstXmlWriterStateOriented, startStateFinalElmtMID, (int) src_state_id, (float) state_weight.Value()) ;
+			}
+		} else {
+			env->CallVoidMethod(fstXmlWriterStateOriented, startStateElmtMID, (int) src_state_id) ;
+		}
+
+
+		// now loop through the arcs exiting this state
+
+		for (ArcIterator<StdVectorFst> aiter(*fstp, src_state_id); 
+		     !aiter.Done(); 
+			 aiter.Next()) 
+		{
+			const StdArc &arc = aiter.Value() ;  // get the arc
+			int i = arc.ilabel ;
+			int o = arc.olabel ;
+			StateId dest_state_id = arc.nextstate ;
+			TropicalWeight w = arc.weight ;
+
+			if (w == TropicalWeight::One()) {       // arc with the neutral weight
+				env->CallVoidMethod(fstXmlWriterStateOriented, writeArcElmtNeutralWeightMID,
+									dest_state_id, i, o) ;
+			} else {
+				// arc with non-neutral weight
+				env->CallVoidMethod(fstXmlWriterStateOriented, writeArcElmtMID,
+									dest_state_id, i, o, (float) w.Value()) ;
+			}
+		}
+		env->CallVoidMethod(fstXmlWriterStateOriented, endStateElmtMID) ;
+	}
+	// finally, terminate the XML
+	env->CallVoidMethod(fstXmlWriterStateOriented, endStatesElmtMID) ;
+	env->CallVoidMethod(fstXmlWriterStateOriented, terminateXmlMID) ;
 }
 
 JNIEXPORT void JNICALL

@@ -1,0 +1,170 @@
+\chapter{Introduction}
+
+\section{What is Kleene?}
+
+\Kleene{} is a programming language in the
+tradition of the \init{at\&t}
+Lextools \citep{roark+sproat:2007},\footnote{\url{http://serrano.ai.uiuc.edu/catms/}}
+the \init{sfst-pl} language
+\citep{schmid:2005},\footnote{\url{http://www.ims.uni-stuttgart.de/projekte/gramotron/SOFTWARE/SFST.html}}
+The \init{hfst}
+software,\footnote{\url{http://www.ling.helsinki.fi/kieliteknologia/tutkimus/hfst/}} and the
+Xerox/\acro{parc} finite-state
+toolkit \citep{beesley+karttunen:2003};\footnote{\url{http://www.fsmbook.com}} 
+all of which provide
+higher-level programming formalisms built on top of low-level finite-state
+libraries.  \Kleene{} allows programmers to specify weighted
+finite-state machines, including acceptors that encode regular
+languages and two-level transducers that encode regular relations,
+using both regular expressions and right-linear phrase-structure
+grammars. The language supports variables and functions, plus
+familiar control structures such as \verb!if-elsif-else!
+statements and \verb!while!
+loops.\footnote{Kleene was first reported at the 2008 conference on
+Finite-State Methods in Natural-language Processing \citep{beesley:2009}.}
+
+The Java-language \Kleene{} parser, implemented with JavaCC and
+JJTree \citep{copeland:2007},\footnote{\url{https://javacc.dev.java.net}} 
+is Unicode-capable and portable.\footnote{Kleene currently runs on Red
+Hat Enterprise Linux, OS X, and Windows.}
+Successfully parsed statements are reduced to abstract
+syntax trees (\init{ast}s); and the Java-language interpreter,
+implemented using the visitor design
+pattern,\footnote{\url{http://en.wikipedia.org/wiki/Visitor_pattern}} 
+interprets the \init{ast}s by calling \CPP{} functions in the
+OpenFst finite-state 
+library
+\citep{allauzen+riley+schalkwyk+skut+mohri:2007}\footnote{A beta version of the 
+OpenFst library (\url{http://www.openfst.org})
+was first released by Google Labs 11 July 2007, and it continues to be
+an active project.  The OpenFst
+library, and additional \CPP{} code that wraps the OpenFst functions so that they can
+be called from Java, must be recompiled for each platform.} 
+via the Java Native Interface
+(\init{jni}) \citep{gordon:1998,liang:1999}.  
+
+The \Kleene{} graphical user interface (\acro{gui}), implemented with 
+the Java Swing library, 
+allows interactive creation, testing and graphic display
+of finite-state machines.  The overall application window, based on a Swing JDesktopPane,
+encloses a Unicode-capable terminal-like window, into which Kleene statements
+can be typed,
+and a symbol-table window that displays an icon for each defined
+machine.  Right-clicking on an icon triggers a pop-up menu with
+commands to test, draw, invert, determinize, draw, delete, 
+etc.\@ the associated machine.
+
+\Kleene{} is copyrighted by \init{sap} \init{AG} and released under the Apache License, Version 2, which
+is a very liberal license that allows even commercial usage without payment of license fees or
+royalties.  The OpenFst Library on which Kleene is based is also released under the same Apache License,
+Version 2.  See the Apache site at \url{http://www.apache.org/licenses/} for the full details.
+
+\section{The Kleene Name}
+
+\Kleene{} is named in honor of American mathematician Stephen Cole Kleene
+(1909--1994), who, among many accomplishments, investigated the properties of regular sets, including
+regular languages, and invented the regular-expression metalanguage, which is the foundation of
+\Kleene{}-language syntax.  In the \init{usa}, the name Kleene is
+commonly pronounced /kliːn/, like the English word \emph{clean}, 
+or /ˈkliːni/, but Kleene himself pronounced it
+/ˈkleɪni/.\footnote{\url{http://en.wikipedia.org/wiki/Stephen_Cole_Kleene}}
+
+\section{Possible Applications}
+
+Kleene can build acceptors to be used in spell-checking and similar
+applications.  Kleene transducers can be used in spelling correction,
+tokenization, phonological modeling, morphological analysis and
+generation, speech synthesis and generation, and shallow or ``robust''
+parsing.
+
+\section{Design Criteria}
+
+The following requirements and desiderata have guided the design and
+implementation of \Kleene{}:
+
+\begin{enumerate}
+
+\item
+The \Kleene{} language must be compelling, easy to learn and well documented.  
+The syntax and semantics should always aim for maximum
+familiarity and ``least astonishment.''
+
+\item
+Programmers must be able to run pre-edited scripts or
+type statements interactively into a \acro{gui}.
+
+\item
+\Kleene{} must allow finite-state machines to be defined using 
+both regular expressions and right-linear
+phrase-structure grammars. 
+
+\item
+The syntax should follow, as far as
+possible and appropriate, the familiar syntax of Perl-like regular
+expressions.  Non-regular features of Perl regular expressions, 
+such as back-references, will be
+excluded; and operators will be added to denote weights,
+two-level relations, subtraction, complementation and intersection, which are
+lacking in Perl-like regular expressions.
+
+\item
+The abstraction mechanisms must include variables, built-in functions
+and user-defined functions.
+
+
+\item
+The syntax will include rule-like expressions similar in semantics and 
+function to the
+Xerox/\acro{parc} Replace Rules
+\citep{karttunen:1995,karttunen+kempe:1995,karttunen:1996,kempe+karttunen:1996,mohri+sproat:1996} that denote regular relations and
+compile into finite-state transducers.  
+
+\item
+Unicode must be supported from the beginning, not only in data
+strings, but also in \Kleene{} identifiers and operators.
+
+\item
+The implementation should be maximally portable.
+
+\item
+The implementation should be maximally modular, allowing the writing of
+interpreters based on various finite-state libraries that might become
+available.
+\end{enumerate}
+
+\section{Terminology}
+
+A \emph{regular language} is a set of strings and can be encoded as a finite-state acceptor.  A
+two-projection (or two-tape) \emph{regular relation} is a set of ordered string pairs and can be
+encoded as a finite-state transducer.  Kleene can be used to build finite-state acceptors
+and two-projection finite-state transducers.\footnote{Transducers can theoretically have
+two or more projections, but most software implementations of transducers---including the
+Xerox/\acro{parc}, \init{at\&t}, \init{sfst} and OpenFst implementations---are limited to
+just two projections.}
+
+In some traditions, the terms \emph{finite-state machine} and \emph{finite-state automaton}
+(plural: \emph{automata}) are used to
+denote acceptors, in contrast to finite-state transducers.  Herein, however, I will avoid the
+term automaton, and I use the term \emph{finite-state machine} to encompass both
+acceptors and transducers.\footnote{In the Xerox/\acro{parc} tradition, the term
+\emph{network} is used as a cover term to include both acceptors and transducers, but this
+usage has not become general.}
+
+I dislike acronyms and initialisms, especially as they have proliferated and become
+increasingly
+ambiguous; but some are well established and almost unavoidable in the field.  I will often use
+\emph{\fst{}} to refer to finite-state transducers, and \emph{\fsm{}} to refer to finite-state machines
+(encompassing both finite-state acceptors and transducers).
+Where it is important to distinguish a finite-state machine as an acceptor, it will be
+called an acceptor, without abbreviation.
+
+Complicating the issue is the fact that OpenFst finite-state machines are always two-projection
+transducers in their structure; each arc in an OpenFst finite-state machine has an ``input
+label'' and an associated ``output label.''  In the OpenFst
+implementation of finite-state machines, an acceptor is just a special
+case of a transducer, which can also be considered an \emph{identity transducer}, wherein each input label is equal to
+its associated output label.  These structure issues, and the terminology, will be
+discussed again in more detail below in a section on how finite-state machines are
+constructed and visualized in various traditions.
+
+

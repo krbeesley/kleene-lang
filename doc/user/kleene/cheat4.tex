@@ -1,0 +1,68 @@
+
+\chapter{Pre-defined Diacritic Functions}
+
+The following functions are provided to make a network
+diacritic-insensitive, which is significantly different from the
+case-insensitivity previously described.  In particular, diacritic
+insensitivity is unidirectional, modifying a network that already accepts
+accented strings, e.g.\@ \emph{\'ecole}, to also accept partially or
+completely unaccented versions of the same string, here \emph{ecole}.  If
+the original network accepts only \emph{\'el\`eve}, then a
+diacritic-insensitive version of the network would also accept
+\emph{eleve}, \emph{\'eleve} and \emph{el\`eve}.  Note that if a network
+accepts only the string \emph{resume}, applying diacritic insensitivity
+will not cause it to accept strings like \emph{r\'esum\'e},
+\emph{r\'esume}, \emph{resum\'e}, \emph{r\`esum\`e}, \emph{r\^es\"um\`e}
+or any other strings with added or changed diacritics.\footnote{Modifying
+a network to accept added or changed diacritics would, even if limited to
+pre-composed Unicode characters, cause a network to explode in size.  If
+the open-ended system of Combining Diacritical Marks were also handled,
+the size of the network would be infinite.}
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb/$^opt_di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^opt_di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+\noindent
+For convenience, the following shorter aliases are pre-defined.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb/$^di($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\verb/$^di!($fst,/\verb!$proj="both"!\verb!)! & allow/add unaccented paths\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+Diacritic insensitivity works for all accented---known as
+``pre-composed''---Unicode letter-characters, and it also includes
+handling of Unicode Combining Diacritical Marks.\footnote{If a network
+contains an arc labeled \emph{\'e}, diacritic insensitivity adds a
+parallel arc labeled \emph{e}.  The unaccented version of the accented or
+``pre-composed'' character is found via Unicode normalization to the
+canonical decomposed \acro{nfd} form.  For an arc labeled with a
+Combining Diacritical Mark, such as the \acro{combining acute accent},
+diacritic insensitivity adds a parallel epsilon arc.}  Thus if a network
+originally accepts just \emph{\'ecole}, the diacritic-insensitive version
+will accept \emph{\'ecole} and \emph{ecole} whether the original
+\emph{\'e} was encoded as the single Unicode character U+00E9
+(\acro{latin small letter e with acute}) or as the sequence of characters
+U+0065 (\acro{latin small letter e}) followed by U+0301 (\acro{combining
+acute accent}).\footnote{OpenFst networks created by Kleene always store
+one Unicode character (using its standard code point value) in one arc
+label, and this includes supplementary Unicode characters and Combining
+Diacritical Marks.}
+
+

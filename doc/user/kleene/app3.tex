@@ -1,0 +1,150 @@
+\chapter{Control Characters in Kleene}
+
+\label{app:controlcharacters}
+
+\section{Characters Representing Whitespace}
+
+In Kleene source code, as in Java, Unicode characters specified by their
+code point value, such as \textbackslash{}u000D (the \acro{carriage
+return}) or \textbackslash{}u000A (the \acro{line feed}), are converted
+to the real Unicode character even before the tokenizer starts its work.
+So a statement typed as
+
+\begin{Verbatim}[fontsize=\small]
+$foo = \u000D ;
+// or
+$foo = \u000A ;
+\end{Verbatim}
+
+\noindent
+would look to the Kleene tokenizer/parser like
+
+\begin{Verbatim}[fontsize=\small]
+$foo =
+;
+\end{Verbatim}
+
+\noindent
+and is not a valid statement because the right-hand side of the assignment is
+empty.  But a statement typed as
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b c \u000D e f ;
+\end{Verbatim}
+
+\noindent
+would look to the tokenizer/parser like
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b c
+e f ;
+\end{Verbatim}
+
+\noindent
+and would compile successfully and match the string ``abcef''.  The carriage
+returns and line feeds (newlines) in these examples are just whitespace and
+are ignored by the tokenizer and the parser.
+
+\section{Illegal Characters Inside Multichar-symbol Names and
+Double-Quoted Strings}
+
+Anything typed as 
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b '\u000Dxyz' e f ;
+\end{Verbatim}
+
+\noindent
+would look to the tokenizer/parser like
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b '
+xyz' e f ;
+\end{Verbatim}
+
+\noindent
+which is illegal (an attempt to put a newline inside single quotes) and will
+raise an exception.  Similarly, anything typed as
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b "\u000Dxyz" e f ;
+\end{Verbatim}
+
+\noindent
+would look to the tokenizer/parser like
+
+\begin{Verbatim}[fontsize=\small]
+$foo = a b "
+xyz" e f ;
+\end{Verbatim}
+
+\noindent
+and is similarly illegal (an attempt to put a carriage return or newline
+inside double quotes).  
+
+You can legally type the special sequences \texttt{\textbackslash{}r}
+(carriage return) and \texttt{\textbackslash{}n} (newline, line feed) by
+themselves, and in double-quoted strings.
+
+\begin{Verbatim}[fontsize=\small]
+// legal statements
+$foo = \n ;
+$foo = a b \r c ;
+$foo = a b "cd\nef" g ;
+\end{Verbatim}
+
+\noindent
+In these cases, the \textbf{\textbackslash{}n} and
+\textbf{\textbackslash{}r} get translated by the Kleene tokenizer into
+their code point values, and these values duly appear on arcs in the
+resulting networks.  The actual values can be seen by \texttt{draw}ing
+the network or just invoking the \texttt{sigma} command, e.g.
+
+\begin{Verbatim}[fontsize=\small]
+$foo = \n ;
+sigma $foo ;
+\end{Verbatim}
+
+You cannot type \textbf{\textbackslash{}n} and \textbf{\textbackslash{}r}
+inside single quotes to represent newline and carriage return.  Currently
+they can be typed, e.g.
+
+\begin{Verbatim}[fontsize=\small]
+$foo = 'a\nb' ;
+\end{Verbatim}
+
+\noindent
+
+but the backslash gets interpreted as a literal backslash.  
+
+KRB:  This
+behavior will be reviewed.
+
+\section{Control Characters and Writing Networks to \acro{xml} 1.0}
+
+Although Kleene \emph{per se} can handle the special characters
+\textbf{\textbackslash{}b} (the \acro{backspace}) and
+\textbf{\textbackslash{}f} (the \acro{form feed}), any attempt to write
+the resulting network to \acro{xml} will cause problems because
+\acro{xml} 1.0 simply does not allow such control characters to appear in
+\acro{xml} text.  For example
+
+\begin{Verbatim}[fontsize=\small]
+$foo = \b ;
+writeXml $foo, "fooFile.xml" ;
+\end{Verbatim}
+
+\noindent
+will result in an \acro{xml}-like file that cannot be read back in
+because it is technically invalid, containing the \acro{backspace} symbol
+that \acro{xml} 1.0 simply does not allow.  \acro{xml} 1.0 does allow the
+\textbf{\textbackslash{}n} (\textbackslash{}u000A),
+\textbf{\textbackslash{}r} (\textbackslash{}u000D) and
+\textbf{\textbackslash{}t} (\textbackslash{}u0009) characters to appear
+in text, and so they do not cause the same problem.\footnote{The
+\acro{xml} 1.1 standard, first published in 2004, also accepts
+\textbf{\textbackslash{}b} (the \acro{backspace}) and
+\textbf{\textbackslash{}f} (the \acro{form feed}) in \acro{xml} text, but
+\acro{xml} 1.1 has never been well accepted or supported.}
+
+

@@ -1,0 +1,65 @@
+\chapter{Built-in List Functions}
+
+\section{Built-in Functions for \fsm{} Lists}
+
+\begin{tabular}{|l|}
+\hline
+\verb!$@^copy($@list)! \\
+\hline
+\verb!$^head($@list)! \\
+\verb!$^getLast($@list)! \\
+\verb!$^get($@list, #n)! \\
+\verb!$@^getSlice($@list, #n, #r:#s, ...)! \\
+\verb!$@^tail($@list)! \\
+\hline
+\verb+$^pop!($@list)+ \\
+\verb+$^removeLast!($@list)+ \\
+\verb+$^remove!($@list, #n)+ \\
+\hline
+\verb+$@^push!($fst, $@list)+ \\
+\verb+$@^add!($@list, $fst)+ \\
+\verb+$@^addAt!($@list, #n, $fst)+ \\
+\hline
+\verb!$@^set($@list, #n, $fst)! \\
+\hline
+\verb!#^size($@list)! \\
+\verb!$@^getSigma($fst)! \\
+\hline
+\verb!$^reduceLeft($^bin, $@list)! \\
+\hline
+\verb!$@^map($^mon, $@list)! \\
+\hline
+\end{tabular}
+
+\section{Built-in Functions for Number Lists}
+
+\begin{tabular}{|l|}
+\hline
+\verb!#@^copy(#@list)! \\
+\hline
+\verb!#^head(#@list)! \\
+\verb!#^getLast(#@list)! \\
+\verb!#^get(#@list, #n)! \\
+\verb!#@^getSlice(#@list, #n, #r:#s, ...)! \\
+\verb!#@^tail(#@list)! \\
+\hline
+\verb+#^pop!(#@list)+ \\
+\verb+#^removeLast!(#@list)+ \\
+\verb+#^remove!(#@list, #n)+ \\
+\hline
+\verb+#@^push!(#num, #@list)+ \\
+\verb+#@^add!(#@list, #num)+ \\
+\verb+#@^addAt!(#@list, #n, #num)+ \\
+\hline
+\verb!#@^set(#@list, #n, #num)! \\
+\hline
+\verb!#^size(#@list)! \\
+\verb!#@^getSigma($fst)! \\
+\hline
+\verb!#^reduceLeft(#^bin, #@list)! \\
+\hline
+\verb!#@^map(#^mon, #@list)! \\
+\hline
+
+\end{tabular}
+

@@ -1,0 +1,1698 @@
+\chapter{Regular Expression Syntax}
+
+\section{Regular Expressions}
+
+In \Kleene{}, regular expressions are the primary way to specify
+finite-state machines. The basic \Kleene{} assignment statements have an
+\fsm{} variable on the left-hand side and a regular
+expression on the right-hand side, e.g.
+
+\begin{alltt}
+$var = d ;
+$var2 = dog ;
+$myvar = (dog|cat|horse) s? ;
+$yourvar = [A-Za-z] [A-Za-z0-9]* ;
+$hisvar = ([A-Za-z]-[aeiouAEIOU])+ ;
+$hervar = (bird|cow|elephant|pig) & (pig|ant|bird) ;
+$ourvar = (dog):(chien) \(\circ\) (chien):(Hund) ;
+\end{alltt}
+
+\noindent
+These regular expressions should already be reasonably familiar to those with experience in
+mathematical or programming-language regular expressions.  Don't worry if they are not
+yet familiar to you; this chapter will present and explain 
+each of the regular-expression operators available in Kleene.
+
+\subsection{Primary Regular Expressions}
+
+Primary regular expressions are recognized directly by the tokenizer and so are
+effectively of highest precedence.
+
+\vspace{.5cm}
+
+\renewcommand\tabcolsep{1.25mm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb!a b c!  & simple alphabetic symbols\\
+\hline
+. & (dot) matches any symbol\\
+\hline
+\verb!\* \+ \? \. \'! & literalized special characters\\
+\hline
+\verb!\n \r \t \b \f! & conventional control characters\\
+\hline
+\verb!'[Noun]' '+Noun'! & single symbols with multi-character names\\
+\hline
+\verb!$myvar $foo! & names of variables denoting a finite-state machine\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+Symbols with multi-character names (also known as ``multi-character symbols'') can contain any
+Unicode letter character from the \init{bmp} (Basic Multilingual Plane) except for newline and
+carriage return.\footnote{The newline or \unicode{line feed} character has the code
+point value \textbackslash{}u000A; the \unicode{carriage return} is \textbackslash{}u000D.}  The
+single quotes are delimiters of the multi-character 
+name in Kleene syntax and are not part of the name.  If a
+multi-character symbol name contains a straight single quote
+(\verb!'!), it must be literalized in the syntax with a preceding backslash, e.g.\@
+\verb!'[o\'clock]'!.
+
+Symbols with multi-character names are most often used as tags, e.g.\@
+\verb!'[Noun]'!, \verb!'[Verb]'!, \verb!'[Adj]'!, \verb!'[Sg]'!,
+\verb!'[Pl]'!, \verb!'[1P]'!, \verb!'[2P]'!, \verb!'[3P]'!,
+\verb!'[Masc]'! and \verb!'[Fem]'!, that are used to convey categorial,
+featural or other grammatical information.  In general, any sequence of
+\init{bmp} characters can be delimited in single quotes and used as a
+single multi-character symbol.  However, it is highly recommended that
+the names contain punctuation symbols; that is, it is almost always a
+mistake to define multi-character symbols with plain alphabetic names
+like \verb!'Noun'!, \verb!'Verb'!, \verb'sh' or \verb'ing' that, 
+minus the single quotes, could be visually confused with a simple
+sequence of separate alphabetic symbols.\footnote{In rare instances, the
+orthography of a language may contain digraphs, trigraphs, etc.\@ that
+are always treated as indivisible units, and these might be encoded
+safely and usefully as multi-character symbols in a finite-state machine
+that models the phonology or orthography of that language.}
+
+Multi-character names starting with \verb!__! (two underscores) or
+\verb!**! (two asterisks) are special and are reserved for internal
+system use.  Any attempt to define such a multi-character symbol
+directly, e.g.\@ \verb!'__foo'!, in your code will cause an exception to be
+thrown.
+
+\subsection{Inherently Delimited Regular Expressions}
+
+The following regular expressions are syntactically complex but
+inherently delimited, making them also of highest precedence.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|p{7.2cm}|}
+\hline
+\verb![aeiou] [a-z] [A-Za-z0-9]! & character sets (unions)\\
+\hline
+\verb![^aeiou] [^a-z] [^A-Za-z0-9]! & complemented character sets\\
+\hline
+\verb!"dog" "+" "AT&T"! & double-quoted literalized concatenations of symbols\\
+\hline
+\verb!<0.5> <0.01> <0.36>! &  weights\\
+\hline
+\verb!$^myfunction!(\textit{args} \ldots) & call to a function returning
+an \fsm{}\\
+%\hline
+%\verb!$@mynetarray![\emph{n}] & reference to an element of an array of
+%machines\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+\Kleene{} employs a system of
+sigils\footnote{\url{http://en.wikipedia/org/wiki/Sigil_(computer_programming)}}
+to distinguish identifiers like \verb!$abc! from simple concatenations of symbols 
+like \verb!abc!.  A prefixed
+\verb!$! marks a variable name with a finite-state-machine value; a prefixed
+\verb!$^! marks the
+name of a function that returns a finite-state-machine value; and a prefixed \verb!$@! marks the name of
+a list of machines.
+
+\vspace{0.5cm} 
+
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\verb!abc! & the concatenation of the three symbols \emph{a}, \emph{b} and \emph{c} \\
+\hline
+\verb!$abc! & a variable named \verb!$abc! \\
+\hline
+\verb!$^abc!(\ldots{}\textit{args}\ldots{}) & a function named
+\verb!$^abc! that returns a finite-state-machine value\\
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+It is important to note the distinction between a single-quoted
+multi-character symbol like \verb!'[Noun]'!, which denotes a single
+symbol with the multi-character print name \verb![Noun]!, versus a
+double-quoted string like \verb!"dog"!, which denotes the concatenation of
+the individual symbols between the quotes: \texttt{d} followed by \texttt{o} followed by
+\texttt{g}.  A double-quoted string can
+contain any Unicode \init{bmp} symbol except for newline and
+carriage-return.\footnote{The newline or \unicode{line feed} character is
+\textbackslash{}u000A; the \unicode{carriage return} is
+\textbackslash{}u000D.}
+
+Double quoting is not needed for
+normal alphabetic symbols---the regular expression \verb!"dog"! is
+equivalent to \verb!dog!, \verb!d o g!, etc.---but
+is useful for literalizing special characters, e.g.\@ \verb!"+"!, and for
+surrounding strings that include a special character, e.g.\@
+\verb!"AT&T"! and \verb!"myfilename.txt"!.
+
+A closed set of control characters can appear inside double-quoted strings,
+and in normal regular-expression text,
+represented using backslash conventions that will be familiar to many
+programmers.
+
+\vspace{0.5cm} 
+
+\begin{center}
+\begin{tabular}{|c|c|l|}
+\hline
+\textbf{Syntax} & \textbf{Code Point Value} & \textbf{Character Name} \\
+\hline
+\hline
+\textbackslash{}n & \textbackslash{}u000A & \charname{line feed}
+(\charname{lf}) or
+``newline''\\
+\hline
+\textbackslash{}r & \textbackslash{}u000D & \charname{carriage return}
+(\charname{cr})\\
+\hline
+\textbackslash{}t & \textbackslash{}u0009 & \charname{character tabulation} or
+``tab''\\
+\hline
+\textbackslash{}b & \textbackslash{}u0008 & \charname{backspace} \\
+\hline
+\textbackslash{}f & \textbackslash{}u000C & \charname{form feed}
+(\charname{ff}) \\
+
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+\noindent
+For examples of the use of such special characters, and limitations on
+writing finite-state machines 
+containing such characters to \init{xml}, see
+Appendix~\ref{app:controlcharacters}.
+
+\subsection{Regular-Expression Operators}
+
+The following regular expression operators are available, 
+listed from high to low precedence.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|l|l|}
+\hline
+( ) &  parenthetical grouping & circumfix &\\
+\hline
+: & crossproduct & infix &\\
+\hline
+\verb!* + ? {2} {2,4} {2,}! & iteration & postfix &\\
+\hline
+\verb!~!  & complement/negation & prefix & \\
+\hline
+(no overt operator) & concatenation & juxtapose & left assoc.\\
+\hline
+\verb!-! & subtraction  & infix & left assoc.\\
+\hline
+\verb!&! & intersection & infix & left assoc.\\
+\hline
+\verb!|! & union        & infix & left assoc.\\
+\hline
+(various rule operators) & & &\\
+\hline
+$\circ$ \emph{or} \_o\_  & composition & infix & left assoc.\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+\subsection{Precedence Issues}
+ 
+The relative precedence of  \verb!:!, \verb!~!, and the various postfix
+iteration operators could still be debated, though
+there are precedents to follow.\footnote{The precedence shown is
+that currently favored by Helmut Schmid (\init{sfst}), and it is the relative precedence that Lauri Karttunen
+has chosen for the \acro{parc} \texttt{xfst} code to be released with the second printing of
+the book \emph{Finite State Morphology} (private communications).}
+Currently, \verb!~.*! is
+equivalent to \verb!~(.*)! and so denotes the empty language; \verb!a:b*!
+is equivalent to \verb!(a:b)*!, and \verb!~a:b! is equivalent to
+\verb!~(a:b)!, which is semantically illegal.\footnote{In general, transducers are not closed under
+complementation, so \texttt{\~{}T}, where \texttt{T} is a transducer, causes a
+runtime exception in \Kleene{}, much like division by zero in
+arithmetic expressions.}
+
+By long tradition, concatenation has higher precedence
+than union and intersection, so one can write  
+
+\begin{Verbatim}
+$foo = dog|cat|mouse ; 
+\end{Verbatim}
+
+\noindent
+to mean
+
+\begin{Verbatim}
+$foo = (dog)|(cat)|(mouse) ;
+\end{Verbatim}
+
+\noindent
+Following other programming languages, \verb!&! has slightly higher
+precedence than \verb!|!.\footnote{Similarly in most other languages,
+\texttt{\&\&}, the Boolean \emph{and},
+has slightly higher precedence than \texttt{||}, the Boolean \emph{or}.}
+The precedence of subtraction (\verb!-!) relative to intersection
+(\verb!&!) is still debatable, but it should probably be higher than
+union (\verb!|!).
+Rules are typically composed together, so composition is given lower precedence
+than the various operators used to construct rules.  The use of
+parentheses, even when formally unnecessary, to show groupings can
+often improve the readability of your source code.
+
+Unicode is embraced from the beginning in the Java/Swing \acro{gui}, and users
+are encouraged, though not required, to edit
+their script files using a Unicode-capable text
+editor.\footnote{\Kleene{} has a Java-language
+parser, and so is able, using normal Java features, to read a file in
+almost any standard encoding and convert it to Unicode.  Unless told otherwise,
+Java assumes that a file being read is in the default encoding of the
+host
+operating system and will convert it to Unicode accordingly.}  Unicode
+characters can also
+be indicated in the syntax using the familiar Java-like \verb!\u!HHHH
+escape sequence, i.e.\@ \verb!\u! followed by exactly four hex
+digits: 0-9, a-f or A-F.  For
+supplementary Unicode characters, Kleene recognizes the Python-like
+\verb!\U!HHHHHHHH escape sequence, i.e.\@ uppercase
+\verb!\U! followed by exactly eight hex digits; and for any Unicode
+character, Kleene also recognizes the
+\verb!\U{H...}! notation, which contains one or more hex digits between the
+curly braces.
+
+Kleene source files are typically Unicode files, and may contain code or comments
+containing arbitrary Unicode characters; so in Unicode files
+the \verb!\u!  sequence must be
+followed by exactly four hex digits, even inside comments.\footnote{Whatever
+the encoding of a Kleene source file might be, when it is read in, tokenized
+and parsed by Kleene, it is converted, one way or another, into Unicode.  This
+is standard behavior for Java programs, which handle text internally as
+String objects, which are always Unicode strings.}
+
+\subsection{Weights}
+
+\subsubsection{The Tropical Semiring}  
+
+Kleene can be used to build finite-state machines that are weighted or unweighted.
+The current implementation of weights is limited to the
+Tropical Semiring, which is the default semiring of the OpenFst library.
+In the Tropical Semiring
+
+\begin{itemize}
+\item
+The weights are logarithmic \emph{costs}, to be explained below.
+\item
+The \emph{extension} operation that accumulates weights along a single
+path, to calculate the weight of the whole path, is simple addition.\footnote{In OpenFst, the extension operation of
+each
+semiring is abstractly called \texttt{Times()}.}
+\item
+The \emph{collection} operation for combining the weights of multiple
+paths is \texttt{min}.\footnote{In OpenFst, the collection
+operation of each semiring is abstractly called \texttt{Plus()}.}
+Thus, among multiple solutions, the one with the minimum cost is preferred.
+\end{itemize}
+
+\noindent
+Where \texttt{p} is a probability ranging from 0.0 (impossible) to
+1.0 (certain), the cost is calculated as -\emph{log}\texttt{(p)},
+such that 0.0 probability corresponds to infinite cost, and 1.0
+probability corresponds to a cost of zero.
+Syntactically in Kleene regular expressions, weights are denoted within angle brackets,
+e.g.\@ \texttt{<0.1>} and \texttt{<0.9>}. 
+
+Each arc and each final state in a machine has a weight.  An unweighted
+machine in Kleene is one in which all the weights are 0.0.
+
+Usually the weights in
+the Tropical Semiring are non-negative, and if the user tries to
+denote negative weights straightforwardly as, for example, \@ \texttt{<-0.1>}, this
+creates a problem for the Kleene tokenizer, which recognizes the
+sequence \texttt{<-} as a left arrow, used in alternation rules, which
+will be presented below.
+The workarounds for this problem, in the rare cases where negative
+weights might be required,
+are to
+
+\begin{enumerate}
+\item
+Put whitespace between the \texttt{<} and \texttt{-}, i.e.\@
+\texttt{< -0.1>}, or
+\item
+Put parentheses around the negative value, i.e.\@
+\texttt{<(-0.1)>}
+\end{enumerate}
+
+\noindent
+If the user types \texttt{<-0.1>}, Kleene generates a
+ParseException and, in the \acro{gui}, prints a message showing how
+to fix the syntax.
+
+
+\subsection{Whitespace in Regular Expressions}
+ 
+Whitespace is ignored in Kleene regular expressions unless it is
+literalized.  The following statements are equivalent, each denoting the
+simple concatenation of the \texttt{d}, \texttt{o} and \texttt{g}
+characters because the
+spaces in the regular expressions are simply ignored:
+
+\begin{alltt}
+$foo = dog ;
+$foo = do g ;
+$foo = d og ;
+$foo = d o g ;
+\end{alltt}
+
+\noindent
+Spaces and other whitespace characters can be inserted anywhere between operators and operands in Kleene regular
+expressions, and such whitespace often improves human readability.  In the following examples,
+literal spaces are displayed as \verb*! ! for clarity. 
+
+A space in a regular expression can be literalized in three ways:
+
+\begin{enumerate}
+\item
+Putting the literalizing backslash directly before the space, i.e.\@ \verb*!\ !
+\item
+Putting the space inside square-bracketed symbol unions \verb![!\ldots\verb!]! or
+\verb![^!\ldots\verb!]!, e.g.\@ \verb*![ abc]! matches \verb!a!,
+\verb!b!, \verb!c! or a literal space, or
+\item
+Putting the space inside double quotes, e.g.\@ \verb*!" "! and
+\verb*!"John Smith"!
+\end{enumerate}
+
+\noindent
+For example, the following assignments are all equivalent, each containing two literal
+spaces:
+
+\begin{alltt}
+$fsm = to\textbackslash{}\verb*! !and\textbackslash{}\verb*! !fro ;
+$fsm = t o \textbackslash{}\verb*! !  a n d \textbackslash{}\verb*! !  f r o ;
+$fsm = to \textbackslash{}\verb*! !  and \textbackslash{}\verb*! !  fro ;
+$fsm = to "\verb*! !" and "\verb*! !" fro ;
+$fsm = "to\verb*! !and\verb*! !fro" ;
+$fsm = to [\verb*! !] and [\verb*! !] fro ;
+\end{alltt}
+
+\noindent
+A language of strings that start with a lowercase letter \texttt{a}-to-\texttt{z} and continue with
+any number of lowercase letters \emph{or spaces} can be defined as
+
+\begin{alltt}
+$fsm = [a-z] [a-z\verb*! !]* ;
+\end{alltt}
+
+\noindent
+Note that the second square-bracketed character set expression, \verb*![a-z ]!, contains a
+literal space.
+
+The Kleene treatment of whitespace in regular expressions is
+similar to the way that whitespace is ignored in arithmetic
+expressions, and it is like Perl regular expressions marked with the /x
+suffix.\footnote{There are similar options in Python and Java to allow
+you to insert whitespace inside regular expressions to make them more
+readable for human beings.}
+
+\subsection{Denoting the Empty String}
+
+The empty (zero-length) string can be represented in various
+equivalent ways,
+including the Unicode U+03F5 \unicode{greek lunate epsilon symbol}
+$\epsilon$,\footnote{This
+Unicode character can be typed into the Kleene \acro{gui}, using
+standard Java Input Methods, including the CodePoint Input
+Method, and into any Kleene script prepared with a
+Unicode-capable text editor.  The Unicode Standard 
+specifies that U+03F5 \unicode{greek lunate epsilon symbol}
+is for
+use in mathematical formulas, such as regular expressions, and
+is not to be used in normal Greek text, where U+03B5 
+\unicode{greek small letter epsilon} is appropriate.}  
+the Unicode escape sequence \verb!\u03F5!,
+the \acro{ascii} sequence \verb!_e_!,
+an empty double-quoted string \verb!""!, 
+\verb!a? - a!, etc.  The global start-up script also defines
+the variables \verb!$e! and \verb!$eps! as the empty string.  The 
+following examples are all equivalent, denoting a relation with \texttt{a} on the
+upper side related to the empty string on the lower side:
+
+\begin{alltt}
+$foo = a:\(\epsilon\) ;
+$foo = a:\(\backslash\)u03F5 ;
+$foo = a:_e_ ;
+$foo = a:"" ;
+$foo = a:$e ;
+$foo = a:$eps ;
+\end{alltt}
+
+\subsection{Denoting Any Symbol}
+
+In Kleene regular expressions, the \verb!.! (dot) syntax by itself is a wildcard
+that denotes any symbol in an acceptor or, in a transducer, the mapping of
+any possible symbol to itself. The \verb!.:.! syntax denotes the mapping of
+any possible symbol to any possible symbol, including itself.  The .\@ therefore covers \emph{a}:\emph{a},
+\emph{b}:\emph{b}, \emph{c}:\emph{c}, etc., but not \emph{a}:\emph{b} or
+\emph{b}:\emph{a}; while .:.\@
+covers  \emph{a}:\emph{a},
+\emph{b}:\emph{b}, \emph{c}:\emph{c}, etc., plus \emph{a}:\emph{b}, \emph{b}:\emph{a}, etc.
+
+\begin{Verbatim}
+$v = . ;   // any symbol, or map any symbol to itself
+\end{Verbatim}
+
+\begin{alltt}
+$w = .:. ; // map any symbol to any symbol, including itself
+\end{alltt}
+
+\noindent
+As in the Xerox finite-state toolkit, the \verb!.! really represents \emph{any}
+possible character---including simple and multi-character symbols---or the mapping of any character to itself, and is not limited to some
+finite alphabet pre-defined by the programmer.
+
+The semantics of the special .\@ (dot or period) is quite complex, being
+interpreted into machines 
+that match \specsym{other}, also known as unknown, symbols, and this subject is treated in
+more detail in Appendix~\ref{app:other}.  Luckily, the Kleene interpreter takes care of this, and
+the programmer doesn't
+have to worry about the underlying complexity.
+
+To denote a literal dot (a period) in a regular expression, use the
+backslashed \verb!\.! or the double-quoted
+\verb!"."!, or put the dot inside a square-bracketed symbol-union
+expression.  Once again, literalized spaces are shown as \verb*! !.
+
+\begin{alltt}
+$fsm = T h e \textbackslash{}\verb*! ! e n d \textbackslash{}. ;
+$fsm = "The\verb*! !end." ;
+$fsm = The "\verb*! !" end "." ;
+$fsm = T h e [\verb*! !] e n d [.] ;
+\end{alltt}
+
+\section{Abstraction Mechanisms}
+
+\subsection{Variables}
+
+As previously explained above, variables having a finite-state machine value are distinguished
+syntactically with a \verb!$! sigil, and they can appear on the
+left-hand side of an assignment statement.
+
+\vspace{.2cm}
+\noindent
+\$\emph{variableName} = \emph{RegularExpression} ;
+\vspace{.2cm}
+
+\noindent
+The regular expression can continue over any number of lines, and the
+assignment statement is terminated with a semicolon.  Once variables 
+such as \verb!$foo! and \verb!$bar! have been bound to \fsm{} values,
+they can appear as operands in subsequent regular expressions.
+
+\begin{alltt}
+$foo = dog | cat | elephant | zebra ;  // bind $foo
+$bar = bat | dog | octopus | frog ;    // bind $bar
+
+// refer to and use the values of $foo and $bar
+//    in a subsequent regular expression
+$result = ($foo | $bar) - (elephant | bat) ;
+\end{alltt}
+
+\noindent
+In this example, the resulting \fsm{} would encode the language
+consisting of the strings \emph{dog}, \emph{cat}, \emph{zebra},
+\emph{octopus} and \emph{frog}.  (The \fsm{} could also be viewed and used as an
+identity transducer that maps each of these words to itself.)  A reference to an
+unbound variable inside a regular expression
+raises a runtime exception (from which interactive Kleene can recover).
+
+Because finite-state machines can get very large, copying is avoided.
+The following sequence of assignment statements results in \verb!$var2! being an alias, bound to
+the same \fsm{} object as \verb!$var1!.
+
+\begin{Verbatim}
+$var1 = a*b+[A-Za-z0-9]{3} ;
+$var2 = $var1 ;
+\end{Verbatim}
+
+\subsection{Pre-defined Functions}
+
+Rather than inventing and proliferating new regular-expression operators, 
+the \Kleene{} philosophy is to give access to some operations via
+pre-defined functions, including
+
+\begin{description}
+\item[]
+\verb!$^invert!(\textit{regexp})
+\item[]
+\verb!$^reverse!(\textit{regexp})
+\item[]
+\verb!$^inputside!(\textit{regexp}) or \verb!$^upperside!(\textit{regexp})
+\item[]
+\verb!$^outputside!(\textit{regexp}) or \verb!$^lowerside!(\textit{regexp}) 
+\item[]
+\verb!$^rmWeight!(\textit{regexp})
+\item[]
+\verb!$^copy!(\textit{regexp}) 
+\end{description}
+
+\noindent
+Note that \verb!$^inputside()! and \verb!$^upperside()! are equivalent, where the
+``input'' terminology reflects the OpenFst visualization of an \fst{}, and the
+``upper'' terminology reflects the Xerox visualization.  The same holds for
+``output'' (OpenFst) and ``lower'' (Xerox). 
+
+A function call that returns an \fsm{} value is a \Kleene{} regular
+expression and can, just like a variable having an \fsm{} value,
+appear as an operand inside a larger regular expression.  Note that while
+
+\begin{alltt}
+$var2 = $var1 ;
+\end{alltt}
+
+\noindent
+simply makes \verb!$var2! an alias for \verb!$var1!, binding \verb!$var2! to the
+same \fsm{} as \verb!$var1!,
+
+\begin{alltt}
+$var2 = $^copy($var1) ;
+\end{alltt}
+
+\noindent
+creates a deep copy of the \fsm{} referenced by \verb!$var1! and binds
+\verb!$var2! to that deep copy.
+
+These functions do not destroy or modify their arguments, thus
+
+\begin{Verbatim}
+$orig = (dog):(chien) ;
+$new = $^lowerside($orig) ;
+\end{Verbatim}
+
+\noindent
+leaves \verb!$orig! intact while setting \verb!$new! to an \fsm{}
+that encodes the language consisting only of the string
+\emph{chien}.  The following destructive functions, which operate on
+an \fsm{} in place, have also been defined:
+
+\begin{description}
+\item[]
+\verb!$^invert!!(\emph{regexp})
+\item[]
+\verb!$^inputside!!(\emph{regexp}) or \verb!$^upperside!!(\emph{regexp}) 
+\item[]
+\verb!$^outputside!!(\emph{regexp}) or \verb!$^lowerside!!(\emph{regexp}) 
+\item[]
+\verb!$^rmWeight!!(\emph{regexp})
+\end{description}
+
+\noindent
+Note that the names of destructive functions end with an
+exclamation mark to mark them as dangerous.\footnote{There is no magic 
+to the exclamation mark,
+and simply adding one to the end of a function name does not make the function
+destructive.}  After executing the following example
+
+\begin{Verbatim}
+$orig = (dog):(chien) ;
+$new = $^invert!($orig) ;
+\end{Verbatim}
+
+\noindent
+both \verb!$orig! and \verb!$new! would be bound to the same
+modified \fsm{}, with \emph{chien} now on the input (upper) side, and \emph{dog} on
+the output (lower) side.  Such behavior is dangerous, not generally recommended, and the use of these
+destructive functions is recommended only for experts working at the limits
+of memory.
+
+\subsection{User-defined Function Syntax}
+
+\subsubsection{Simple Examples}
+
+Users can also declare and call their own functions.  As a minimal and admittedly silly example, consider the
+\emph{function definition}
+
+\begin{Verbatim}
+$^myunion($a, $b) {
+    return $a | $b ;
+}
+\end{Verbatim}
+
+\noindent
+which defines \verb!$^myunion! as a function that takes two \fsm{} arguments, represented here by the formal
+parameters \verb!$a! and \verb!$b!, unions them together, and returns the \fsm{} result.  Note that the formal
+parameters are marked as being of type \fsm{} by their \verb!$! sigils.  Function names (of all types) 
+in Kleene are always
+prefixed with the \verb!^! prefix, and the \verb!$^! prefix, as in \verb!$^myunion!, marks this as a function
+that
+returns an \fsm{}.  Once defined, our new function could be called in the following way:
+
+\begin{Verbatim}
+$foo = dog|cat|rat ;
+$bar = elephant|horse|bird ;
+
+$newfsm = $^myunion($foo, $bar) ;
+// equivalent to $newfsm = $foo | $ bar ;
+\end{Verbatim}
+
+\noindent
+When a function is called, the arguments can be arbitrarily complex expressions, as long as they evaluate to a
+value of the type required by the function.
+
+\begin{Verbatim}
+// call $^myunion with complex regular-expression arguments
+$newfsm = $^myunion(worm | dog | rabbit | fox, 
+                    skunk | cat | hippopotamus) ;
+\end{Verbatim}
+
+\noindent
+In addition, for a function like \verb!$^myunion()! that returns an \fsm{}, a call to \verb!$^myunion()! is
+itself a regular expression and can appear anywhere a regular expression is legal.
+
+\begin{Verbatim}
+$newfsm = $^myunion(worm | dog | rabbit | fox, 
+                    $^myunion(skunk, $^myunion(cat, hippopotamus)) ) ;
+\end{Verbatim}
+
+As another simple example, consider the following function definition that creates an \fsm{} that accepts
+palindromes of its input language:
+
+\begin{Verbatim}
+$^palindrome($a) {
+    return $a $^reverse(a) ;
+}
+\end{Verbatim}
+
+
+\subsubsection{Practical Example}
+
+As a much more practical function-definition example, consider the operation of \emph{priority union}, which is defined as follows:
+
+\begin{quotation}
+Let Q and R be transducers.  The priority union of Q and
+R, giving \emph{input-side} priority to Q, returns the union of Q and R
+with the added 
+restriction that if both Q and R share an input string \emph{i}, then
+the result transducer contains only the paths from Q that have
+\emph{i} on the
+input side.
+\end{quotation}
+
+\noindent
+Priority union with \emph{output-side} priority is also potentially useful.
+In \Kleene{} these functions can be defined as
+
+\begin{Verbatim}
+$^priority_union_input($q, $r) {
+	return $q | (~$^inputside($q) _o_ $r) ;
+}
+
+$^priority_union_output($q, $r) {
+	return $q | ($r _o_ ~$^outputside($q)) ;
+}
+\end{Verbatim}
+
+\noindent
+Such function \emph{definitions} are equivalent to the following function
+\emph{assignments}, which have just a function variable on the left-hand side, followed by an equal sign
+and an \emph{anonymous function} on the right-hand side, which most users will find less
+friendly.\footnote{Lisp and Python programmers
+will recognize anonymous functions as ``lambda'' functions.}  
+
+\begin{Verbatim}
+$^priority_union_input = $^($q, $r) {
+	return $q | (~$^inputside($q) _o_ $r) ;
+} ;
+
+$^priority_union_output = $^($q, $r) {
+	return $q | ($r _o_ ~$^outputside($q)) ;
+} ;
+\end{Verbatim}
+
+\noindent
+The anonymous-function expressions
+
+\begin{Verbatim}
+$^($q, $r) { return $q | (~$^inputside($q) _o_ $r) ; }
+\end{Verbatim}
+
+\noindent
+and
+
+\begin{Verbatim}
+$^($q, $r) { return $q | ($r _o_ ~$^outputside($q)) ; }
+\end{Verbatim}
+
+
+\noindent
+look just like function definitions, but they begin with the \verb!$^! sigil \emph{without any
+following function name}. So an anonymous function is one that simply has no name.  The \verb!$^! sigil, as always in Kleene,
+indicates that these functions return an \fsm{}, and the
+parameter list, here \verb!($q, $r)!, indicates that the functions take two \fsm{} arguments.  We will find
+uses for anonymous functions later, but for now we will restrict ourselves to the friendlier function
+definitions.
+
+Priority union can be useful in morphology to override regular but incorrect
+forms with their correct irregular forms.  For example, assume that
+an \fsm{} named \verb!$productive_english! has been productively generated to contain
+input$\Longleftrightarrow$output
+string pairs like the following (where \verb![Verb]! and \verb![Past]! are
+multi-character symbols, and $\Longleftrightarrow$ is not a regular-expression
+operator but is used here just to indicate that two whole strings are related):
+
+\begin{alltt}
+walk[Verb][Past] \(\Longleftrightarrow\) walked
+
+kick[Verb][Past] \(\Longleftrightarrow\) kicked
+
+think[Verb][Past] \(\Longleftrightarrow\) thinked
+
+go[Verb][Past] \(\Longleftrightarrow\) goed
+\end{alltt}
+
+\noindent
+Incorrect forms like \emph{*thinked} and \emph{*goed} can be overridden by 
+defining a
+smaller \fsm{} encoding the correct mappings and simply priority-unioning it with
+the \fsm{} \verb!$productive_english!.
+
+\begin{Verbatim}
+$corrections = (
+    (dig):(dug)
+|   (go):(went)
+|   (say):(said)
+|   (think):(thought)
+) ('[Verb]' '[Past]'):"" ;
+
+$english = $^priority_union_input($corrections, 
+                                  $productive_english) ;
+\end{Verbatim}
+
+
+Once defined, functions can be called directly in regular
+expressions and used in the definition of yet other functions.  For
+example, the normal composition of Q and R 
+is \verb!Q _o_ R! (also typeable in Unicode as \verb!Q!~$\circ$~\verb!R!, using the
+Unicode \acro{ring operator} character, U+2218); and if the input-side language of Q is I, then
+the input-side language of \verb!Q _o_ R! may be a proper subset of I.
+That is, one or more of the original input strings of Q may not be accepted by the 
+composition.  The Lenient Composition of transducers Q and R accepts exactly the 
+same input language as Q.  The
+following definition of \verb!$^lenient_composition_input()! is
+appropriate for the examples in Karttunen's regular formalization of Optimality Theory
+\citep{karttunen:1998}, where the \verb!$base!
+transducer encodes a lexicon, and the \verb!$filter! transducer
+encodes an optimality rule or filter being composed
+``underneath''
+the lexicon.
+
+\begin{Verbatim}
+$^lenient_composition_input($base, $filter) {
+    return $^priority_union_input($base _o_ $filter, $base) ;
+}
+\end{Verbatim}
+
+\noindent
+When, conversely, the rule or filter is being
+composed ``on top of'' the lexicon, and the desire is to
+preserve the output language of the lexicon, then the following
+function \verb!$^lenient_composition_output! is appropriate.
+
+\begin{Verbatim}
+$^lenient_composition_output($filter, $base) {
+    return $^priority_union_output($filter _o_ $base, $base) ;
+}
+\end{Verbatim}
+
+
+
+\subsection{Function Call Semantics}
+
+\Kleene{} maintains its environment as a directed graph of frames,
+where each frame
+contains a symbol table and both a dynamic link and a static link to other frames (or to null at the root of the environment).  When a function is called, a new
+frame is allocated for its execution; the dynamic link of the
+new frame points back to the frame
+from which the function was called, and the static link points back to the
+frame where the function was defined.  
+
+The formal parameters of the function are bound, in the new frame's local
+symbol table, to the passed-in argument values,\footnote{When an \fsm{} is passed as an argument, no copy is performed, and the local
+parameter becomes an alias for the original \fsm{}.  If it is
+necessary to pass a copy, the explicit \verb!$^copy()! function can be used
+in the argument list.}  and any variables introduced in
+the body of the function are also stored in the local symbol
+table.  References to free (non-local) variables are resolved
+through the static link, thus implementing lexical scope.  When the
+function terminates, it pushes the return value on the interpreter stack; then
+the calling frame, pointed to by the dynamic
+pointer, is once again made the current frame.
+
+This fairly standard environment design supports functions that call other
+functions, functions that call themselves recursively, functions
+that themselves contain local definitions of functions, etc.  
+
+\subsubsection{Higher-order Functions}
+
+\Kleene{} also supports higher-order functions that return functions,
+as in the following example:
+
+\begin{Verbatim}
+// a function that returns a function that returns an FSM 
+$^^append_suffix($suff) {
+    // return a function, denoted here as an
+    //   anonymous function
+    return $^($a) { return $a $suff ; } ;
+}
+
+$^append_ing = $^^append_suffix(ing) ;
+$^append_espVend = $^^append_suffix(as|is|os|us|u|i) ;
+
+$net1 = $^append_ing(walk|talk) ;
+$net2 = $^append_espVend(pens|dir) ;
+\end{Verbatim}
+
+\noindent
+Recall that the sigil \verb!$^! marks a function that returns an \fsm{}. Similarly,
+the sigil \verb!$^^!, as in \verb!$^^append_suffix!, marks a function that returns a function that returns an
+\fsm{}.  Note that the \texttt{return} statement in this function returns a function, notated as an anonymous
+function.
+
+\begin{Verbatim}
+// return an anonymous function
+return $^($a) { return $a $suff ; } ;
+\end{Verbatim}
+
+The function \verb!$^append_ing! just concatenates \emph{ing} to
+its \fsm{} argument, so \verb!$net1! will be set to an \fsm{} that
+encodes the language containing \emph{walking} and \emph{talking}.
+The function \verb!$^append_espVend! is designed to model the
+suffixation of Esperanto verb endings to verb roots, and
+\verb!$net2! is set to an \fsm{} that encodes the language
+containing \str{pensas}, \str{pensis}, \str{pensos},
+\str{pensus}, \str{pensu}, \str{pensi}, \str{diras}, \str{diris}, etc.
+
+
+\subsection{Function Parameters with Default Values}
+
+In what follows, the term \emph{parameter} is used for the local
+parameters in a function definition, and the term \emph{argument} is
+used for the values passed in a function call.  The parameters are bound to the passed-in 
+function values when a function
+is called.
+
+Kleene functions can be defined to have \emph{required} and/or \emph{optional}
+parameters, where optional parameters have explicit default
+values.\footnote{The new Kleene argument-passing and parameter-binding scheme
+is modeled on that of Python, minus the Python parameters denoted with
+initial single and double asterisks.  In Python, a parameter spelled
+*foo is bound to a tuple containing any extra positional arguments in
+the call; and
+a parameter named **bar is bound to a dictionary (hash table) containing any
+extra name=value pairs in the call.} In
+the following example, \$a and \$b are required parameters, and \$c and
+\$d are optional parameters.
+
+\begin{Verbatim}
+$^myfunc($a, $b, $c = abc, $d = xyz) {
+	return $a $b $c $d ;
+}
+\end{Verbatim}
+
+\noindent
+In the parameter list, required parameters must precede optional parameters.
+If a call to \verb!$^myfunc()! does not supply values for the optional
+parameters, here \$c and \$d, they are bound to the default values indicated
+in the function definition.
+
+A function call may contain \emph{positional} and/or \emph{named}
+arguments, where positional arguments must precede named arguments.  A
+named argument is of the form \emph{paramName}~=~\emph{value}.
+The following call contains two positional arguments and one named
+argument:
+
+\begin{Verbatim}
+$net = $^myfunc(a*b+c?, [a-z]{3,6}, $d = ing) ;
+\end{Verbatim}
+
+\noindent
+It is important to understand that there is not always a straightforward mapping
+between positional arguments and required parameters, nor between named
+arguments and optional parameters.  As in Python, positional arguments
+are treated first; if there are \emph{n} positional arguments in the
+call, their
+values are bound to the first \emph{n} parameters, in syntactic order,
+whether those
+parameters are required (having no default value) or optional (having a
+default value).  Any named arguments in the call are then used
+to bind the same-named parameters, whether those parameters are
+required or optional.  The following runtime errors are detected:
+
+\begin{itemize}
+\item
+Passing more arguments than there are parameters
+\item
+Attempting to set a parameter twice, first by a positional argument and
+then by a named argument
+\item
+Failure to set a required parameter
+\end{itemize}
+
+The use of optional parameters and named arguments makes function calling more flexible and
+often more readable.  Consider the following definition of a function
+with three required parameters:
+
+\begin{Verbatim}
+$^func($prefix, $root, $suffix) {
+	return $prefix $root $suffix ;
+}
+\end{Verbatim}
+
+\noindent
+This function can be called with three positional arguments,
+
+\begin{Verbatim}
+$net = $^func(re, work, ing) ;
+\end{Verbatim}
+
+\noindent
+or with named arguments in any order:
+
+\begin{Verbatim}
+$net1 = $^func($root=think, $prefix="", $suffix=ing) ;
+$net2 = $^func($prefix=un, $suffix=ing, $root=do) ;
+\end{Verbatim}
+
+\noindent
+Function calls with positional arguments can, of course, easily become
+opaque to human readers, especially when the function contains an unusually large number of parameters.
+
+If parameters are optional---having default values---then the call
+may contain only the subset of arguments needed to override selected
+defaults.  The function could, for example, expand the arguments, plus default
+values, into larger \fsm{}s representing complex feature structures.
+
+\begin{quote}
+\textbf{Note to myself}: The \init{at\&t} Lextools contain a
+built-in syntactic
+feature that handles feature structures, linearizing
+the component features in a predefined canonical order.  Show how this
+can be done with Kleene functions with optional arguments.
+\end{quote}
+
+\section{Right-linear Phrase-structure Grammars}
+
+\subsection{Right-linear Syntax}
+
+While regular expressions are formally capable of describing any
+regular language or regular relation, some linguistic
+phenomena---especially productive morphological compounding and
+derivation---can be awkward to model this way.  \Kleene{}
+therefore provides right-linear phrase-structure grammars that
+are similar in semantics, if not in syntax, to the
+Xerox/\acro{parc} \texttt{lexc} language \citep{beesley+karttunen:2003}.  While general phrase-structure
+grammars are context-free, requiring a push-down stack to parse, and so go beyond
+regular power, a right-linear (or left-linear) grammar is regular and so can be
+compiled into a finite-state machine.  
+
+%The \Kleene{} phrase-structure syntax is beyond the scope of this paper.
+
+A \Kleene{} phrase-structure \term{grammar} is a set of
+\term{productions}, each
+assigned to a variable with a \verb!$>! sigil.\footnote{If anyone has a better
+suggestion for the syntax, please contact me.}  Productions may
+include right-linear references to themselves or to other
+productions, which might not yet be defined.  The productions are parsed
+immediately\footnote{The parsed productions are stored as \init{ast}s in the
+symbol table.} but are not evaluated until the entire grammar is built
+into an \fsm{} via a call to the built-in function
+
+\vspace{0.5cm}
+\verb!$^start(!\emph{\$>StartProduction}\verb!)!
+\vspace{0.5cm}
+
+\noindent
+which takes one production
+name as its argument and treats it as the starting production of the whole
+grammar.  The following example models a fragment of Esperanto noun morphotactics:
+
+\begin{Verbatim}
+$>Root = ( kat | hund | elefant | dom ) ( $>Root | $>AugDim ) ;
+$>AugDim = ( eg | et )? $>Noun ;
+$>Noun = o $>Plur ;
+$>Plur = j? $>Case ;
+$>Case = n? ;
+
+$net = $^start($>Root) ;
+\end{Verbatim}
+
+\noindent
+The syntax on the right-hand-side of productions is identical to regular
+expression syntax, but allowing right-linear references to productions of the form
+\verb!$>!\emph{Name}.
+
+\subsection{Right-linear Semantics}
+
+
+\subsubsection{Enforcing the Right-linear Limitation}
+
+After a production is parsed into an
+\init{ast}, and before it is evaluated and stored in the symbol table, the
+\init{ast} is sent a message to accept a visitor object\footnote{This
+visitor is of type
+OpenFstRrKleeneVisitor.} that ensures that
+all references to productions are genuinely right-linear.  In the simplest cases,
+a right-linear reference is visually on the far right-hand side of the
+expression, as with \verb!$>Foo! in the following example:
+
+\begin{Verbatim}
+$>Production = a b c $>Foo ;
+\end{Verbatim}
+
+\noindent
+In more complicated examples, multiple right-linear references can be unioned 
+at the end of the expression:
+
+\begin{Verbatim}
+$>Production = a b c ( $>A | $>B | $>C ) ;
+\end{Verbatim}
+
+\noindent
+Even more complicated examples are possible, as long as the references remain
+right-linear. 
+
+\begin{Verbatim}
+$>Production = a b c ( d e f $>X | g h i j $>Y | k l m $>Z ) ;
+\end{Verbatim}
+
+\noindent
+Violations of the right-linear restriction are found and reported
+at production parse-time.
+
+\subsubsection{The Implied Grammar}
+
+The built-in \verb!$^start()! function takes the identifier of a single
+production as its argument, and treats the start state of this production as the
+start state of the resulting \fsm{}.  The overall implied grammar is the set
+including the
+starting production, any productions referred to by the starting
+production, and, 
+recursively, any productions referred to by the referred-to productions.
+The call to \verb!$^start()! fails if any referred-to production in the
+implied grammar is
+not yet defined.
+
+If the call to \verb!$^start()! succeeds, it returns an \fsm{} value.  The
+productions are not consumed during compilation, but remain available for
+potential reuse.  While productions can be defined at any time and in any
+place, it is often convenient to encapsulate an entire right-linear grammar
+in a function, which can be called and then deleted when no longer
+needed.
+
+\begin{Verbatim}
+$^esperanto_noun_function() {
+	$>Root = (kat|hund|elefant|dom) ( $>Root | $>AugDim ) ;
+	$>AugDim = ( eg | et )? $>Noun ;
+	$>Noun = o $>Plur ;
+	$>Plur = j? $>Case ;
+	$>Case = n? ;
+
+	return $^start($>Root) ;
+}
+
+$esp_nouns = $^esperanto_noun_function() ;
+delete $^esperanto_noun_function ;
+\end{Verbatim}
+
+Deletion of the function severs the reference link between the function
+identifier \verb!$^esperanto_noun_function! and the underlying object that
+represents the function, allowing the memory tied up by that object to be
+reclaimed.\footnote{The symbol tables and their objects are implemented in
+Java, and objects are automatically garbage collected when there are no
+more references to them.}  Another way to encapsulate right-linear
+grammars, in stand-alone code blocks, is described in
+section~\ref{sec:codeblock} on page~\pageref{sec:codeblock}.
+
+\subsubsection{Uses of Right-linear Grammars}
+
+\begin{quote}
+\textbf{Note to myself}:   Make it clear that the productions can be defined in any order, as long as they
+are all available when \verb!$^start()! is called. Similarly,
+productions can refer to functions that have not yet been defined,
+as long as those functions are available when \verb!$^start()! is
+called.  Contrast
+regular-expression assignments, which must be fully evaluatable at the
+moment they are parsed, with right-linear grammars, where
+evaluation is delayed.
+Try to reconstruct the Aymara-derivation example and include it here.  
+\end{quote}
+
+
+
+\section{Scope}
+
+\subsection{Assignments, Declarations and Local Scope}
+
+Kleene, like Python, and unlike Java and \CPP{}, does not require
+variables to be declared.
+When a value is first assigned to a variable, as in
+
+\begin{Verbatim}
+$foo = a*b+[c-g] ;
+\end{Verbatim}
+
+\noindent
+the statement automatically creates the variable \verb!$foo! and then binds
+the \fsm{} value to the variable in the current local symbol table.  A
+subsequent statement like
+
+\begin{Verbatim}
+$foo = (dog | cat | rat) s? ;
+\end{Verbatim}
+
+\noindent
+causes the existing \verb!$foo! to be re-bound to the new \fsm{} 
+value, again in the local symbol table.
+
+
+\subsection{Stand-alone Code Blocks}
+
+Kleene provides stand-alone code blocks, grouping a set of statements
+that are to be evaluated in a new frame, which means in a new scope.
+In the following example, a new frame/scope is allocated for the
+stand-alone block, and the \verb!$foo! at point B is local to the block
+and distinct from the
+\verb!$foo! at point A. Inside the block, the local \verb!$foo! shadows
+the \verb!$foo! defined at point A.  At the end of the code block, the new
+frame/scope is released, and all memory used inside the block is freed
+and made available for garbage collection.  At point C, the value of \verb!$foo! is the
+language consisting of the word \emph{cat}, and the \verb!$foo! defined
+at point B is out-of-scope and unavailable.
+
+\begin{Verbatim}
+$foo = cat ;        // point A
+{
+    $foo = dog ;    // point B
+}
+print $foo ;        // point C
+\end{Verbatim}
+
+\subsection{Function Blocks}
+
+Function blocks are very similar to the stand-alone code blocks, being
+evaluated in a new frame/scope.  The formal parameters of the function are
+bound as local variables in the
+new frame, and any variables created in the block are also local.
+
+
+\begin{Verbatim}
+$^func($a, $b) {
+    // parameters $a and $b are local
+    $foo = $a $b ;    // $foo is local
+    return $foo ;
+}
+\end{Verbatim}
+
+\noindent
+When the function terminates, it returns a value, unless it is a void function, and the
+new frame is released, freeing any locally used memory for garbage
+collection.  While locally used memory is released when a function returns, the
+function definition itself is stored as an Abstract Syntax Tree (\init{ast}) that could
+potentially tie up 
+significant memory, and that memory is retained until the function definition
+itself is deleted or goes out of scope.  In contrast, the \init{ast} representing a
+stand-alone code block is released as soon as its execution is completed.
+
+Note that the blocks of code in \texttt{if-elsif-else} statements and \texttt{while}
+loops are not evaluated inside a new frame/scope.
+
+\begin{Verbatim}
+if (#^numStates($fst) < 30) {
+    // this block is not executed in a new frame
+    draw $fst ;
+} else {
+    // this block is not executed in a new frame
+    print "the fst is too big to draw" ;
+}
+\end{Verbatim}
+
+
+\subsection{External Variables}
+
+Normally, from inside function blocks and stand-alone code blocks,
+it is not possible to change the value of non-local variables,
+i.e.\@ variables that are defined in ``higher'' frames; nor is it
+possible to delete such variables.  Exceptionally, it may be useful
+or necessary for code within a stand-alone code block or function
+block to change the value of a variable or variables outside that
+scope.  To allow this, the variable or variables to be changed must
+be overtly declared \texttt{external} at the top of the stand-alone
+code block or function block.\footnote{The Python \texttt{global}
+declaration has a very similar function.}  In the following
+example, \verb!$foo! is declared external inside a stand-alone
+block, and so the \verb!$foo! referred to at points B and C is the
+same \verb!$foo! referred to at point A, and the value of
+\verb!$foo! at point C is the language containing the single string
+\emph{dog}.
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = cat ;        // point A
+{
+    external $foo ; 
+    $foo = dog ;    // point B
+}
+print $foo ;        // point C
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+Similarly in function blocks, external declarations allow a function to change the value
+of variables outside the function's own block/scope.  The following function could be
+called repeatedly to union a number of arguments into \verb!$result!.
+
+\begin{samepage}
+\begin{Verbatim}
+$result = ~.* ; // point A, $result set to the empty language
+                // the empty language could also be denoted 
+                //     as a-a, etc.
+^func($fst) {
+    external $result ;
+    $result = $result | $fst ;  // point B: 
+                                // changes $result at point A
+}
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+Similarly, a non-local variable can be deleted, from inside a
+function block or stand-alone code block, only if it has been
+declared external.
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = foo ;
+{
+    delete $foo ;  // this is illegal
+}
+\end{Verbatim}
+\end{samepage}
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = foo ;  // point A
+{
+    external $foo ;
+    delete $foo ;  // deletes the variable at point A
+}
+\end{Verbatim}
+\end{samepage}
+
+Note that Kleene, consistent with its lexical scope, searches for
+the external binding of a variable \verb!$var! declared external in
+a function block by
+searching up the \emph{static} environment links.  If multiple
+\verb!$var! variables are in use in the program, you can see
+which \verb!$var! is referred to by
+looking at the source code and identifying the \verb!$var! that
+is in scope where the function is defined.\footnote{In the
+alternative, and rather old-fashioned, dynamic scope, the variable
+referred to by the \texttt{external} statement would be the one
+active at the point where the function is \emph{called}, and this
+could of course change for each call.}
+
+An \texttt{external} statement can appear only in a stand-alone code block or in a
+function block, and it must precede any other kind of statement.  There can be multiple
+\texttt{external} statements at the beginning of a block, 
+and each statement can include multiple
+identifiers, optionally separated by commas.
+
+\begin{samepage}
+\begin{Verbatim}
+{
+    external $foo ;
+    external $foo, $bar, $result ;  // optional commas
+    external $sum $avg $collection ;
+
+    // other statements here
+}
+\end{Verbatim}
+\end{samepage}
+
+
+\subsection{Free Variables}
+
+In general, expressions inside a stand-alone code block, or inside a function block, can
+always \emph{refer} to variables outside the local scope, to retrieve their values, but
+they cannot \emph{change} the value of such variables unless they are expressly declared to be
+external. In the following example, at point B, \verb!$foo! is referred to, and its
+value retrieved, and this is legal and normal.  Because there is no local binding of
+\verb!$foo!, Kleene searches up the static environment links to find the first higher
+frame that contains a binding for \verb!$foo!,  and returns the value.  In such a case,
+\verb!$foo! is known as a free variable.
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = dog | cat | rat ;  // point A
+{
+    $bar = $foo s? ;      // point B, $foo is a free variable
+    print $bar ;
+}
+\end{Verbatim}
+\end{samepage}
+
+\noindent 
+In an assignment statement, free variables occur only on the right-hand side.
+If a variable, such as \verb!$bar! at point B, 
+appears on the left-hand side of an assignment, then its value is being
+changed, and it is assumed to be local---and is created locally if it doesn't already
+exist---unless it was overtly declared to be external.
+
+\subsection{Combining Free and Local Usage}
+
+It is possible to write a stand-alone code block or function block that first retrieves
+the value of a
+variable \verb!$var! as a free variable, and then subsequently tries to create and set
+\verb!$var! as a local variable.
+
+\begin{samepage}
+\begin{Verbatim}
+// a bad, confusing example
+{
+    $a = a b c $var ;  // point A: $var is a free variable
+    // ...
+    $var = a*b+[c-g] ; // point B: attempt to create/set
+                       //     $var as a local variable
+    // ...
+}
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+The statement at point B creates and sets \verb!$var! as a local variable because it was
+not declared external.  The same problem can arise in a single assignment statement,
+where a variable name appears both on the right-hand and left-hand sides of an
+assignment.
+
+\begin{samepage}
+\begin{Verbatim}
+// another bad, confusing example
+$var = xyz ;
+{
+    $var = a b c $var ;  
+    // ...
+}
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+In the assignment statement, the right-hand side is evaluated first, including the
+retrieval of the value of \verb!$var! as a free variable.  Then, because \verb!$var! was
+not declared external, it would attempt to create a local \verb!$var! and bind it to the
+value of the right-hand side.
+
+
+While such code makes sense theoretically, and could be allowed,
+it is dangerously confusing and probably represents a programming error.  For this
+reason, Kleene detects such cases and generates an exception at execution
+time.\footnote{Python also disallows such usage, and it generates an error at
+function-definition time.}
+
+
+\subsection{Export Statements}
+
+As an experiment, Kleene supports \texttt{export} statements that can
+appear only in a stand-alone code block, and which cause a local
+variable, and its bound value, to be ``exported'' up from the current
+frame to the mother frame.\footnote{For stand-alone code blocks, the
+static mother frame and the dynamic mother frame are the same.} Consider
+first the following example, which creates a local \verb!#var! inside a
+stand-alone block and then tries to reference it after the block has
+terminated.
+
+\begin{samepage}
+\begin{Verbatim}
+{
+    $var = abc ;	// point A
+}
+print $var ;  // point B: error, $var is out of scope
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+This example generates an exception because \verb!$var! was created at point
+A but is out of scope and unavailable at point B.  However, the example can be made to work by exporting \verb!$var!.
+
+\begin{samepage}
+\begin{Verbatim}
+{
+    $var = abc ;	// point A
+    export $var ;	// export $var to the mother frame
+}
+print $var ;  // point B: no error, $var has the value "abc"
+\end{Verbatim}
+\end{samepage}
+
+A stand-alone code block can contain multiple \texttt{export} statements,
+which can appear anywhere (but after \texttt{external} declarations, if
+any).  A single \texttt{export} statement can list multiple variables,
+optionally separated by commas.
+
+\begin{samepage}
+\begin{Verbatim}
+{
+    $foo = abc ;
+    $bar = xyz ;
+    export $foo, $bar ;
+
+    $a = a ;
+    $b = b ;
+    $c = c ;
+    export $a $b $c ;
+}
+\end{Verbatim}
+\end{samepage}
+
+
+\subsection{Practical Use of Code Blocks}
+
+\label{sec:codeblock}
+
+Finite-state machines can often get alarmingly big, sometimes too big to
+process; and \fsm{}s are normally persistent, taking up memory until
+they are overtly deleted or go out of scope.  Stand-alone code blocks and function blocks
+can be used to help minimize the use of memory when programming.  
+
+For example, in practical finite-state programming it is very common to
+define a set of intermediate \fsm{}s and then combine them somehow into
+the final desired \fsm{}.  The intermediate \fsm{}s can then be deleted
+to allow their memory to be garbage collected.  Take the following
+example that models simple Esperanto nouns.
+
+\begin{Verbatim}
+$nroot = elefant | kat | hund | bird ;  
+//       elephant  cat    dog   bird
+// could be expanded to thousands of roots
+$augdim = eg | et ;
+$num = j ;
+$case = n ;
+
+$nouns = $nroot $augdim* $num? $case? ;
+
+// now delete intermediate FSMs no longer needed
+delete $nroot $augdim $num $case ;
+\end{Verbatim}
+
+\noindent
+Of course, it requires some attention and discipline
+to recognize and delete no-longer-needed intermediate \fsm{}s,
+and it is far too easy to leave them lying around, taking up valuable memory.  
+
+Kleene programmers writing such grammars are encouraged to group them into stand-alone 
+code blocks that
+either export the final value or declare an external variable and set it to the final
+value, e.g.
+
+\begin{samepage}
+\begin{Verbatim}
+{
+    // intermediate FSMs 
+    $nroot = elefant | kat | hund | bird ;
+    $augdim = eg | et ;
+    $num = j ;
+    $case = n ;
+    // the final FSM 
+    $nouns = $nroot $augdim* $num? $case? ;
+
+    export $nouns ;
+}
+\end{Verbatim}
+\end{samepage}
+
+\noindent
+or
+
+\begin{Verbatim}
+$nouns = "" ;
+{
+    external $nouns ;
+
+    // intermediate FSMs 
+    $nroot = elefant | kat | hund | bird ;
+    $augdim = eg | et ;
+    $num = j ;
+    $case = n ;
+
+    // set the final (external) value
+    $nouns = $nroot $augdim* $num? $case? ;
+}
+\end{Verbatim}
+
+\noindent
+Either way, at the end of the code block, its frame will be released and
+all of its local memory will be freed for garbage collection.  Only the
+variables and values explicitly exported, or declared external, will
+remain.
+
+Stand-alone code blocks can also be nested, e.g.\@ to model Esperanto
+nouns and verbs, one might write the following:
+
+\begin{Verbatim}
+{
+    {
+        $nroot = elefant | kat | hund | bird ;
+        $augdim = eg | et ;
+        $num = j ;
+        $case = n ;
+        $nouns = $nroot $augdim* $num? $case? ;
+        export $nouns ;
+    }
+    {
+        $vroot = pens | ir | don | dir ;
+        //     think    go   give  say
+        $aspect = ad ;
+        $vend = as | is | os | us | u | i ;
+        $verbs = $vroot $aspect? $vend ;
+        export $verbs ;
+    }
+    $esp = $nouns | $verbs ;
+    export $esp ;
+}
+\end{Verbatim}
+
+\noindent
+After the evaluation of this nested block, only the final \verb!$esp!
+variable would be available, and all the intermediate code and \fsm{s} 
+would be released, as if they had been explicitly deleted.
+
+\section{Language Restriction Expressions}
+
+Kleene language-restriction expressions are regular-expression
+abbreviations that denote regular \emph{languages} (not regular
+\emph{relations}) and compile into \fsm{}s that are finite-state
+acceptors.  For
+example, the expression
+
+\begin{Verbatim}
+b => a _ c ;
+\end{Verbatim}
+
+\noindent
+denotes the Universal Language minus all strings that violate
+the restriction that any symbol \texttt{b} must
+be preceded immediately by \texttt{a} and followed immediately by
+\texttt{c}.  Thus the denoted language includes \emph{dog} and
+\emph{elephant}, and all other strings that do not contain
+\texttt{b}; and it contains strings like \emph{abc}, \emph{aaabcm},
+\emph{qaaabcmmabcr} wherein every occurrence of \texttt{b} is
+preceded by \texttt{a} and followed by \texttt{c}.  The language
+excludes all strings, including \emph{bac}, \emph{abm} and
+\emph{abcqqabr}, that contain any \texttt{b} that is not surrounded
+with the specified left and right contexts.
+
+In general, the restriction syntax is
+
+\begin{alltt}
+\emph{content} => \emph{leftContext} _ \emph{rightContext}
+\end{alltt}
+
+\noindent
+where \emph{content}, \emph{leftContext} and \emph{rightContext}
+can be arbitrarily complex regular expressions with the semantic
+restriction that each must denote a regular language (not a
+relation).  The \emph{leftContext} and/or \emph{rightContext} can
+be omitted
+
+\begin{Verbatim}
+b => a _
+b => _ c
+\end{Verbatim}
+
+\noindent
+and word boundaries can be indicated with \texttt{\#}.  The
+expression
+
+\begin{Verbatim}
+b => # _
+\end{Verbatim}
+
+\noindent
+allows \texttt{b} to appear only at the beginning of a word, and,
+similarly,
+
+\begin{Verbatim}
+b => _ #
+\end{Verbatim}
+
+\noindent
+allows \texttt{b} only at the end of a word.  The following
+expressions allows \texttt{abc} to appear only when followed by
+\texttt{quam} and the end of the string.
+
+\begin{Verbatim}
+abc => _ quam #
+\end{Verbatim}
+
+\noindent
+To include a literal pound sign (also known as the hash mark or
+hash sign) in any regular expression, it should be literalized in
+the usual Kleene ways:  either as \verb!\#! or \verb!"#"! or \verb![#]!. 
+
+Restriction expressions can also include multiple contexts, separated by
+\texttt{||}, a double vertical bar.  The following expression denotes the
+Universal Language, minus any strings that violate the restriction that
+each occurrence of \texttt{abc} must appear either at the beginning of a
+string, at the end of a string, or in the context between \texttt{left}
+and \texttt{right}.
+
+\begin{Verbatim}
+abc => #_ || _ # || left _ right 
+\end{Verbatim}
+
+\noindent
+Where multiple contexts are provided, each example of the content
+must appear in at least one of the contexts indicated.
+
+Because restriction expressions are regular expressions that denote
+regular languages and compile into acceptors, they can be assigned to
+variables just like any other regular expressions.
+
+\begin{Verbatim}
+$var =  abc => left _ right ;
+\end{Verbatim}
+
+

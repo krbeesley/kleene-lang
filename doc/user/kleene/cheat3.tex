@@ -1,0 +1,73 @@
+\chapter{Pre-defined Case Functions}
+
+
+The following functions change or augment networks to handle case
+variants.  The \verb!$proj! argument must have the value \texttt{input}
+(or \texttt{upper}), \texttt{output} (or \texttt{lower}), or
+\texttt{both}, which is the default, e.g.
+
+\begin{Verbatim}[fontsize=\small]
+$foo = (abc):(def) ;
+$bar = $^uc($foo, output) ; // or $^uc($foo, "output")
+\end{Verbatim}
+
+\noindent
+sets \verb!$bar! to a version of \verb!$foo! that has ``DEF'' rather than
+``def'' on the output/lower side.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb/$^uc($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
+\verb/$^uc!($fst,/\verb!$proj="both"!\verb!)! & convert to uppercase\\
+\verb/$^lc($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
+\verb/$^lc!($fst,/\verb!$proj="both"!\verb!)! & convert to lowercase\\
+\hline
+\verb/$^init_uc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
+\verb/$^init_uc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to uppercase\\
+\verb/$^init_lc($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
+\verb/$^init_lc!($fst,/\verb!$proj="both"!\verb!)! & convert initial char to lowercase\\
+\hline
+\verb/$^opt_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
+\verb/$^opt_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase\\
+\verb/$^opt_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
+\verb/$^opt_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add lowercase\\
+\hline
+\verb/$^opt_init_uc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
+\verb/$^opt_init_uc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase\\
+\verb/$^opt_init_lc($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
+\verb/$^opt_init_lc!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial lowercase\\
+\hline
+\verb/$^opt_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^opt_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^opt_init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^opt_init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+The \texttt{ci} in the final four names stands for ``case insensitive''
+(i.e.\@ accept uppercase or lowercase), and the following functions with
+abbreviated names are also provided for convenience.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb/$^ci($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add uppercase \& lowercase\\
+\verb/$^init_ci($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\verb/$^init_ci!($fst,/\verb!$proj="both"!\verb!)! & allow/add initial uppercase \& lowercase\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+It is anticipated that the behavior of the ``ci'' will be re-examined and
+perhaps changed, and that new functions will be added in future releases
+to handle ``title''-casing and ``camel''-casing.
+

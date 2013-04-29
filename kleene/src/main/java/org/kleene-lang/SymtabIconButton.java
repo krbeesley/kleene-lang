@@ -174,7 +174,7 @@ class SymtabIconButton extends JButton {
 
 		pm.addSeparator() ;
 
-		JMenuItem writeDotItem = new JMenuItem("writeDOT ...") ;
+		JMenuItem writeDotItem = new JMenuItem("writeDot ...") ;
 		writeDotItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				//fcsave.setSelectedFile(new File(fcsave.getCurrentDirectory().getPath() 
@@ -192,7 +192,7 @@ class SymtabIconButton extends JButton {
 
 					String encoding = efcWriteDOT.getSelectedEncoding() ;
 
-					terminal.processInput("writeDOT " + 
+					terminal.processInput("writeDot " + 
 											iconName + 
 											", " +
 											"\"" + correctedPathName + "\"" +
@@ -208,8 +208,8 @@ class SymtabIconButton extends JButton {
 		writeDotItem.setEnabled(true) ;
 		pm.add(writeDotItem) ;
 
-		JMenuItem writeXMLItem = new JMenuItem("writeXML ...") ;
-		writeXMLItem.addActionListener( new ActionListener() {
+		JMenuItem writeXmlItem = new JMenuItem("writeXml ...") ;
+		writeXmlItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				//fcsave.setSelectedFile(new File(fcsave.getCurrentDirectory().getPath() + "/" + iconName.substring(1) + ".xml")) ; 
 				efcWriteXML.setSelectedFile(new File(efcWriteXML.getCurrentDirectory().getPath() + "/" + iconName.substring(1) + ".xml")) ; 
@@ -224,7 +224,7 @@ class SymtabIconButton extends JButton {
 
 					String encoding = efcWriteXML.getSelectedEncoding() ;
 
-					terminal.processInput("writeXML " + 
+					terminal.processInput("writeXml " + 
 											iconName + 
 											", " +
 											"\"" + correctedPathName + "\"" +
@@ -237,8 +237,9 @@ class SymtabIconButton extends JButton {
 				//}
 			}
 		}) ;
-		//writeXMLItem.setEnabled(true) ;
-		pm.add(writeXMLItem) ;
+		//writeXmlItem.setEnabled(true) ;
+		pm.add(writeXmlItem) ;
+		
 
 		JMenuItem writeBinaryItem = new JMenuItem("writeBinary ...") ;
 		writeBinaryItem.addActionListener( new ActionListener() {
@@ -339,6 +340,41 @@ class SymtabIconButton extends JButton {
 			}
 		}) ;
 		submenu.add(rmEpsilonItem) ;
+
+		JMenuItem writeXmlStateOrientedItem = new JMenuItem("writeXmlStateOriented ...") ;
+		writeXmlStateOrientedItem.addActionListener( new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				//fcsave.setSelectedFile(new File(fcsave.getCurrentDirectory().getPath() + "/" + iconName.substring(1) + ".xml")) ; 
+				efcWriteXML.setSelectedFile(new File(efcWriteXML.getCurrentDirectory().getPath() + "/" + iconName.substring(1) + ".xml")) ; 
+				//int returnVal = fcsave.showSaveDialog(symtab) ;
+				int returnVal = efcWriteXML.showSaveDialog(symtab) ;
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					//String pathName = fcsave.getSelectedFile().getPath() ;
+					String pathName = efcWriteXML.getSelectedFile().getPath() ;
+					// On Windows systems, the pathName will typically contain backslashes.
+					// Replace them with forward slashes.
+					String correctedPathName = pathName.replaceAll("\\\\", "/") ;
+
+					String encoding = efcWriteXML.getSelectedEncoding() ;
+
+					terminal.processInput("writeXmlStateOriented " + 
+											iconName + 			// the name of the icon/network
+											", " +
+											"\"" + correctedPathName + "\"" +
+											", " +
+											"\"" + iconName.substring(1) + "\"" +
+											", " +
+											"\"" + encoding + "\" ;"
+											) ; 
+				} 
+				//else {
+				//	System.out.println("Open command canceled by user\n") ;
+				//}
+			}
+		}) ;
+		//writeXmlItem.setEnabled(true) ;
+		submenu.add(writeXmlStateOrientedItem) ;
+
 
 		pm.add(submenu) ; 
 

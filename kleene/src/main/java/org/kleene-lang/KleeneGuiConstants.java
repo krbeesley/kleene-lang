@@ -3,7 +3,7 @@
 //
 //	The Kleene Programming Language
 
-//   Copyright 2006-2012 SAP AG
+//   Copyright 2006-2013 SAP AG
 
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
 //	Constants used in the Kleene GUI
 
 public interface KleeneGuiConstants {
-	public static final String VERSION_NUMBER = "0.9.3.2" ;
+	public static final String VERSION_NUMBER = "0.9.3.4" ;
 
-	public static final String COPYRIGHT_YEAR_RANGE = "2006-2012" ;
+	public static final String COPYRIGHT_YEAR_RANGE = "2006-2013" ;
 }
 

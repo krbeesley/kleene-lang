@@ -1,0 +1,20 @@
+\Kleene{} is a high-level programming language for building,
+manipulating and testing weighted 
+finite-state acceptors and transducers, which are collectively called
+finite-state machines (\fsm{}s).
+It allows programmers to define \fsm{}s using regular expressions and
+right-linear phrase-structure grammars, and it provides variables,
+rule-like expressions, functions and familiar
+control structures.  Pre-edited \Kleene{}
+scripts can be run from the command line, and a graphical user
+interface is provided for interactive learning, programming and testing.
+
+The \Kleene{} parser is implemented in JavaCC/JJTree, and the
+interpreter calls functions in the OpenFst library via the Java
+Native Interface (\acro{jni}).  Kleene has its own syntax, based on
+familiar regular expressions, and it borrows much of its semantics from
+the Xerox/\acro{parc} finite-state toolkit.
+
+Language-restriction expression and alternation rules are implemented using
+algorithms supplied by M\r{a}ns Huld\'en. 
+

@@ -1,6 +1,13 @@
-kleene2
+kleene User Documentation
 
-Extension of paper written for FSMNLP08,
+2012-01-05 converted from article to book
+Master file is kleene.tex
+	which now includes other .tex files
+
+
+
+
+Extension of paper originally written for FSMNLP08,
 to include right-linear phrase-structure grammars,
 and alternation-rule syntax.
 

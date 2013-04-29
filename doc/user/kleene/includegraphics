@@ -1,0 +1,7 @@
+\begin{center}
+\includegraphics{images/<filename>.pdf}
+%\includegraphics[scale=0.9]{images/<filename>.pdf}
+%\includegraphics[width=60mm]{images/<filename>.pdf}
+%\includegraphics[height=60mm]{images/<filename>.pdf}
+\end{center}
+

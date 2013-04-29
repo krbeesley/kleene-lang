@@ -1,0 +1,5 @@
+
+To clone the Kleene source files from Github:
+
+$ git clone git://github.com/krbeesley/kleene-lang.git
+

@@ -1,0 +1,88 @@
+\chapter{Sigma and \acro{other}/\acro{unknown} Characters}
+
+\label{app:other}
+
+Kleene automatically keeps track of the set of symbols that are ``known''
+to each network, and this set is known traditionally as the \emph{sigma}.
+Each Kleene network carries its own private sigma.\footnote{The OpenFst
+library does not maintain a private sigma for each network; this
+functionality is added at the Java level of Kleene.} In the simple case 
+
+\begin{Verbatim}[fontsize=\small]
+$v = abc ;
+\end{Verbatim}
+
+\noindent
+the sigma of network \$v will contain the symbols \emph{a}, \emph{b},
+\emph{c} and no other symbols.  The Kleene programmer never has to
+declare sigmas manually.
+
+In Kleene regular expressions, the . (dot) special syntactic symbol
+semantically represents \emph{any} symbol, and has a non-trivial
+semantics.  Intuitively, the notion of \emph{any} symbol properly
+includes all known symbols in the sigma, plus the infinite set of
+\acro{other}, also known as \acro{unknown}, symbols.  We will use the
+term \acro{other} herein. 
+
+Kleene transducers must also distinguish between the \emph{identity
+mapping} of \acro{other} symbols vs.\@ the \emph{non-identity mapping} of
+\acro{other} symbols.  The identity mapping maps any \acro{other} symbol
+to itself, while the non-identity mapping maps any \acro{other} symbol to
+any \acro{other} symbol \emph{except} itself.  The difference is best
+seen in concrete examples.
+
+
+When . (dot) appears in a regular expression like
+
+\begin{Verbatim}[fontsize=\small]
+$w = . ;
+\end{Verbatim}
+
+\noindent
+it is interpreted to produce the arc label
+\acro{other\_id}:\acro{other\_id}, which represents the \emph{identity
+mapping} of \acro{other} symbols, i.e.\@ the mapping of any \acro{other}
+symbol to itself.  As the sigma of ``known'' symbols in \$w is empty, the
+resulting network maps \emph{a} to \emph{a}, \emph{b} to \emph{b},
+\emph{c} to \emph{c}, and similarly for all possible symbols---but not
+\emph{a} to \emph{b} because this would be a non-identity mapping.
+
+To denote the mapping of any symbol to any symbol, including itself, the
+Kleene syntax .:. is used in regular expressions, e.g.
+
+\begin{Verbatim}[fontsize=\small]
+$y = .:. ;
+\end{Verbatim}
+
+\noindent
+The resulting network for \$y contains a start state and a final state,
+linked by two arcs labeled \acro{other\_id}:\acro{other\_id} and
+\acro{other\_nonid}:\acro{other\_nonid}, respectively.  As the name
+implies, \acro{other\_nonid}:\acro{other\_nonid} represents the
+non-identity mapping of \acro{other} symbols.  The two arcs therefore
+handle the cases of identity mapping and non-identity mapping.
+
+In Kleene networks, the symbol coverage of \acro{other\_id} and
+\acro{other\_nonid} are identical; it can be thought of as \acro{other},
+i.e.\@ the set of all possible symbols not in the sigma of the network;
+the labels \acro{other\_id}:\acro{other\_id} and
+\acro{other\_nonid}:\acro{other\_nonid} differ only in their mapping
+behavior: identity mapping vs.\@ non-identity mapping.
+
+When two networks are combined, via operations like union, concatenation
+and composition, the result is a new network with its own sigma.  Where
+one or both networks to be combined ``contain \acro{other}'', the
+operation, and the calculation of the new sigma, can be quite
+complicated, but the programmer never needs to worry about it.
+
+The notion of \emph{any symbol}, denoted . (for ``map any other symbol to
+itself'') or .:. (``map any other symbol to any other symbol, including
+itself'') are syntactic notions that appear in regular expressions.  The
+notions of identity mapping, non-identity mapping and the labels
+\acro{other\_id}:\acro{other\_id} and
+\acro{other\_nonid}:\acro{other\_nonid} belong to underlying networks.  
+
+The arc labels \acro{other\_id} and \acro{other\_nonid} are special, and
+these two special symbols should not appear in regular expressions.
+
+
