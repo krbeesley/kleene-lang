@@ -16,7 +16,7 @@ WINPORT_DIR=$(CURDIR)/../../winport
 include $(WINPORT_DIR)/os_type.mk
 
 # the basename of the icu library
-ICU4C_BASENAME=icu4c-49_1_2
+ICU4C_BASENAME=icu4c-51_1
 ICU4C_ARCHIVE=$(ICU4C_BASENAME)-src.tgz
 
 # the compiled libraries get stored in ./icu/src/lib
@@ -27,7 +27,7 @@ ICU4C_LIB_DIR=$(ICU4C_SOURCE_DIR)/lib
 # a number of libraries are compiled, including libicudata
 ICU4C_LIB_BASENAME=libicudata
 # this is the naming-convention format for the compiled libraries
-ICU4C_LIB_VERSION=49.1.2
+ICU4C_LIB_VERSION=51.1
 
 # different operating systems use different extensions
 # for the compiled libraries
@@ -45,6 +45,9 @@ ICU4CLIB=$(ICU4C_LIB_DIR)/$(ICU4C_LIB_DIR).$(DYLIBTYPE).$(ICU_LIB_VERSION)
 
 #default goal
 target: $(ICU4CLIB)
+
+link:
+	ln -s ../../../kleene-lang-dependencies/$(ICU4C_BASENAME)-src.tgz
 
 # untarring the downloaded .tgz archive creates the icu/ dir
 # including icu/source/configure

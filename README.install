@@ -8,7 +8,7 @@
 				for Windows installation--not
 				possible at this date)
 
-				2013-04-28
+				2013-05-23
 
 CORRECTIONS, AND SUGGESTIONS TO MAKE THE INSTALLATION STEPS ACCURATE,
 COMPLETE AND CLEAR TO ALL POTENTIAL USERS, WOULD BE MUCH APPRECIATED.
@@ -27,7 +27,7 @@ dependencies and acknowledgments, see the file named NOTICE.
 ********************************************************************************
 
 	Please follow these instructions carefully to install Kleene on your
-	system.  Kleene is still a beta project, and I definitely plan to
+	system.  Kleene is still a beta project, and I definitely hope to
 	make the installation more automatic in the future.  If any of the
 	instructions are unclear, inaccurate or insufficient please contact
 	us to help us improve this document.
@@ -35,8 +35,7 @@ dependencies and acknowledgments, see the file named NOTICE.
 Here we assume that you are installing a pre-compiled "binary release" of
 Kleene.  Check that you have the most recent Kleene release available,
 where higher numbers are more recent.  In what follows, we will refer
-generically to version W.X.Y.Z instead of 0.9.1.0, 0.9.1.7, 1.0.0.0, or
-whatever.
+generically to version W.X.Y.Z instead of 0.9.3.3, 0.9.3.4 or whatever.
 
 
 1.  For Linux and OS X, pre-compiled Kleene releases are packaged as gzipped
@@ -45,14 +44,19 @@ whatever.
 kleene-linux-W.X.Y.Z.tar.gz
 kleene-mac-W.X.Y.Z.tar.gz
 
+The "linux" package is currently compiled on Mint.
+
 For Windows (see README.install_windows), the releases are zipped, e.g.
 
 kleene-win-W.X.Y.Z.zip
 
+Kleene on Windows is NOT currently available.
+
 In what follows, the gzipped tarball will be called the "release package."
 Unless you build Kleene yourself from the source files, you will need to
 obtain a copy of the gzipped tarball, either from the Kleene website
-(www.kleene-lang.org) or from some other mirror or source.
+(eventually www.kleene-lang.org), from Dropbox, or from some other mirror 
+or source.
 
 2.  Pre-requisites:
 
@@ -72,7 +76,7 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	the dollar sign represents the command-line prompt, which may be very
 	different on your system.) The response will be something like
 
-	/bin/bash			(indicating that you're running "bash")
+	/bin/bash			(indicating that you're running the "bash" shell)
 
 	or
 
@@ -90,7 +94,7 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 
 	On my Mac, this currently returns
 
-	java version "1.6.0_33"
+	java version "1.6.0_45"
 
 	On my Linux system, this currently returns
 
@@ -106,14 +110,14 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	application called "Graphviz.app" (it displays just as "Graphviz")
 	in your /Applications/ directory, surf to
 	http://www.graphviz.org/Download_macos.php and follow the installation
-	instructions there (for "lion," "snowleopard" or "leopard" as
+	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard" as
 	appropriate for your version).  Then proceed to step d below.
 	(I am successfully runnning GraphViz 2.30.1 on Snow Leopard.)
 
 	If you are on Linux, or on OS X but for some reason cannot install a
 	"native" Graphviz for OS X, you will need to have a standard
 	installation of GraphViz.  In particular, you will need the 'dot'
-	application of GraphViz.  To see if you have it, enter
+	application of GraphViz.  To see if you already have it, enter
 
 	$ which dot
 	
@@ -179,7 +183,7 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 
 	a.  Move the Kleene release package to a convenient directory.  It
 	could be just about anywhere, but in the examples that follow, I assume
-	that you place it in the directory ~/kleene/, which on OS X would be
+	that you place it in a directory ~/kleene/, which on OS X would be
 
 	/Users/<yourUserName>/kleene
 
@@ -199,7 +203,8 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	$ mkdir kleene
 
 	(Remember that you can cd wherever you want and make the "kleene"
-	directory there.)
+	directory there.  If you put it somewhere else, then adjust the path
+	in the instructions that follow.)
 
 	Move the release package to that directory.  E.g. if you have a Linux
 	system and the release package kleene-linux-W.X.Y.Z.tar.gz is currently
@@ -234,7 +239,8 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 
 	$ cd current
 
-	d.  Invoking 'ls', you should then see following files:
+	d.  Invoking 'ls', you should then see following files (substituting digits
+	for X and Y):
 
 	$ ls
 
@@ -246,14 +252,14 @@ or  libkleeneopenfst.so     (for Linux)
 	libfst.dylib			(for OS X, the OpenFst library)
 or  libfst.so               (for Linux)
 
-	libicudata.49.1.2.dylib	(for OS X, ICU4C data library)
-or	libicudata.49.1.2.so	(for Linux)
+	libicudata.Y.Z.dylib	(for OS X, ICU4C data library)
+or	libicudata.Y.Z.so		(for Linux)
 
-	libicui18n.49.1.2.dylib	(for OS X, ICU4C internationalization library)
-or	libicui18n.49.1.2.so	(for Linux)
+	libicui18n.Y.Z.dylib	(for OS X, ICU4C internationalization library)
+or	libicui18n.Y.Z.so		(for Linux)
 
-	libicuuc.49.1.2.dylib	(for OS X, ICU4C letter-casing library)
-or	libicuuc.49.1.2.so		(for Linux)
+	libicuuc.Y.Z.dylib		(for OS X, ICU4C letter-casing library)
+or	libicuuc.Y.Z.so			(for Linux)
 
 	LICENSE					(Apache License, Version 2)
 	NOTICE					(dependencies, and their licenses)
@@ -269,8 +275,8 @@ or	libicuuc.49.1.2.so		(for Linux)
 	Linux, or DYLD_LIBRARY_PATH in OS X.  This library path must be set
 	to include the installation directory just created (shown as
 	~/kleene/current in the examples above).  If you have not installed
-	Kleene inside ~/kleene/current/, then modify the examples below as
-	appropriate.
+	Kleene inside ~/kleene/current/, then modify the path in the examples 
+	below as appropriate.
 
 	If you are running bash on Linux, then edit your ~/.bashrc file to include
 
@@ -285,7 +291,8 @@ or	libicuuc.49.1.2.so		(for Linux)
 
 	export DYLD_LIBRARY_PATH=/Users/<yourUserName>/kleene/current
 
-	If you are running cshell on OS X, then edit your ~/.cshrc file to include
+	If you are running cshell or tcshell on OS X, then edit your ~/.cshrc or
+	~/.tcshrc file to include
 
 	setenv DYLD_LIBRARY_PATH /Users/<yourUserName>/kleene/current
 
@@ -299,11 +306,12 @@ or	libicuuc.49.1.2.so		(for Linux)
 	$ cp -r dotkleene ~/.kleene
 
 	This .kleene directory contains preference files and a global startup
-	script that is run automatically whenever Kleene is launched.
+	script that is run automatically whenever Kleene is launched.  It also
+	contains a subdirectory where Kleene stores temporary files.
 
-	If you have a "native" GraphViz installed as /Applications/Graphviz
-	(see above), you are done with preferences; skip the rest of this step
-	and proceed to step 4 below.
+	If you are on OS X and have a "native" GraphViz installed as /Applications/Graphviz
+	(see above), you are done with preferences; skip the rest of this step 3
+	and proceed directly to step 4 below.
 
 	[This step will be easier in future releases after I implement
 	preference-selection in the GUI.  But for now ...]  In a previous step,
@@ -411,9 +419,9 @@ or	libicuuc.49.1.2.so		(for Linux)
 
 	Similarly, if the path to the PostScript viewer on your system is
 	different from the default linux/default/dot/viewer value (here
-	/usr/bin/kghostview), e.g. if your running KDE and it's /usr/bin/ggv,
-	then enter the correct value for your system in linux/user/dot/viewer,
-	e.g.
+	/usr/bin/kghostview), e.g. if you're running KDE and it's /usr/bin/ggv,
+	then enter the correct value for your system in the linux/user/dot/viewer
+	element, e.g.
 
 		<user>
 			<dot>
@@ -436,6 +444,15 @@ or	libicuuc.49.1.2.so		(for Linux)
 
 	$ cd ~/kleene/current
 	$ java -jar Kleene.jar
+
+	If Java complains that it can't find Kleene.jar, then add . (the current
+	directory) to your CLASSPATH.  If you're using bash:
+
+	export CLASSPATH=$CLASSPATH:.
+
+	or if you're using cshell or tcshell
+
+	set CLASSPATH = ($CLASSPATH .)
 
 	You should see the Kleene GUI appear, with a "pseudo-terminal" window
 	on the left, and a "symbol table" window on the right.  At the bottom
@@ -461,7 +478,7 @@ or	libicuuc.49.1.2.so		(for Linux)
 
 	export CLASSPATH=$CLASSPATH:$USER_HOME/kleene/current/Kleene.jar:.
 
-	If you are using csh:
+	If you are using csh ot tcsh:
 
 	set CLASSPATH = ($CLASSPATH $USER_HOME/kleene/current/Kleene.jar .)
 
@@ -480,14 +497,15 @@ or	libicuuc.49.1.2.so		(for Linux)
 
 I've tried to write this README.install file to be as exact and
 understandable as possible, but the binaries have been tested on very few
-machines.  Please help me correct errors and omissions and make the
-instructions as bullet-proof as possible.
+machines.  Kleene is a one-man project now, and I have relatively little
+time and facilities for testing.  Please help me correct errors 
+and omissions and make these instructions as correct and bullet-proof as possible.
 
 NOTES ***********************************************************************
 
 A.  ~/.kleene/global/predefined.kl file is a global start-up script that is
 run automatically whenever you launch Kleene.  In general it is a VERY BAD
-idea for users to try to edit this file; the definitions in this file are
+IDEA for users to try to edit this file; the definitions in this file are
 effectively part of the Kleene language, and any errors that you introduce
 will prevent Kleene from launching correctly. Rather than editing
 predefined.kl, users should edit and run their own separate startup files
@@ -505,5 +523,5 @@ $ java -jar Kleene.jar myKleeneStartup.kl -gui
 
 The built-in global script in ~/.kleene/global/predefined.kl will always be
 executed first, and any definitions in the user's own startup script will
-shadow same-named definitions in the system's global startup script.
+shadow any same-named definitions in the system's global startup script.
 

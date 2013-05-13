@@ -1,11 +1,26 @@
 ICU4J
 
-You need to download icu4j-49_1.jar
+To compile Kleene from source, you need icu4j-51_1.jar
+
+For license information, see kleene-lang/NOTICE.
+
+For the easy way to download this library and make it
+available to Kleene, see kleene-lang/tools/README
+
+***** lines below are notes, not instructions
+
+If the easy way is not possible or convenient, you will
+need to download icu4j-51_1.jar from
+
 from
 	http://site.icu-project.org/download
 to
 	kleene-lang/tools/ICU4J/
 
+
+
+2013-05-05
+	use icu4j-51_1.jar
 
 2012-07-04
 	needs icu4j-49_1.jar

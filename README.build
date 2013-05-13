@@ -1,11 +1,24 @@
-2012-07-17
+2013-05-05
 
-To build Kleene from source.
+To build Kleene from source (NOT necessary if you are installing
+a pre-compiled binary):
 
-1.  See tools/ and its daughter directories.  You will first need to download
-the various libraries needed by Kleene as indicated in the README files.
+1.  See README.git to clone a copy of the kleene-lang/ directory from
+Github.
 
-2.  Then:
-	cd kleene/src/main/java/org/kleene-lang/
-	make
+2.  Once you have the downloaded the source code, there are also some
+external libraries that need to be downloaded separately.  
+
+$ cd kleene-lang/tools/README
+
+and read it carefully.  The easy way, described in in detail in this
+README file, is to download kleene-lang-dependencies.tar.gz from
+the Dropbox repository.
+
+3.  Once you have downloaded the source code from Github (see step 1)
+and downloaded the external libraries (see step 2), then
+
+
+$ cd kleene-lang/kleene/src/main/java/org/kleene-lang
+$ make
 

@@ -1,0 +1,161 @@
+
+Implementing parallel rules in Kleene
+(and keeping an eye on epenthesis rules)
+
+doc/engineering/notes/rules/parallelrules.txt
+
+Ken Beesley
+2012-09-01
+2012-09-04
+2012-09-10
+
+$a -> $b / left _ right  where { $a _E_ $@(b, d, g), $b _E_ $@(p, t, k)}
+
+Keyword is "where" or "where_matched", requires that the net lists be
+exactly the same length.  Must be broken down into parallel rules
+compiled (in a new Frame) with the settings
+
+$a = b     	$b = p
+$a = d		$b = t
+$a = g		$b = k
+
+$a -> $b / left _ right where_mixed { $a _E_ $@(a, b, c), $b _E_ $@(x,
+y) }
+
+Keyword is "where_mixed", the settings are the Cartesian Product of the
+various values.
+
+$a = a		$b = x
+$a = a		$b = y
+
+$a = b		$b = x
+$a = b		$b = y
+
+$a = c		$b = x
+$a = c		$b = y
+
+For Cartesian Product, see langcomp/java/tests/cartProd/
+							langcomp/java/tests/cartProd2/
+
+Stand-alone Rule vs. inside $^parallel(rule, rule...)  (node.jjtGetParent() is available)
+	
+	The parsing of a rule results (as usual) in an AST.  (Check the real
+	ASTs)
+	rule_lhs
+		rule_lhs_upper (some kind of regexp)
+		rule_lhs_lower
+	rule_rhs				opt
+		if present, contains one or more two_level_rule_context or one_level_rule_context
+		each of which contains one, both or neither of
+								left_rule_context
+								right_right_context
+
+	where_clauses			opt
+		if present, contains one or more where_matched_clause or where_mixed_clause
+		each of which contains one or more  elmt_of_net_list_exp
+		each of which contains net_id and net_list_exp
+	...
+
+	where clauses identifies variables that are local to the rule itself
+	(used only during the rule compilation)
+
+
+	One RuleSyntacticParts object (constructed from one syntactic rule AST)
+	will always translate into an ArrayList of RuleSemanticParts objects
+	Perhaps with a size of one, but size > 1 possible because of
+		where clauses
+		and/or
+		epenthesis
+
+	In the RuleSyntacticParts, keep the various ASTs.  Do not evaluate
+	them yet (except for Fst values in the where-clauses)
+
+
+From one RuleSyntacticParts object to ArrayList<RuleSemanticParts>
+
+	The first parts to evaluate, in the _current_ frame, are the astValues
+	of the local rule variables.  Somehow/somewhere turn them all into fstValues 
+	NOW, not later.
+
+	Create a new empty ArrayList<RuleSemanticParts>  
+
+	If ruleVarSettingLists is not null
+		push to a new Frame
+
+		for each ArrayList<RuleVarSetting>
+
+			loop through them and make the assignments
+
+			Create a new RuleSemanticParts object
+
+			compile lhs_upper
+				if not a semantic acceptor
+					throw an Exception
+				set lhs_upper in the RuleSemanticParts
+			compile lhs_lower
+				if not a semantic acceptor
+					throw an Exception
+				set lhs_lower in the RuleSemanticParts
+
+			stub:  Handle all the contexts
+				Initialize:
+					set upper_left to universal language
+					set lower_left to universal language
+					set upper_right to universal language
+					set lower_right to universal language
+
+				if one_level_rule_context
+					if left_rule_context not null
+						compile it
+						if transducer
+							throw Exception
+						if Rule.RIGHT
+							set upper_left to compiled value
+						else
+							set lower_left to compiled value
+					if right_rule_context not null
+						compile it
+						if transducer
+							throw Exception
+
+						if Rule.RIGHT
+							set upper_right to compiled value
+						else
+							set lower_right to compile value
+
+
+				if two_level_rule_context
+					if left_rule_context not null
+						compile it
+						set upper_left to upper projection
+						set lower_left to lower projection
+
+					if right_rule_context not null
+						compile it
+						set upper_right to upper projection
+						set lower_right to lower projection
+			
+			if Rule.RIGHT
+				then the input expression is the rule_lhs_upper
+			else
+				the input expression is the rule_lhs_lower
+
+			
+
+			if (compiled) input expression contains the empty string (and is not
+			just the empty string) {
+				Subtract the empty string from the input LHS
+
+
+
+				Create a second RuleSemantic object (copy what we have so far)
+				For the input expression, substitute the empty string Fst
+				Push this second RuleSemanticParts object onto the RuleSemanticList
+			}
+			Push the first RuleSemanticParts object 
+			(input LHS may have had the empty string subtracted)
+
+
+		
+	
+		

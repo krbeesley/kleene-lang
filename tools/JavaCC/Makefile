@@ -10,6 +10,9 @@ JAVACC_ARCHIVE=$(JAVACC_BASENAME).tar.gz
 $(JAVACC_BASENAME): $(JAVACC_ARCHIVE)
 	tar xzf $(JAVACC_ARCHIVE)
 
+link:
+	ln -s ../../../kleene-lang-dependencies/$(JAVACC_BASENAME).tar.gz
+
 old:
 	@make --no-print-directory clean
 	# KRB 2012-04--2 had to remove the ./

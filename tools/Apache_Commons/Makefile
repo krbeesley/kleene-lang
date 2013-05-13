@@ -14,6 +14,9 @@ COMMONS_LANG_ARCHIVE=$(COMMONS_LANG_BASENAME)-bin.tar.gz
 $(COMMONS_LANG_BASENAME): $(COMMONS_LANG_ARCHIVE)
 	tar xzf $(COMMONS_LANG_ARCHIVE)
 
+link:
+	ln -s ../../../kleene-lang-dependencies/$(COMMONS_LANG_BASENAME)-bin.tar.gz
+
 old:
 	@make --no-print-directory clean
 	tar -xzf $(COMMONS_LANG_ARCHIVE) $(COMMONS_LANG_BASENAME)/$(COMMONS_LANG_BASENAME).jar

@@ -1,12 +1,24 @@
 OpenFst
 
-You need to download openfst-1.3.2.tar.gz
+To compile Kleene from source, you need the OpenFst library.
+
+For license information, see kleene-lang/NOTICE.
+
+For the easy way to install it and make it accessible to
+Kleene, see kleene-lang/tools/README
+
+***** lines below are notes, not instructions
+
+If the easy way is not possible or appropriate, you will 
+need to download openfst-1.3.3.tar.gz
 from
 	http://www.openfst.org
 to
 	kleene-lang/tools/OpenFst/
 
 
+2013-05-05
+	use openfst-1.3.3.tar.gz
 
 2012-07-04
 	currently using openfst-1.3.2.tar.gz

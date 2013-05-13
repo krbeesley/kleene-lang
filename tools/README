@@ -1,7 +1,57 @@
-	KRB 2012-04-18 notes about tools/
-	external libraries that Kleene depends on.
-	See Makefile
+KRB  2013-05-12
 
+kleene-lang/tools/README
+
+	Notes on the external libraries that Kleene depends on.
+
+	For license information, see kleene-lang/NOTICE.
+
+	You need the following information only if you are trying to compile
+	Kleene from source.  You do NOT need this information if you
+	are installing a pre-compiled binary.
+
+	******
+
+	There are currently a total of 8 external libraries to download
+	and install in the proper place before you can compile Kleene from 
+	source.
+
+	The _easy_ way to get these libraries is to download
+	kleene-lang-dependencies.tar.gz from the Kleene distribution
+	on Dropbox (or eventually on www.kleene-lang.org).
+
+	Unpack this "tar ball" and put the resulting
+	kleene-lang-dependencies/ directory in the same directory
+	as the kleene-lang/ directory (from Github).  For example,
+	if your kleene-lang/ directory is in ~/projects/
+
+	$ gunzip kleene-lang-dependencies.tar.gz
+	$ tar xvf kleene-lang-dependencies.tar
+
+	(the result is a directory named kleene-lang-dependencies)
+
+	$ mv kleene-lang-dependencies ~/projects/
+
+	( i.e. put kleene-lang-dependencies in the same directory
+	as kleene-lang )
+
+	$ cd ~/projects/kleene-lang/tools/
+	$ make links
+
+
+	For anyone trying to build Kleene from source:  
+	See kleene-lang/tools/README (this file)
+		kleene-lang/tools/README.updates
+		and the README files for each directory under kleene-lang/tools/
+
+
+The lines below are notes, not instructions.  See the README files
+listed above for what you need to download and do if you are building 
+Kleene from source.
+
+**********************************************************************
+
+Notes from the main developers--NOT instructions for building.
 
 JavaCC/JJTree, needed to convert Kleene.jjt into Java code.  Currently
 version 5.0.
@@ -10,22 +60,21 @@ Java .jar files
 
 	Apache_Commons	for		commons-lang3-3.1.jar		(from tar.gz)
 	dom4j					dom4j-1.6.1.jar				(from tar.gz)
-	icu4j					icu4j-49_1.jar				(dist. as a .jar)
-	jaxen					jaxen-1.1.1.jar				(from tar.gz)
+	icu4j					icu4j-51_1.jar				(dist. as a .jar)
+	jaxen					jaxen-1.1.6.jar				(from tar.gz)
 	rome					rome-1.0.jar				(dist. as a .jar)
 					Copied into Kleene/src/java/lib/
 
-The ROME/rome library appears to be used only for
-import com.sun.syndication.io.XmlReader
-a reader that gets an XML file and determines the encoding.
 
-C++ libraries, must be recompiled for each platform. See Makefile
+C++ libraries, must be recompiled for each platform. See Makefiles
 
-	ICU4C			for		libicudata.49.1.1.dylib  or .so  or .dll
-							libicui18n.49.1.1.dylib
-							libicuuc.49.1.1.dylib
+	ICU4C			icu4c-51_1-src.tgz
+					for		libicudata.51.1.dylib  or .so  or .dll
+							libicui18n.51.1.dylib
+							libicuuc.51.1.dylib
 					Copied into Kleene/src/java/
 
-	OpenFst			for		libfst.dylib			or .so or .dll
+	OpenFst			openfst-1.3.3.tar.gz
+					for		libfst.dylib			or .so or .dll
 					Copied into Kleene/src/java/
 

@@ -57,7 +57,7 @@ DOM4J_BASENAME=dom4j-1.6.1
 DOM4J_DIR=$(DOM4J_MAKEDIR)/$(DOM4J_BASENAME)
 DOM4J_JAR=$(DOM4J_BASENAME).jar
 
-ICU4J_BASENAME=icu4j-49_1
+ICU4J_BASENAME=icu4j-51_1
 ICU4J_DIR=$(TOOLSDIR)/ICU4J
 ICU4J_JAR=$(ICU4J_BASENAME).jar
 
@@ -66,7 +66,7 @@ JAVACC_BASENAME=javacc-5.0
 JAVACC_BINDIR=$(JAVACC_MAKEDIR)/$(JAVACC_BASENAME)/bin
 
 JAXEN_MAKEDIR=$(TOOLSDIR)/Jaxen
-JAXEN_BASENAME=jaxen-1.1.4
+JAXEN_BASENAME=jaxen-1.1.6
 JAXEN_DIR=$(JAXEN_MAKEDIR)/$(JAXEN_BASENAME)
 JAXEN_JAR=$(JAXEN_BASENAME).jar
 
@@ -77,7 +77,7 @@ ROME_JAR=$(ROME_BASENAME).jar
 # C++ libraries (OpenFst and ICU4C)
 #
 OPENFST_MAKEDIR=$(TOOLSDIR)/OpenFst
-OPENFST_BASENAME=openfst-1.3.2
+OPENFST_BASENAME=openfst-1.3.3
 OPENFST_DIR=$(OPENFST_MAKEDIR)/$(OPENFST_BASENAME)
 OPENFST_LIBDIR=$(OPENFST_DIR)/src/lib
 OPENFST_BINDIR=$(OPENFST_DIR)/src/bin
@@ -97,16 +97,16 @@ ifeq ($(os_type),linux)
  DOT=/usr/bin/dot
  JNILIBTYPE=so
  DYLIBTYPE=so
- ICU4C_NAME_VERSION=49.1.2
+ ICU4C_NAME_VERSION=51.1
  ICU4C_MAKEDIR=$(TOOLSDIR)/ICU4C
  ICU4C_DIR=$(ICU4C_MAKEDIR)/icu
  ICU4C_SOURCE_DIR=$(ICU4C_DIR)/source
  ICU4C_INCDIR=$(ICU4C_SOURCE_DIR)/common
  ICU4C_LIBDIR=$(ICU4C_SOURCE_DIR)/lib
- # on Linux, at least, ICU4C 49.1.2 builds a library named
- # libicudata.so.49.1.2, with the DYLIBTYPE followed by the version
+ # on Linux, at least, ICU4C 51.1 builds a library named
+ # libicudata.so.51.1, with the DYLIBTYPE followed by the version
  # number; it also creates symbolic links named libicudata.so and
- # libicudata.so.49, both pointing to libicudata.so.49.1.2
+ # libicudata.so.51, both pointing to libicudata.so.51.1
  ICU4CDT_BASENAME=libicudata
  ICU4CDT_DLL=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)
  ICU4CDT_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CDT_BASENAME).$(DYLIBTYPE)*
@@ -140,7 +140,7 @@ ifeq ($(os_type),linux)
  LIBFULLNAME=lib$(LIBNAME).$(JNILIBTYPE)
  CLASSPATHFLAG=-classpath "lib/$(COMMONS_LANG_JAR):lib/$(DOM4J_JAR):lib/$(ICU4J_JAR):lib/$(JAXEN_JAR):lib/$(ROME_JAR):."
  # shared libraries on Linux have .so followed by major.minor version
- # numbers, e.g.  libname.so and libname.so.49 are links to name.so.49.1.2
+ # numbers, e.g.  libname.so and libname.so.51 are links to name.so.51.1
  RELEASE_FILES=$(FSTLIB_BASENAME).$(DYLIBTYPE)* \
  			  $(ICU4CDT_BASENAME).$(DYLIBTYPE)* \
               $(ICU4CIN_BASENAME).$(DYLIBTYPE)* \
@@ -158,7 +158,7 @@ ifeq ($(os_type),mac)
  DOT=/usr/local/bin/dot
  JNILIBTYPE=jnilib
  DYLIBTYPE=dylib
- ICU4C_NAME_VERSION=49.1.2
+ ICU4C_NAME_VERSION=51.1
  ICU4C_MAKEDIR=$(TOOLSDIR)/ICU4C
  ICU4C_DIR=$(ICU4C_MAKEDIR)/icu
  ICU4C_SOURCE_DIR=$(ICU4C_DIR)/source
@@ -194,8 +194,8 @@ ifeq ($(os_type),mac)
  CLASSPATHFLAG=-classpath "lib/$(COMMONS_LANG_JAR):lib/$(DOM4J_JAR):lib/$(ICU4J_JAR):lib/$(JAXEN_JAR):lib/$(ROME_JAR):."
  # shared library names on OS X have the version numbers in the middle, e.g.
  # libfst.dylib is a link to libfst.0.dylib
- # libicudata.dylib and libicudata.49.dylib are links to
- # libicudata.49.1.2.dylib
+ # libicudata.dylib and libicudata.51.dylib are links to
+ # libicudata.51.1.dylib
  RELEASE_FILES=$(FSTLIB_BASENAME)*.$(DYLIBTYPE) \
 			  $(ICU4CDT_BASENAME)*.$(DYLIBTYPE) \
               $(ICU4CIN_BASENAME)*.$(DYLIBTYPE) \

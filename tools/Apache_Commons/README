@@ -1,11 +1,29 @@
 Apache_Commons
 
-You need to download commons-lang3-3.1-bin.tar.gz
-from 
+To be built from source, Kleene needs
+
+commons-lang3-3.1-bin.tar.gz
+
+For licence information, see kleene-lang/NOTICE.
+
+See kleene-lang/tools/README
+for the easy way to install this library and make
+it accessible to Kleene.
+
+***** below are notes, not instructions
+
+In kleene-lang/tools/Apache_Commons/
+there needs to be a link to a copy of 
+commons-lang3-3.1-bin.tar.gz
+on your system.
+
+If the easy way is not possible or convenient,
+the Apache Commons library commons-lang3-3.1-bin.tar.gz
+can be downloaded 
+from
 	http://commons.apache.org/lang/download_lang.cgi
 to
 kleene-lang/tools/Apache_Commons/
-
 
 
 2012-07-04

@@ -2,7 +2,7 @@
 NOTICE file
 
    Kleene Programming Language
-   Copyright 2006-2012 SAP AG
+   Copyright 2006-2013 SAP AG
 
    All trademarks and registered trademarks mentioned herein are the
    property of their respective owners.
@@ -12,16 +12,16 @@ NOTICE file
    (http://www.sap.com/corporate-en/our-company/innovation/saplabs/index.epx).
    The SAP approval to make Kleene open-source, under the Apache
    License, Version 2.0, is dated 4 May 2012, finalized by Stefan Sigg.
-   The Kleene website is www.kleene-lang.org.  
+   The Kleene website (not yet operational) is www.kleene-lang.org.  
    See the file LICENSE for a copy of the Apache License, Version 2.0.
 
    2.  This product includes the OpenFst library (www.openfst.org)
    which is released by Google, Inc. under the Apache License,
    Version 2.0.
 
-   3.  This product includes the Apache_Commons library
-   (commons.apache.org) which is released under the Apache License,
-   Version 2.0.
+   3.  This product includes the Apache_Commons library (commons.apache.org) 
+   and the ROME library (http://download.java/net/maven/2/rome/rome/1.0/), 
+   which are released under the Apache License, Version 2.0.
 
    4.  This product includes ICU4J and ICU4C (International Components
    for Unicode) (http://site.icu-project.org/) which are released under a
@@ -149,7 +149,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 	default calls GraphViz (at least in the OS X version) to display networks. Kleene
 	users on OS X are invited to install GraphViz, which is released under the Eclipse
 	Public License, v. 1.0 (http://www.graphviz.org/License.php,
-	http://www.graphviz.org/Download.php).  OS X users can install GraphViz from
-	http://www.graphviz.org/Download_macos.php.  General downloads are available from
-	http://www.graphvix.org/Download.php.
+	http://www.graphviz.org/Download.php).  OS X users should install a "native" 
+	GraphViz from
+	http://www.graphviz.org/Download_macos.php.  General Graphviz downloads are available 
+	from http://www.graphviz.org/Download.php.
 

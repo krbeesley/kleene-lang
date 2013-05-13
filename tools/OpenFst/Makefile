@@ -9,7 +9,7 @@
 WINPORT_DIR=$(CURDIR)/../../winport
 include $(WINPORT_DIR)/os_type.mk   # set os_type to standard name for OS type
 
-OPENFST_BASENAME=openfst-1.3.2
+OPENFST_BASENAME=openfst-1.3.3
 OPENFST_ARCHIVE=$(OPENFST_BASENAME).tar.gz
 
 OPENFST_LIBDIR=$(OPENFST_BASENAME)/src/lib
@@ -29,6 +29,9 @@ endif
 FSTLIB=$(OPENFST_LIBDIR)/.libs/$(FSTLIB_BASENAME).$(DYLIBTYPE)
 
 default: $(FSTLIB)
+
+link:
+	ln -s ../../../kleene-lang-dependencies/$(OPENFST_BASENAME).tar.gz
 
 # openfst is distributed as a tar.gz archive;
 # unzip it, yielding the $(OPENFST_BASENAME) directory and all its contents,

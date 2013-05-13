@@ -6,18 +6,21 @@ dotkleene/
 	During installation, should be copied to the user's home directory 
 		as .kleene, i.e.
 	$ cp -r dotkleene ~/.kleene
+	See README.install
 
 kleene/
-	Kleene code proper, minus JAR, OpenFst and ICU4J dependencies
+	Kleene source code
 
 	src/main/cpp
 	src/main/java
 	src/main/resources
 
 tools/
-	JAR, OpenFst and ICU4J dependencies
+	pointers to libraries needed to build Kleene from source
+	See README.build
 
 winport/
+	(Kleene for Windows is not currently available)
 	README
 	os_type.mk		included in several Makefiles to determine the 
 					operating system (os)

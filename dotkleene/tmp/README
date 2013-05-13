@@ -1,0 +1,4 @@
+The tmp/ directory is where Kleene writes certain temporary files, e.g.
+last.dot
+last.xml
+

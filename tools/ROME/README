@@ -1,10 +1,25 @@
 ROME
 
-You need to download rome-1.0.jar
+To compile Kleene from source, you need the ROME
+library.
+
+For license information, see kleene-lang/NOTICE.
+
+For the easy way to install this library and make it
+accessible to Kleene, see kleene-lang/tools/README
+
+***** the lines below are notes, not instructions
+
+If the easy way is not possible or appropriate, you will
+need to download rome-1.0.jar
 from
 	http://download.java.net/maven/2/rome/rome/1.0/
 to
 	kleene-lang/tools/ROME/
+
+The ROME/rome library appears to be used only for
+import com.sun.syndication.io.XmlReader
+a reader that gets an XML file and determines the encoding.
 
 
 2012-07-04

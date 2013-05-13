@@ -1,5 +1,33 @@
+README.git
 
-To clone the Kleene source files from Github:
+If you want to run Kleene from OS X, the compiled binaries
+are probably sufficient.
 
+If you want to run Kleene from Linux (at least from Mint),
+then the compiled binary is probably sufficient.
+
+If you want to compile Kleene from source, for some other
+distribution of Linux, the process is currently a bit difficult 
+(too difficult).  See README.build
+
+Kleene-on-Windows is a project for the future.
+
+*************  To build on Linux
+
+Let's assume that you have a directory ~/projects/ where you
+keep various projects, and that you want to put the Kleene sources 
+in a child directory of ~/projects/.
+
+
+To clone the Kleene source files from Github (fixing the path as
+appropriate for your situation):
+
+$ cd ~/projects
 $ git clone git://github.com/krbeesley/kleene-lang.git
+
+
+This will create, under your projects/ directory, a subdirectory
+called kleene-lang/ that contains the Kleene sources.
+
+Then see README.build
 

@@ -1,11 +1,25 @@
 Jaxen
 
-You need to download jaxen-1.1.4.tar.gz from
+To compile Kleene from source, you need jaxen-1.1.6-bin.tar.gz
+
+For license information, see kleene-lang/NOTICE.
+
+For the easy way to install this library and make it available
+to Kleene, see kleene-lang/tools/README
+
+****** the lines below are notes, not instructions
+
+If the easy way is not possible or appropriate you will
+need to download jaxen-1.1.6-bin.tar.gz from
  	http://jaxen.codehaus.org/releases.html
 into 	
 	kleene-lang/tools/Jaxen/
 
-jaxen-1.1.4.tar.gz is "the 1.1.4 binaries in tar/gz format"
+jaxen-1.1.6-bin.tar.gz is "the 1.1.6 binaries in tar/gz format"
+
+
+2013-05-05
+	use jaxen-1.1.6-bin.tar.gz
 
 2012-07-04
 	needs jaxen-1.1.4.tar.gz 

@@ -1,13 +1,27 @@
 ICU4C
 
-See ./Makefile
+To be built from source, Kleene needs
 
-You need to download icu4c-49_1_2-src.tgz
+icu4c-51_1-src.tgz
+
+For license information, see kleene-lang/NOTICE.
+
+For the easy way to install this file, see
+kleene-lang/tools/README
+
+***** lines below are notes, not instructions
+
+If the easy way it not possible or convenient
+you need to download icu4c-51_1-src.tgz
 from
 	http://site.icu-project.org/download
 to
 	kleene-lang/tools/ICU4C/
 
+
+
+2013-05-05
+	needs icu4c-51_1-src.tgs
 
 2012-07-04
 	needs icu4c-49_1_2-src.tgz

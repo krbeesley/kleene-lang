@@ -27,7 +27,7 @@
 #include <jni.h>
 
 // 2012-04-18 fstlib.h is in
-// tools/OpenFst/openfst-1.3.1/src/include/fst/
+// tools/OpenFst/openfst-1.3.x/src/include/fst/
 #include <fst/fstlib.h>
 
 // 2012-04-18 where is info-main.h? defines FstInfo, seems obsolete
@@ -2442,15 +2442,11 @@ Java_OpenFstLibraryWrapper_getShortFstInfoNative
 	(JNIEnv *env, jclass cls,
 	 jlong fstPtr)
 {
+	// KRB:  semiring-generalization point
 	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
 	// create an FstClass object (a class independent of ArcType)
-	fst::script::FstClass fstc(fstp) ;
-
-	// semiring point
-	// KRB 2012-04-19 it seems in 1.3.1 that we are not to use
-	// the FstInfo class directly anymore.  FstType() and ArcType()
-	// are now methods of the Fst itself.
-	//FstInfo<StdArc> info(*fstp, true) ;
+	//fst::script::FstClass fstc(fstp) ;   // KRB worked in 1.3.2 but not 1.3.3
+	fst::script::FstClass fstc(*fstp) ;   // need dereference in 1.3.3
 
 	string s ;
 	s += "FstType: " ;
@@ -2471,12 +2467,9 @@ Java_OpenFstLibraryWrapper_getArcTypeNative
 	// KRB:  semiring-generalization point
 	// template <class Arc> ???
 	VectorFst<StdArc> * fstp = (VectorFst<StdArc> *)(uintptr_t) fstPtr ;
-	fst::script::FstClass fstc(fstp) ;
-
-	// KRB 2012-04-19 in 1.3.1 use of FstInfo directly is not
-	// necessary or recommended.  .ArcType() is now a method of
-	// the fst itself
-	//FstInfo<StdArc> info(*fstp, true) ;
+	//fst::script::FstClass fstc(fstp) ;
+	// previous line worked in 1.3.2 but not 1.3.3, see also line 2447
+	fst::script::FstClass fstc(*fstp) ;  // need dereference in 1.3.3
 
 	string s = fstc.ArcType() ;
 

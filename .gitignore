@@ -4,6 +4,12 @@
 *.nogit
 *.log
 *.swp
+*.aux
+*.bbl
+*.blg
+*.cb
+*.idx
+*.toc
 *~
 
 # don't track Java .class files or C++ .o or .a files
@@ -19,6 +25,8 @@
 # for now, don't track anything in doc-notrack
 # (review to see what can be made public)
 doc-notrack/
+dotkleene/tmp/*
+doc/engineering/notes/rules/hulden/*
 
 # don't track dependency libraries, typically .tar, .jar, .gz or .tgz
 # these shouldn't be stored under github

@@ -1,4 +1,23 @@
+See kleene-lang/tools/README
+
+	for the easy way to install the external libraries
+	needed to compile Kleene from source.
+
+	You do not need to install libraries if you are just
+	installing a pre-compiled Kleene binary.
+
+*********************************************************************
+
+The information below is for experts:
 
 When any of these libraries are updated (manually),
-note the version numbers and edit the main Kleene
-Makefile accordingly.
+note the new version numbers and edit the 
+
+tools/<nameOfLibrary>/Makefile
+
+appropriately for each <nameOfLibrary>.
+
+Also edit kleene-lang/kleene/src/main/java/org/kleene-lang/Makefile
+
+and change the library numbers appropriately.
+
