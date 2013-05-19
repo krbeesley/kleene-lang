@@ -131,12 +131,12 @@ public class KleeneGUI extends JFrame implements ActionListener {
 			e.printStackTrace() ;
 		}
 
-		backgroundImageListLength = backgroundImageListIndex ;
-		System.out.println("****** Background image count: " + backgroundImageListLength ) ;
-		for (int i = 0; i < backgroundImageListLength ; i++) {
-		    System.out.println(backgroundImageList[i]) ;
-		}
-		System.out.flush() ;
+		//backgroundImageListLength = backgroundImageListIndex ;
+		//System.out.println("****** Background image count: " + backgroundImageListLength ) ;
+		//for (int i = 0; i < backgroundImageListLength ; i++) {
+		//    System.out.println(backgroundImageList[i]) ;
+		//}
+		//System.out.flush() ;
 
 		Random rand = new Random(new Date().getTime()) ;
 		backgroundImageListIndex = rand.nextInt(backgroundImageListLength) ;

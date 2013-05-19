@@ -36,6 +36,45 @@ doc/engineering/notes/rules/hulden/*
 *.gz
 *.tgz
 
+# dependent libraries, ignore everything in Apache_Commons/, except ...
+tools/Apache_Commons/
+!tools/Apache_Commons/Makefile
+!tools/Apache_Commons/Makefile_nmake
+!tools/Apache_Commons/README
+
+tools/ICU4C/
+!tools/ICU4C/Makefile
+!tools/ICU4C/README
+
+tools/ICU4J/
+!tools/ICU4J/Makefile
+!tools/ICU4J/README
+
+tools/JavaCC/
+!tools/JavaCC/Makefile
+!tools/JavaCC/Makefile_nmake
+!tools/JavaCC/README
+
+tools/Jaxen/
+!tools/Jaxen/Makefile
+!tools/Jaxen/Makefile_nmake
+!tools/Jaxen/README
+
+tools/OpenFst/
+!tools/OpenFst/Makefile
+!tools/OpenFst/Makefile_nmake
+!tools/OpenFst/README
+
+tools/ROME/
+!tools/ROME/Makefile
+!tools/ROME/README
+
+tools/dom4j/
+!tools/dom4j/Makefile
+!tools/dom4j/Makefile_nmake
+!tools/dom4j/README
+
+
 # files generated from Kleene.jjt
 *.jj
 

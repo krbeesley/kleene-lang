@@ -1,7 +1,19 @@
 2013-05-05
 
-To build Kleene from source (NOT necessary if you are installing
-a pre-compiled binary):
+Relax:
+You do NOT need to "build" Kleene from source if you are installing
+a pre-compiled binary.  If a pre-compiled binary will work for you
+(see README.install), all is relatively simple.
+
+Beware:
+Building Kleene from source is currently a game for Experts Only.
+And for now it's a game only for Linux.  (Kleene-on-Windows is
+a project for the distant future.)
+
+******************************************************************
+
+To build Kleene from source on Linux:
+
 
 1.  See README.git to clone a copy of the kleene-lang/ directory from
 Github.
@@ -14,15 +26,26 @@ $ cd kleene-lang/tools
 
 and read the README file carefully; follow its instructions.  The easy way, 
 described in detail in this README file, is to download 
-kleene-lang-dependencies.tar.gz from the Dropbox repository (or
-eventually from www.kleene-lang.org), unpack it, and call 'make links'.
+kleene-lang-dependencies.tar.gz from www.kleene-lang.org (or from
+Dropbox?) unpack it, and in kleene-lang/tools/ enter the command
+
+make links
 
 3.  To build Kleene on Linux you will need the g++ compiler.
 
-4.  Once you have downloaded the source code from Github (see step 1)
-and downloaded the external libraries (see step 2), then
+4.  To build Kleene on Linux you will need JDK 1.5+ (The Java Development
+Kit, which includes the javac compiler).  The environment
+variable $JAVA_HOME should be properly set (so that the directory
+$JAVA_HOME/include/ contains the file jni.h).
+
+5.  Once you have downloaded the source code from Github (see step 1)
+and downloaded the external libraries (see step 2), and made sure
+that you have g++ and a recent JDK, then
 
 
 $ cd kleene-lang/kleene/src/main/java/org/kleene-lang
 $ make
+
+Then see the README.install file for more information about setup.
+
 
