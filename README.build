@@ -7,15 +7,19 @@ a pre-compiled binary):
 Github.
 
 2.  Once you have the downloaded the source code, there are also some
-external libraries that need to be downloaded separately.  
+external libraries that need to be downloaded separately.  cd to the
+tools/ directory
 
-$ cd kleene-lang/tools/README
+$ cd kleene-lang/tools
 
-and read it carefully.  The easy way, described in in detail in this
-README file, is to download kleene-lang-dependencies.tar.gz from
-the Dropbox repository.
+and read the README file carefully; follow its instructions.  The easy way, 
+described in detail in this README file, is to download 
+kleene-lang-dependencies.tar.gz from the Dropbox repository (or
+eventually from www.kleene-lang.org), unpack it, and call 'make links'.
 
-3.  Once you have downloaded the source code from Github (see step 1)
+3.  To build Kleene on Linux you will need the g++ compiler.
+
+4.  Once you have downloaded the source code from Github (see step 1)
 and downloaded the external libraries (see step 2), then
 
 

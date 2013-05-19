@@ -1195,7 +1195,8 @@ TOKEN: {
 		   paren_count = 0 ;
 		   SwitchTo(NON_INITIAL) ;
 		}
-|   < SIGMA_RW: 			"sigma" > : NON_INITIAL
+|   < SIGMA1_RW: 			"sigma" > : NON_INITIAL
+|   < SIGMA2_RW: 			"alphabet" > : NON_INITIAL
 	// see "println" below
 |	< PRINT_RW: 			"print" > : NON_INITIAL
 |   < BREAK_RW: 			"break" >	// leave in DEFAULT state
@@ -3280,7 +3281,7 @@ void draw_statement() #draw_statement: {}
 
 void sigma_statement() #sigma_statement: {}
 {
-	<SIGMA_RW> regexp() <SEMICOLON>
+	( <SIGMA1_RW> | <SIGMA2_RW> ) regexp() <SEMICOLON>
 }
 
 void test_statement() #test_statement: {}

@@ -8,7 +8,7 @@
 				for Windows installation--not
 				possible at this date)
 
-				2013-05-23
+				2013-05-19
 
 CORRECTIONS, AND SUGGESTIONS TO MAKE THE INSTALLATION STEPS ACCURATE,
 COMPLETE AND CLEAR TO ALL POTENTIAL USERS, WOULD BE MUCH APPRECIATED.
@@ -44,7 +44,7 @@ generically to version W.X.Y.Z instead of 0.9.3.3, 0.9.3.4 or whatever.
 kleene-linux-W.X.Y.Z.tar.gz
 kleene-mac-W.X.Y.Z.tar.gz
 
-The "linux" package is currently compiled on Mint.
+The "linux" package is currently compiled on Linux Mint 14.
 
 For Windows (see README.install_windows), the releases are zipped, e.g.
 
@@ -80,11 +80,11 @@ or source.
 
 	or
 
-	/bin/tcsh			(indicating that you're running the "tcshell")
+	/bin/tcsh			(indicating that you're running the "t shell")
 
 	or
 
-	/bin/csh			(indicating that you're running the "cshell")
+	/bin/csh			(indicating that you're running the "c shell")
 
 	b.  You need to have Java version 1.5 or higher installed.  To check
 	your Java installation, from a Terminal command line enter the
@@ -98,7 +98,7 @@ or source.
 
 	On my Linux system, this currently returns
 
-	java version "1.6.0_11"
+	java version "1.7.0_21"
 
 	Install or update Java if necessary on your system to get version 1.5
 	or higher.
@@ -110,8 +110,8 @@ or source.
 	application called "Graphviz.app" (it displays just as "Graphviz")
 	in your /Applications/ directory, surf to
 	http://www.graphviz.org/Download_macos.php and follow the installation
-	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard" as
-	appropriate for your version).  Then proceed to step d below.
+	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard"
+	as appropriate for your version).  Then proceed to step d below.
 	(I am successfully runnning GraphViz 2.30.1 on Snow Leopard.)
 
 	If you are on Linux, or on OS X but for some reason cannot install a
@@ -122,7 +122,11 @@ or source.
 	$ which dot
 	
 	If you do not already have 'dot' installed, i.e. if no path is
-	returned, then surf to http://www.graphvix.org/Download.php and follow
+	returned, then in a Mint/Ubuntu system, install it with apt-get
+
+	$ sudo apt-get install graphviz
+	
+	Otherwise, surf to http://www.graphvix.org/Download.php and follow
 	the installation instructions there.
 
 	Once you have installed GraphViz, from a Terminal command line, enter
@@ -141,10 +145,10 @@ or source.
 	your system and save it; you may need it below.
 
 	d.  If you are running OS X, proceed directly to step 3 below.  If you
-	are running Linux, you will need to find (or install) a suitable
+	are running Linux, you will need to identify (or install) a suitable
 	PostScript or PDF viewer application on your system.
 
-	If you are running Linux (RHEL 5), you should have the 'evince'
+	If you are running Linux (Mint/RHEL 5), you should have the 'evince'
 	application.  Try
 
 	$ echo evince
@@ -156,7 +160,7 @@ or source.
 
 	$ echo kghostview
 
-	and note the path (e.g.  /usr/bin/kghostview).
+	and note the path (e.g. /usr/bin/kghostview).
 
 	Else if you are running Linux with Gnome, you should should have 'ggv'
 	or 'gpdf' installed.  Try
@@ -280,21 +284,21 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	If you are running bash on Linux, then edit your ~/.bashrc file to include
 
-	export LD_LIBRARY_PATH=/home/<yourUserName>/kleene/current
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
 
 	Else if you are running cshell (or tcshell) on Linux, then edit your
 	~/.cshrc (or ~/.tcshrc) file to include
 
-	setenv LD_LIBRARY_PATH /home/<yourUserName>/kleene/current
+	setenv LD_LIBRARY_PATH $LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
 
 	If you are running bash on OS X, then edit your ~/.bashrc file to include
 
-	export DYLD_LIBRARY_PATH=/Users/<yourUserName>/kleene/current
+	export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
 
 	If you are running cshell or tcshell on OS X, then edit your ~/.cshrc or
 	~/.tcshrc file to include
 
-	setenv DYLD_LIBRARY_PATH /Users/<yourUserName>/kleene/current
+	setenv DYLD_LIBRARY_PATH $DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
 
 
 	e.  Setting your "preferences":
@@ -445,42 +449,44 @@ or	libicuuc.Y.Z.so			(for Linux)
 	$ cd ~/kleene/current
 	$ java -jar Kleene.jar
 
-	If Java complains that it can't find Kleene.jar, then add . (the current
-	directory) to your CLASSPATH.  If you're using bash:
-
-	export CLASSPATH=$CLASSPATH:.
-
-	or if you're using cshell or tcshell
-
-	set CLASSPATH = ($CLASSPATH .)
-
 	You should see the Kleene GUI appear, with a "pseudo-terminal" window
 	on the left, and a "symbol table" window on the right.  At the bottom
-	of the pseudo-terminal is a line where you type input.  Try typing
-	the following on this line
+	of the pseudo-terminal is a "command-line" field where you type input.  
+	Try typing the following on this line
 
-	$net = a*b+[c-g]{2} ;
+	$fsm = a*b+[c-g]{2} ;
 
 	and then enter it by pressing the ENTER key.  If all is working well,
-	you should see an icon named "$net" appear in the symbol-table window.
+	you should see an icon named "$fsm" appear in the symbol-table window.
 
 	Right-click on the icon to see various options, including 'draw' and
 	'delete'.  Try 'draw'; you should see the network displayed on your
 	screen.  You can also double-click on the icon to cause the
-	finite-state machine to be displayed.
+	finite-state machine to be displayed.  Alternatively, you can enter
+
+	draw $fsm ;
+
+	or just
+
+	draw  a*b+[c-g]{2} ;
 
 5.  Launching Kleene from Anywhere
 
-	To facilitate launching Kleene, without having to cd to the ~/kleene directory,
-	add the full path to Kleene.jar to your CLASSPATH environment variable.
+	To facilitate launching Kleene, without having first to cd to the ~/kleene/current
+	directory, create a simple macro named 'kleene'.
 
 	If you are using bash:
 
-	export CLASSPATH=$CLASSPATH:$USER_HOME/kleene/current/Kleene.jar:.
+	alias kleene='java -jar $HOME/kleene/current/Kleene.jar'
 
-	If you are using csh ot tcsh:
 
-	set CLASSPATH = ($CLASSPATH $USER_HOME/kleene/current/Kleene.jar .)
+	If you are using csh or tcsh:
+
+	alias kleene 'java -jar $HOME/kleene/current/Kleene.jar'
+
+	Then, from a normal terminal command-line, you need only enter
+
+	kleene
 
 6.  Some things that might go wrong (especially with the current Linux port):
 

@@ -155,13 +155,31 @@ class SymtabIconButton extends JButton {
 		// infoItem.setEnabled(false) ;
 		pm.add(infoItem) ;
 
-		JMenuItem sigmaItem = new JMenuItem("sigma") ;
+		//  sigma $foo ;
+		//  alphabet $foo ;
+		JMenuItem sigmaItem = new JMenuItem("alphabet") ;
 		sigmaItem.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				terminal.processInput("sigma " + iconName + " ;" ) ;
+				terminal.processInput("alphabet " + iconName + " ;" ) ;
 			}
 		}) ;
 		pm.add(sigmaItem) ;
+
+		JMenuItem randInputItem = new JMenuItem("randInput") ;
+		randInputItem.addActionListener( new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				terminal.processInput("randInput " + iconName + " ;") ;
+			}
+		}) ;
+		pm.add(randInputItem) ;
+
+		JMenuItem randOutputItem = new JMenuItem("randOutput") ;
+		randOutputItem.addActionListener( new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				terminal.processInput("randOutput " + iconName + " ;") ;
+			}
+		}) ;
+		pm.add(randOutputItem) ;
 
 		JMenuItem testItem = new JMenuItem("test") ;
 		testItem.addActionListener( new ActionListener() {
