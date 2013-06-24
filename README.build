@@ -24,28 +24,38 @@ tools/ directory
 
 $ cd kleene-lang/tools
 
-and read the README file carefully; follow its instructions.  The easy way, 
-described in detail in this README file, is to download 
-kleene-lang-dependencies.tar.gz from www.kleene-lang.org (or from
-Dropbox?) unpack it, and in kleene-lang/tools/ enter the command
+and read the README file carefully; follow its instructions.  The easy
+way, described in detail in this README file, is to download
+kleene-lang-dependencies.tar.gz from www.kleene-lang.org, unpack it, and
+move the resulting kleene-lang-dependencies directory into the same
+directory as the kleene-lang directory.  Then in in kleene-lang/tools/
+enter the command
 
-make links
+$ make links
 
-3.  To build Kleene on Linux you will need the g++ compiler.
+3.  To build Kleene on Linux you will need the g++ compiler.  Install it if
+necessary.
 
 4.  To build Kleene on Linux you will need JDK 1.5+ (The Java Development
-Kit, which includes the javac compiler).  The environment
-variable $JAVA_HOME should be properly set (so that the directory
-$JAVA_HOME/include/ contains the file jni.h).
+Kit, which includes the javac compiler).  The environment variable $JAVA_HOME
+should be properly set (so that the directory $JAVA_HOME/include/ contains
+the file jni.h).
 
 5.  Once you have downloaded the source code from Github (see step 1)
 and downloaded the external libraries (see step 2), and made sure
 that you have g++ and a recent JDK, then
 
-
 $ cd kleene-lang/kleene/src/main/java/org/kleene-lang
 $ make
+$ make release
 
-Then see the README.install file for more information about setup.
+which should produce a "tarball" file named kleene-mac-W.X.Y.Z.tar.gz or
+kleene-linux-W.X.Y.Z.tar.gz (with digits replacing the W, X, Y and Z,
+representing the release number).  
 
+Then see the README.install file for further information about setup.
+
+If you succeed in compiling and running Kleene on a new platform or operating
+system, please inform me at krbeesley (atsign) gmail (dot) com, and consider
+contributing the "tarball" for use by others.
 

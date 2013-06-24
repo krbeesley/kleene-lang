@@ -155,6 +155,7 @@
 \newcommand{\fsm}{\init{fsm}}
 \newcommand{\fst}{\init{fst}}
 \newcommand{\xml}{\init{xml}}
+\newcommand{\jni}{\init{jni}}
 \newcommand{\gui}{\acro{gui}}
 \newcommand{\xslt}{\init{xslt}}
 
@@ -189,7 +190,7 @@
 
 \title{The Kleene Language\\
 for Weighted Finite-State Programming:\\
-{\Large User Documentation, Version 0.9.3.4}\\
+{\Large User Documentation, Version 0.9.3.5}\\
 \mbox{}\\
 {\Large This Document is Work in Progress\\
 Corrections and Suggestions Are Welcome}}
@@ -201,7 +202,7 @@ North Salt Lake\\
 Utah 84054, USA\\
 \texttt{ken.beesley@sap.com}}
 
-\date{1 May 2013}
+\date{24 June 2013}
 
 
 \begin{document}
@@ -222,23 +223,43 @@ Released under the Apache License, Version 2.\\
 
 \frontmatter
 
-\section*{The Kleene Programming Language}
+\section*{Preface}
 
-Kleene is a programming language that can be used to create many useful and efficient applications, based
-on \fsm{s} (Finite State Machines), including tokenizers, spelling checkers, spelling correctors,
-morphological analyzers and shallow parsers.  \fsm{}s are also widely used in speech synthesis and speech
-recognition.
+\subsection*{What is Kleene?}
 
-\Kleene{} allows programmers to define, build,
-manipulate and test weighted and unweighted finite-state machines (\fsm{}s), 
-which include finite-state acceptors and two-projection 
-finite-state transducers (\fst{}s).
-Programmers define \fsm{}s using regular expressions and
-right-linear phrase-structure grammars, and Kleene provides variables,
-rule-like expressions, functions and familiar programming-language
-control syntax.  Pre-edited \Kleene{}
-scripts can be run from the command line, and a graphical user
-interface is provided for interactive learning, programming and testing.
+Kleene is a programming language that can be used to create many useful and
+efficient linguistic applications based on finite-state machines
+(\fsm{}s), including tokenizers, spelling checkers, spelling correctors,
+morphological analyzer/generators and shallow parsers.  
+\fsm{}s are also widely used
+in speech synthesis and speech recognition.
+
+\Kleene{} allows programmers to define, build, manipulate and test 
+finite-state machines using regular expressions
+and right-linear phrase-structure grammars; and Kleene supports variables,
+rule-like expressions, user-defined 
+functions and familiar programming-language control
+syntax.  The \fsm{}s can include acceptors and two-projection
+transducers, either weighted under the Tropical Semiring or unweighted.
+
+Pre-edited \Kleene{} scripts can be run from the command line, and a
+graphical user interface is provided for interactive learning, programming
+and testing.
+
+\subsection*{Operating Systems}
+
+Kleene runs on OS X and Linux, requiring Java version 1.5 or higher. 
+
+\subsection*{Prerequisites}
+
+This book assumes only superficial familiarity with regular languages,
+regular relations and finite-state machines.
+
+While readers need not have any experience with finite-state
+programming, those who have no programming experience at all, in a language
+like Java, \CPP{}, Perl, Python, Ruby, etc., will find it difficult.
+
+\subsection*{Implementation}
 
 The \Kleene{} parser is implemented in
 JavaCC/JJTree\symbolfootnote[1]{\url{http://java.net/projects/javacc}} and
@@ -250,21 +271,39 @@ Library,''
 Application of Automata}, (CIAA 2007), volume 4783 of Lecture Notes in 
 Computer Science, pages 11-23. Springer, 2007. \url{http://www.openfst.org}.} via the Java
 Native Interface
-(\acro{jni}).\symbolfootnote[4]{\url{http://www.ibm.com/developerworks/java/tutorials/j-jni/}}  Kleene has its own syntax, based on
+(\jni).\symbolfootnote[4]{\url{http://www.ibm.com/developerworks/java/tutorials/j-jni/}}  Kleene has its own syntax, based on
 familiar regular expressions, and it borrows much of its semantics from
 the Xerox/\acro{parc} finite-state
 toolkit.\symbolfootnote[5]{\url{http://www.fsmbook.com}}
 
-Language-restriction expression and alternation rules are implemented using
+Language-restriction expressions and alternation rules are implemented using
 algorithms supplied by M\r{a}ns Huld\'en.\symbolfootnote[6]{M\r{a}ns
 Huld\'en,
 2009
 \emph{Finite-State Machine Construction Methods and Algorithms for
 Phonology and Morphology}, Ph.D. dissertation, University of Arizona.}
 
-The Kleene project was released under the Apache License, Version
-2\symbolfootnote[7]{\url{http://www.apache.org/licenses/LICENSE-2.0}} on 4 May 2012 by
-\init{SAP AG}.\symbolfootnote[8]{\url{http://www.sap.com/}}  The OpenFst library is available
+\subsection*{Acknowledgments}
+
+Thanks are due to the following people for advice and encouragement over
+the years.  I have not always followed the advice I received, so I take 
+full responsibility for any problems, failures or infelicities.
+
+\begin{quote}
+Lauri Karttunen, M\r{a}ns Huld\'en, Paola Nieddu, Phil Sours, André Kempe, 
+Mike Wilkens,
+Kemal Oflazer
+\end{quote}
+
+\noindent
+Kleene is named after American mathematician Stephen Cole Kleene
+(1909--1994), who investigated the properties of regular sets and invented
+the metalanguage of regular expressions.
+
+\subsection*{License}
+
+Kleene is free and open-source, released 4 May 2012  by \init{sap ag}\symbolfootnote[8]{\url{http://www.sap.com/}} under the Apache License, Version
+2.\symbolfootnote[7]{\url{http://www.apache.org/licenses/LICENSE-2.0}}  The OpenFst library is available
 under the same license.
 
 \nocite{hulden:2009thesis}

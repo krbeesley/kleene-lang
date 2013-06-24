@@ -53,7 +53,8 @@ effectively of highest precedence.
 
 \noindent
 Symbols with multi-character names (also known as ``multi-character symbols'') can contain any
-Unicode letter character from the \init{bmp} (Basic Multilingual Plane) except for newline and
+Unicode letter character from the
+\init{bmp}\footnote{\url{https://en.wikipedia.org/wiki/Plane_(Unicode)}} (Basic Multilingual Plane) except for newline and
 carriage return.\footnote{The newline or \unicode{line feed} character has the code
 point value \textbackslash{}u000A; the \unicode{carriage return} is \textbackslash{}u000D.}  The
 single quotes are delimiters of the multi-character 
@@ -71,7 +72,7 @@ featural or other grammatical information.  In general, any sequence of
 single multi-character symbol.  However, it is highly recommended that
 the names contain punctuation symbols; that is, it is almost always a
 mistake to define multi-character symbols with plain alphabetic names
-like \verb!'Noun'!, \verb!'Verb'!, \verb'sh' or \verb'ing' that, 
+like \verb!'Noun'!, \verb!'Verb'!, \verb!'sh'! or \verb!'ing'! that, 
 minus the single quotes, could be visually confused with a simple
 sequence of separate alphabetic symbols.\footnote{In rare instances, the
 orthography of a language may contain digraphs, trigraphs, etc.\@ that
@@ -230,6 +231,14 @@ $\circ$ \emph{or} \_o\_  & composition & infix & left assoc.\\
 \end{tabular}
 
 \vspace{0.5cm}
+The : is the cross-product operator, used in examples like \texttt{a:b},
+\texttt{(book):(books)} and \texttt{$fst1:$fst2}.  The operands must
+denote regular languages (not regular relations), and the result is a
+relation that relates each string in one language to all the strings in
+the other language.  Because : has high precedence, note that a regular
+expression like \texttt{ab:cd} is equivalent to \texttt{a(b:c)d}.
+
+
 
 \subsection{Precedence Issues}
  
@@ -335,7 +344,7 @@ probability corresponds to a cost of zero.
 Syntactically in Kleene regular expressions, weights are denoted within angle brackets,
 e.g.\@ \texttt{<0.1>} and \texttt{<0.9>}. 
 
-Each arc and each final state in a machine has a weight.  An unweighted
+Each arc and each final state in a finite-state machine has a weight.  An unweighted
 machine in Kleene is one in which all the weights are 0.0.
 
 Usually the weights in

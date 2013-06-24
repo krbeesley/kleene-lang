@@ -622,7 +622,7 @@ $^reduceLeft($^bin, $@list) {
 }
 
 // foldLeft is like reduceLeft but also has an initial value specified
-$^foldLeft($^bin, $init, $@list) {
+$^foldLeft($^bin, $@list, $init) {
 	$result = $init ;
 	foreach($n in $@list) {
 		$result = $^bin($result, $n) ;
@@ -642,8 +642,16 @@ $^foldLeft($^bin, $init, $@list) {
 	return #result ;
 }
 
-// foldLeft is like reduceLeft but also has an initial value specified
-#^foldLeft(#^bin, #init, #@list) {
+// foldLeft is like reduceLeft but also has an initial value specified.
+// Different programming langs have varying order for the arguments;
+// this order is seen in
+// Python:  reduce(func, list, init)
+// CommonLisp: (reduce func list init)
+// (Closure and Scheme put the init before the list)
+// 
+// Having the first 2 args as function and list is common
+// for 'map' functions in many languages
+#^foldLeft(#^bin, #@list, #init) {
 	#result = #init ;
 	foreach(#n in #@list) {
 		#result = #^bin(#result, #n) ;

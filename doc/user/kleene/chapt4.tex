@@ -274,7 +274,8 @@ test $rule ;
 \end{Verbatim}
 
 \noindent
-and we will often talk about one rule, here the \texttt{c -> k} rule, being compose ``below'' or
+and we will often talk about one rule, here the \texttt{c -> k} rule,
+being composed ``below'' or
 ``underneath'' the \texttt{c -> s} rule.  Recall that regular
 expressions, including those with alternation-rule notations, can extend
 over multiple lines and are always terminated with a semicolon.  When this cascade of rules is applied in a downward direction to an input
@@ -595,11 +596,11 @@ only at runtime, when the context expressions are evaluated.  This is similar to
 must be detected in general-purpose programming languages.
 
 \begin{Verbatim}
-// Semantically bad
+// Semantically bad if used as rule contexts
 $left = (qr):(st) ;
-$firht = x:y ;
+$right = x:y ;
 
-a -> b / $left _ $right ;  // a runtime exception will be thrown
+a -> b / $left _ $right ; // runtime exception will be thrown
 \end{Verbatim}
 
 
@@ -1000,7 +1001,7 @@ $deriv =  b -> a
 \noindent
 the first rule will map \emph{abba} to \emph{aaaa}, and then the second rule will map
 \emph{aaaa} into \emph{bbbb}.  Obviously, one rule is undoing the work
-of the other, and simple ruler e-ordering will not solve this
+of the other, and simple rule re-ordering will not solve this
 problem.
 
 In ordered derivations, such problems can be solved by the use of a temporary symbol---we

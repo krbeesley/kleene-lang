@@ -28,7 +28,7 @@ some optimization, especially the determinization step, to keep the
 networks from blowing up in size and/or taking forever to finish.
 
 Kleene defines (in the system-supplied 
-start-up file \verb!~/.kleene/global/basic.kl!) the following three
+start-up file \verb!~/.kleene/global/predefined.kl!) the following three
 special numeric variables which are interpreted as booleans (true or
 false):
 
@@ -65,7 +65,7 @@ if (#KLEENEdeterminize) {
 These variables affect the behavior of the \texttt{optimizeInPlace()}
 algorithm, which is called routinely on newly created networks.
 
-Also defined in basic.kl are the following convenience functions:
+Also defined in predefined.kl are the following convenience functions:
 
 \begin{Verbatim}[fontsize=\small]
 ^setOptimize(#bool)
@@ -87,7 +87,7 @@ also
 
 The global variables \verb!#KLEENEdeterminize!, \verb!#KLEENEminimize!
 and \verb!#KLEENErmepsilon!, defined in the global start-up file
-\texttt{basic.kl}, can be shadowed by user-defined variables of the same
+\texttt{predefined.kl}, can be shadowed by user-defined variables of the same
 name that are local to function code blocks and stand-alone code blocks.
 So programmers can play the scope game when turning these variables on
 and off.

@@ -1,8 +1,7 @@
-# Generic Makefile
+# Makefile for Kleene user manual
 
-# replace XXX with bare name, minus the .tex extension
 TARGET=kleene
-# expanded version of paper submitted to FSMNLP 08
+VERSION=0.9.3.5
 
 default: $(TARGET).pdf
 
@@ -20,5 +19,8 @@ pdf: open
 open: $(TARGET).pdf
 	open $(TARGET).pdf
 
+release: $(TARGET).pdf
+	cp $(TARGET).pdf $(TARGET)$(VERSION).pdf
+
 clean:  
-	rm -f *.aux $(TARGET).bbl $(TARGET).blg $(TARGET).toc $(TARGET).dvi $(TARGET).ent $(TARGET).log $(TARGET).ps $(TARGET).pdf $(TARGET)$(SMALL).ps  $(TARGET)$(SMALL).pdf *.cb *.cb2 *~
+	rm -f *.aux $(TARGET).bbl $(TARGET).blg $(TARGET).toc $(TARGET).dvi $(TARGET).ent $(TARGET).log $(TARGET).ps $(TARGET).pdf $(TARGET)$(SMALL).ps  *.cb *.cb2 *~

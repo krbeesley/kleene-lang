@@ -307,17 +307,17 @@ $compfsm = $^reduceLeft($^compose, $@list) ;
 \end{Verbatim}
 \end{samepage}
 
-\verb!$^foldLeft($^bin, $init, $@list)! is like \verb!$^reduceLeft()! except that it has
-three arguments: a binary function, an initial \fsm{} value, and an \fsm{} list.
+\verb!$^foldLeft($^bin, $@list, $init)! is like \verb!$^reduceLeft()! except that it has
+three arguments: a binary function, an \fsm{} list and an initial \fsm{} value.
 \verb!$^foldLeft()! is often preferable to \verb!$^reduceLeft()! because
 it returns the initial value, rather than throwing an exception, when
 the argument list is empty.
 
 \begin{Verbatim}
-$result = $^foldLeft($^concat, "", $@list) ;
+$result = $^foldLeft($^concat, $@list, "") ;
 \end{Verbatim}
 
-Similarly, the function 
+Similarly, the numerical function 
 \verb!#^reduceLeft(#^bin, #@list)! 
 takes as arguments 
 a binary function \verb!#^bin! and
@@ -327,6 +327,7 @@ the following example, a list of numbers is reduced first by addition and then b
 multiplication.
 
 \begin{Verbatim}
+// define some binary functions
 #^add(#x, #y)  { return #x + #y ; }
 #^mult(#x, #y) { return #x * #y ; }
 
@@ -339,19 +340,19 @@ multiplication.
 // #product has the value 24
 \end{Verbatim}
 
-\verb!#^foldLeft(#^bin, #init, #@list)! is like \verb!#^reduceLeft()! except that it
-has three arguments: a binary function, an initial number value, and a number list.
+\verb!#^foldLeft(#^bin, #@list, #init)! is like \verb!#^reduceLeft()! except that it
+has three arguments: a binary function, a number list and an initial number value.
 \verb!#^foldLeft()! is often preferable to \verb!#^reduceLeft()! because
 it returns the initial value, rather than throwing an exception, when
 the argument list is empty.
 
-With the ``foldLeft'' and ``reduceLeft'' functions, it is sometimes convenient to pass an
-anonymous function, e.g.
+With the \texttt{foldLeft} and \texttt{reduceLeft} functions, it is sometimes convenient to pass an
+anonymous function as the first argument, e.g.
 
 \begin{Verbatim}
 // calling foldLeft with anonymous functions
-#sum     = #^foldLeft(#^(#a, #b) {return #a + #b;}, 0, #@list) ;
-#product = #^foldLeft(#^(#a, #b) {return #a * #b;}, 1, #@list) ;
+#sum     = #^foldLeft(#^(#a, #b) {return #a + #b;}, #@list, 0) ;
+#product = #^foldLeft(#^(#a, #b) {return #a * #b;}, #@list, 1) ;
 \end{Verbatim}
 
 
@@ -482,6 +483,11 @@ foreach (#num in #@(1, 2, 3)) {
 }
 info #num ;    // Point B
 \end{Verbatim}
+
+(KRB:  consider the wisdom of treating the iteration identifier this
+way.  Perhaps it should be (at least conceptually, a new identifier that
+is bound for each value, and perhaps it should disappear after the
+foreach loop is finished.)
 
 \section{User-Defined Functions and Lists}
 

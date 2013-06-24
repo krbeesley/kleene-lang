@@ -265,7 +265,7 @@ or equivalently
 \noindent
 and the system will respond indicating 1 (= true = input/upper bounded)
 or 0 (= false = the \fsm{} has input/upper epsilon cycles).   
-You could be a little more fancy and write
+You could be a little fancier and write
 
 \begin{Verbatim}
 if (#^isIBounded($Fst))
@@ -316,7 +316,8 @@ Java code that simulates the application of the original \fsm{}.
 
 \subsubsection{Step Five:  Generating the Java Package using fst2java}
 
-Now cd to the fst2java directory, which contains four \xslt{} scripts that
+Now \texttt{cd} to the fst2java directory (downloadable from
+\url{www.kleene-lang.org}, which contains four \xslt{} scripts that
 convert the \fsm{} from one form of \xml{} to another form of \xml{}, plus one
 final \xslt{} script, named \texttt{generate\_java.xsl}, that takes the final \xml{}
 file and generates from it the Java code as a Java package.\footnote{A Java package is a set of related Java files residing in
@@ -336,7 +337,7 @@ Move your just-generated \texttt{Fst.xml} file to the fst2java directory, or
 \item
 Copy your \texttt{Fst.xml} file to the fstjava directory, or
 \item
-Create a soft link named \texttt{Fst.xml}, in the fstjava directory, to \texttt{Fst.xml}
+Create a soft link named \texttt{Fst.xml}, in the fst2java directory, to \texttt{Fst.xml}
 \end{enumerate}
 
 \noindent
@@ -598,7 +599,7 @@ program.  Type the following minimal example into a file named
 
 import java.util.Scanner ;
 // import the new package/class
-import StoZRulePackage.StoZRule ; 
+import StoZrulePackage.StoZrule ; 
 
 public class Test {
   public static void main(String[] args) {

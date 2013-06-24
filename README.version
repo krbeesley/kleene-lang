@@ -1,6 +1,10 @@
 
 		Kleene Version Notes
 
+2013-06-17
+	Version v0.9.3.5
+	Beta release candidate to show to a few close friends
+
 2013-04-28
 	Version v0.9.3.4
 	Added facilities for generating Java code for an FSM
