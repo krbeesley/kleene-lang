@@ -435,6 +435,11 @@ $(NAME).jar: $(LIBFULLNAME) $(NAME).class images
 run: jar
 	java -jar $(NAME).jar
 
+# Run Kleene, forcing UTF-8 system encoding (Typically for OS X,
+# which reports MacRoman when the locale is UTF-8)
+run8: jar
+	java -Dfile.encoding=UTF-8 -jar $(NAME).jar
+
 # Generate documentation for the BNF grammar of Kleene.
 bnf: $(NAME).html
 doc: $(NAME).html

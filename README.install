@@ -112,7 +112,9 @@ or source.
 	http://www.graphviz.org/Download_macos.php and follow the installation
 	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard"
 	as appropriate for your version).  Then proceed to step d below.
-	(I am successfully runnning GraphViz 2.30.1 on Snow Leopard.)
+	(I am successfully runnning GraphViz 2.32.0 on Snow Leopard.  When
+	you download the .pkg file, e.g.  graphviz-2.32.0.pkg, double-click
+	it and follow the installer instructions.)
 
 	If you are on Linux, or on OS X but for some reason cannot install a
 	"native" Graphviz for OS X, you will need to have a standard

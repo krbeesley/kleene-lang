@@ -1,439 +1,559 @@
-
-\chapter{Other Syntax}
-
-\section{Void Functions with Names}
-
-Void functions return no value, and their names are
-prefixed with the plain \verb!^!
-sigil, like all Kleene functions, but with nothing before the \verb!^!.
-Such void functions can be used to abbreviate and generalize a
-sequence of Kleene commands.
-
-\begin{Verbatim}
-^inputSigma($fst) {
-	$input = $^inputProj($fst) ;
-	sigma $input ;
-	draw $input ;
-}
-
-// an invocation of the defined void function
-^inputSigma(abc) ;
-\end{Verbatim}
-
-\section{Anonymous Void Functions}
-
-An anonymous void function looks like
-\verb!^(!\ldots\emph{args}\ldots\verb!)!\verb!{!\ldots\emph{body}\ldots\verb!}!,
-with the plain \verb!^! sigil
-marking a function that has no return value. 
+\chapter{Lists}
 
 
-\section{Control Syntax}
+\section{Lists of \fsm{}s and Numbers}
 
-In addition to \fsm{}-, arithmetic- and function-assignment statements,
-\Kleene{} provides \verb!if-elsif-then! statements, \verb!while!  and
-\verb!until!  loops, iteration over list elements, and a variety of
-``housekeeping'' statements for input-output, executing pre-edited
-scripts, retrieving information about \fsm{}s, drawing \fsm{}s, etc.
-For example, numbered iteration could be implemented by defining the
-following functions (though \Kleene{} already provides the convenient
-\verb!{!\emph{n}\verb!}! postfix operator):
+In addition to individual \fsm{}s, and individual numbers,
+Kleene also supports collections of \fsm{}s and collections of numbers.
+These collections are implemented as linked lists,\footnote{In the
+underlying Java code, they are implemented as LinkedList objects.} and
+functions are provided to manipulate them as lists, stacks, queues and
+double-ended queues (also known as deques, pronounced \emph{decks}).
+They will be referred to collectively herein as lists.
+
+Kleene lists must be homogeneous; that is, a single list must contain
+only \fsm{}s, or only numbers, though the numbers may be a mix of
+integers\footnote{Kleene integers are always stored internally as Java
+Long objects.} and floats.\footnote{Kleene floats are always stored
+internally as Java Double objects.}  Kleene lists are sometimes referred
+to informally as arrays, but they are technically lists and are better
+thought of as such.\footnote{Readers familiar with Lisp and Scheme are
+warned that Kleene lists cannot contain lists.}
+
+Kleene provides syntax to represent, assign, access and manipulate lists.
+Lists can be passed as arguments to functions, and functions can
+return a list as a result.  A \texttt{foreach} statement supports
+iteration through the members of a list.
+
+The sigil \verb!$@! marks lists of \fsm{}s, and \verb!#@! marks lists of
+numbers. 
+
+\section{List Literals, Identifiers, and Assignment}
+
+List literals, also known as anonymous lists, are denoted by the
+appropriate sigil, \verb!$@! for \fsm{}s and \verb!#@! for numbers, followed
+by a parenthesized list of elements.
 
 \begin{Verbatim}
-$^iterate_by_recursion($fsm, #count) {
-    if (#count > 0) {
-        return $fsm $^iterate_by_recursion($fsm, #count - 1) ;
-    } else {
-        return "" ;
-    }
-}
+$@(dog, cat, a, a*b+[c-g])  // a literal list of 4 FSMs 
 
-$^iterate_by_loop($fsm, #count) {
-    $result = "" ;
-    while (#count > 0) {
-        $result = $result $fsm ;
-        #count = #count - 1 ;
-    }
-    return $result ;
-}
-\end{Verbatim}
-
-\section{Input/Output}
-
-\subsection{Scripts}
-
-When Kleene is invoked ``bare'' from the command line, using
-
-\begin{Verbatim}
-$ java -jar Kleene.jar
+#@(12, -45, 2.47, 0.326, 0) // a literal list of 5 numbers
 \end{Verbatim}
 
 \noindent
-the \acro{gui} is launched, allowing users to type individual statements
-for immediate intepretation.\footnote{The dollar sign in these examples
-	represents the command-line prompt.  Kleene will initially be
-	packaged for distribution as an executable \acro{jar} file.} A Kleene
-	\acro{script} is a sequence of Kleene statements pre-edited and
-	stored in a file.  Scripts can be executed by including their
-	filenames in the command line,
+An identifier of the form \verb!$@!\emph{name} can be bound to an
+\fsm{}-list value; and, in parallel, an identifier of the form
+\verb!#@!\emph{name} can be bound to a number-list value.
 
 \begin{Verbatim}
-$ java -jar Kleene.jar myscript
-$ java -jar Kleene.jar myscript1 myscript2 ...
+$@foo = $@(a, b, $fsm1, $fsm2, (dog|cat|elephant)s?) ;
+
+#@bar = #@(1, 2, 12.23, 9, -234) ;
 \end{Verbatim}
 
 \noindent
-and Kleene will, by default, exit after all the scripts are executed.
-The script names can be paths such as
-\texttt{/Users/beesley/kleene/scripts/myscript.kl}.  By default, Kleene
-(and Java programs in general) will assume that the script file is in the
-default encoding of the operating system, and will convert it to Unicode
-accordingly.\footnote{Java's String objects are always Unicode.  Text
-input to Java programs is always converted to Unicode, one way or
-another.  By default, text output from Java is converted from Unicode to
-the default encoding of the operating system.}  If a script is not in the
-default encoding of the operating system, its encoding should be specified
-explicitly using the \texttt{-encoding} flag, which should appear before
-the filename(s):
+When such assignment statements are executed in the \acro{gui}, the lists are
+represented by named icons that appear automatically in the symbol-table window.
+
+The \texttt{info} and \texttt{delete} commands work with list identifiers
+just as they do with individual \fsm{} and number identifiers.
 
 \begin{Verbatim}
-$ java -jar Kleene.jar -encoding UTF-8    myscript
-$ java -jar Kleene.jar -encoding Latin-1  myscript ...
+info $@foo ;
+info #@bar ;
+
+delete $@foo ;
+delete #@bar ;
 \end{Verbatim}
 
 \noindent
-To cause Kleene to execute one or more scripts---typically start-up
-scripts---and then launch the \acro{gui} for interactive input, add the
-\texttt{-gui} flag anywhere among the script names.
+In the \acro{gui}, these commands can be accessed by right-clicking on a list
+icon.
+
+\section{Pre-Defined Functions Operating on Lists}
+
+\subsubsection{Functions Accessing the Elements of a List} 
+Individual list
+elements can be accessed non-destructively from a list using the
+following pre-defined functions.  Note that index counting starts at 0
+(zero).
+
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb!$^head($@list)! & Returns the zeroth FSM element of the argument list\\
+\hline
+\verb!$^getLast($@list)! & Returns the last FSM element of the argument list\\
+\hline
+\verb!$^get($@list, #n)! & Returns the nth FSM element of the argument list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+Such functions return \fsm{}s and can be called in the usual ways, 
+e.g.
 
 \begin{Verbatim}
-$ java -jar Kleene.jar myStartupScript -gui
-\end{Verbatim}
-
-To execute a Kleene script from the \acro{gui}, i.e.\@ from the Kleene
-language itself, use the \texttt{source} command, which requires one
-Kleene-regular-expression argument denoting a single-string filename or path,
-with an optional comma-separated second argument (also denoting a language of
-a single string) indicating the encoding of the source file.  In Kleene, a
-sequence of alphabetic letters such as \texttt{myscript} is of course such a
-single-string regular expression; and double-quoted strings, also regular
-expressions, are appropriate if the name or path contains special characters
-like periods, slashes and hyphens.
-
-\begin{Verbatim}
-// invoke from the Kleene GUI
-// By default, the encoding of the script is assumed to be the 
-//    default encoding of the operating system
-source "myscript.kl" ;
-source "/Users/beesley/kleene/scripts/testscript.kl" ;
-source "myscript.kl", "UTF-8" ; // specify the encoding
-\end{Verbatim}
-
-By default, Kleene will attempt to read the script file using the default
-encoding of your operating system, as perceived by Java. In Java code,
-the default encoding of the operating system is supposed to be returned by
-\texttt{System.getProperty("file.encoding")}, and on Linux this seems to work.
-However, Apple \init{os
-x} annoyingly reports the default encoding as ``MacRoman'' even if you've reset your locale
-otherwise.\footnote{In Apple \init{os x}, you can set your LANG
-environment variable to something like \verb!en_US.UTF-8!, which causes
-the \verb!locale! command to report \init{utf-8} encoding, but inside
-Java, \texttt{System.getProperty("file.encoding")} still returns
-MacRoman.  If you, like me, have set up your whole \init{os x} system for default
-\init{utf-8} encoding, and (naturally) expect Java to perceive the default encoding
-as \init{utf-8},
-you have to launch Kleene with something like \texttt{java -jar -Dfile.encoding-UTF-8
-Kleene.jar}.}
-
-In the Kleene \acro{gui}, the terminal widget has a pull-down \verb!Source!
-menu that brings up a window that allows you to browse for the source file and
-to indicate the encoding.  The encoding will be pre-set to the default encoding
-of the operating system, but it can be changed if necessary.
-
-\subsection{XML Input/Output}
-
-An \fsm{} can be written to file in Kleene's 
-\acro{xml} language using the \texttt{writeXml} command,
-which takes as arguments a regular expression representing the \fsm{} to be
-written, and a second regular expression indicating the file-path:
-
-\begin{Verbatim}
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
-writeXml (dog|cat|elephant)s? , 
-         "/Users/beesley/kleene/xml/animals.xml" ;
-\end{Verbatim}
-
-By default, the file is written in Unicode \acro{utf-8}, which is the
-official default encoding for all \acro{xml} files.\footnote{The
-\acro{xml} header of the file will be written as \texttt{<?xml
-version="1.0" encoding="UTF-8"?>}, though the overt specification of
-\acro{utf-8} encoding is redundant.}  Other encodings can be specified in
-an optional third argument, but the only other recommendable encoding is
-\acro{utf-16}.  \acro{xml} parsers are required to handle only
-\acro{utf-8} and \acro{utf-16}, though they may handle other encodings.
-Most users will want to stay with the default \acro{utf-8} encoding.
-
-\begin{Verbatim}
-// default UTF-8 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
-
-// explicit UTF-8 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml, "UTF-8" ;
-
-// explicit UTF-16 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml", "UTF-16" ;
-\end{Verbatim}
-
-In the Kleene \acro{gui}, the \verb!writeXml! command can be invoked by
-right-clicking on an \fsm{} icon and selecting the \verb!writeXml!
-item.  The file selection window allows you to select the encoding,
-which is pre-set to the recommended \acro{utf-8}.
-
-The built-in function \verb!$^readXml()! reads from a Kleene \acro{xml} file and returns an
-\fsm{}.
-
-\begin{Verbatim}
-// to read file fsm.xml in the current directory
-$newfsm = $^readXml("fsm.xml") ;
-
-// a full pathname can be specified
-$newnfsm = $^readXml("/Users/beesley/kleene/xml/fsm.xml") ;
-\end{Verbatim}
-
-The encoding of an
-\acro{xml} file is always 1) specified by an overt \texttt{encoding} in
-the \acro{xml} header, if present, or 2) detectable automatically from the
-\acro{bom} (Byte Order Mark), if present, or 3) \acro{utf-8} by default.
-The reading of \acro{xml} files is now done using the \acro{rome} library's
-\texttt{XmlReader} class, which knows how to detect the encoding of an
-\acro{xml} file.
-
-\subsection{\acro{dot} Output}
-
-\fsm{}s can be written to file in the GraphViz \verb!dot!
-format\footnote{\url{http://www.graphviz.org}} using the
-\texttt{writeDot} command, which is similar to the \texttt{writeXml} command.
-
-\begin{Verbatim}
-writeDot $fsm, "/Users/beesley/kleene/xml/fsm.dot" ;
-writeDot (dog|cat|elephant)s? , 
-         "/Users/beesley/kleene/xml/animals.dot" ;
-\end{Verbatim}
-
-By default, the file will be written to file in the \acro{utf-8}
-encoding.  A different encoding can be specified in an optional third
-argument, but the only valid alternative is \acro{iso-8859-1}, because
-the \verb!dot! parser can handle only \acro{utf-8} and \acro{iso-8859-1}.
-Most users will want to stay with the default \acro{utf-8} encoding,
-which is the only alternative if the sigma of the \fsm{} contains
-Unicode symbols beyond the \acro{iso-8859-1} range.
-
-In the Kleene \acro{gui}, the \verb!writeDot! command can be invoked by
-right-clicking on an \fsm{} icon and selecting the \verb!writeDot! item.
-The file selection window allows you to select the encoding, which is pre-set to the recommended \acro{utf-8}.  \acro{dot} output is used in the
-background when you invoke the \texttt{draw} command, which can also be
-generated by right-clicking on the \fsm{}'s icon and selecting the \texttt{draw} item, or
-by double-clicking on the icon.
-
-\subsection{Interactive Testing in the \acro{gui}}
-
-For interactive manual testing of an \fsm{} within the \acro{gui},
-use the Kleene \texttt{test} command, e.g.
-
-\begin{Verbatim}
-test $myfsm ;
-test (dog|cat|rat) '[Noun]':"" ( '[Sg]':"" | '[Pl]':s ) ;
+$@mylist = $@(a, b, c, d) ;
+$fsm = $^head($@mylist) ;
 \end{Verbatim}
 
 \noindent
-The \texttt{test} command causes the indicated \fsm{} to be scanned for
-multi-character symbols, which are used to build 
-string-to-symbol tokenizers, one for the input side, and one for
-the output side.\footnote{These tokenizers are currently
-built using the Transliterator object from \acro{icu} (International
-Components for Unicode).}  A testing window is opened, with string
-input fields allowing the user to type in strings either for
-analysis or generation.  An input string for analysis is tokenized
-into symbols, built-in a one-string \fsm{}, and composed on the
-output (lower) side of the transducer; the input (upper) side of
-the composed \fsm{} is then extracted as the result.  Generation
-is the same, except that the one-string \fsm{} is composed on the
-input (upper) side of the original \fsm{}, and the output (lower)
-side of the composed \fsm{} is extracted as the result.  If the
-result language is reasonably finite, the individual strings are
-displayed in the terminal window.
+would set \verb!$fsm! to the \fsm{} denoted by \texttt{a}.
 
-When the \fsm{} being tested contains \acro{other} (unknown) characters,
-the output may be unintuitive; see Appendix~\ref{app:test} for more
-details.
+Parallel functions are defined for number-lists:
 
-When an \fsm{} is finite (no cycles) relatively small and an acceptor, you can print out
-the strings using the \texttt{print} command:
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|l|}
+\hline
+\verb!#^head(#@list)! & Returns the zeroth number element of the argument list\\
+\hline
+\verb!#^getLast(#@list)! & Returns the last number element of the argument list\\
+\hline
+\verb!#^get(#@list, #n)! & Returns the nth number element of the argument list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+The following functions return a new list containing all or part of the
+elements of the argument list.  These operations are non-destructive.
+
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|p{4.5cm}|}
+\hline
+\verb!$@^copy($@list)! & Returns a shallow copy of the argument FSM-list\\
+\hline
+\verb!$@^tail($@list)! & Returns a new list containing all but the first element of the
+argument FSM-list\\
+\hline
+\verb!$@^getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
+indicated elements of the argument FSM-list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|p{4.5cm}|}
+\hline
+\verb!#@^copy(#@list)! & Returns a shallow copy of the argument number-list\\
+\hline
+\verb!#@^tail(#@list)! & Returns a new list containing all but the first element of the
+argument number-list\\
+\hline
+\verb!#@^getSlice(#@list, #n, #r:#s, ...)! & Returns a new list containing the
+indicated elements of the argument number-list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+The statement
 
 \begin{Verbatim}
-$net = dog | cat | elephant ;
-print $net ;
-// output:
-//    cat: 0.0
-//    dog: 0.0
-//    elephant: 0.0
-\end{Verbatim}
-
-[KRB:  Random upper and lower strings.  New functionality 2013-04.  Not well tested yet.]
-For transducers and large \fst{}, even those with cycles, you can print out a random
-selection of upper-side strings, or lower-side strings, using the \texttt{randInput} (alias
-\texttt{randUpper}, \texttt{rinput} and \texttt{rupper}) command:
-
-\begin{Verbatim}
-randInput $fst ;
-randUpper $fst ;
+$@tailList = $@^tail($@(a, b, c)) ;
 \end{Verbatim}
 
 \noindent
-Similarly, you can use the \texttt{randOutput} (alias \texttt{randLower}, \texttt{routput}
-and \texttt{rlower}) command to print out a random selection of the output/lowerside
-strings.
+sets \verb!$@tailList! to the value \verb!$@(b, c)!.  As in Scheme,
+Haskell and Scala, the \texttt{head} and \texttt{tail} functions throw an
+exception if the argument is an empty list.  The call
 
 \begin{Verbatim}
-randOutput $fst ;
-randLower $fst ;
+$@newList = $@^getSlice($@list, 2, 4, 7:10) ;
 \end{Verbatim}
 
 \noindent
-These commands are often useful during development to ``see what the upper (or lower)
-strings look like.''  These commands also have optional second and third arguments, the second
-being the number of strings to display (the default is currently 15), and the third is the
-maximum length of a string (default 50), which can be useful to avoid getting into infinite loops).
+sets \verb!$@newList! to a list containing items 2, 4, 7, 8 and 9 of
+\verb!$@list!.  Note that index counting starts at 0, and the notation
+\emph{n}:\emph{m} is inclusive of \emph{n} but exclusive of \emph{m}, so
+\texttt{7:10} includes 7, 8 and 9.
 
-\begin{Verbatim}
-// print 20 random input strings
-randInput $fst, 20 ;
+The following functions destructively return an individual element from
+the argument list, removing that element from the list.  As elsewhere in
+Kleene, destructive function names are marked with a final \verb+!+.
 
-// print 10 random input strings, max 25 symbols
-randUpper $fst, 10, 25 ;
-\end{Verbatim}
+\vspace{.5cm}
 
 \noindent
-The ``random'' function are based on the OpenFst RandGen() function.
+\begin{tabular}{|l|p{6cm}|}
+\hline
+\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a FSM-list\\
+\hline
+\verb+$^removeLast!($@list)+ & Removes and returns the last element of a
+FSM-list\\
+\hline
+\verb+$^remove!($@list, #n)+ & Removes and returns the nth element of a
+FSM-list\\
+\hline
+\end{tabular}
 
-\section{Memory Management}
+\vspace{.5cm}
 
-Memory management commands are intended for use by the developers and
-maintainers of Kleene, not for typical users.
+\noindent
+\begin{tabular}{|l|p{6cm}|}
+\hline
+\verb+#^pop!(#@list)+ & Removes and returns the zeroth element of a number-list\\
+\hline
+\verb+#^removeLast!(#@list)+ & Removes and returns the last element of a number-list\\
+\hline
+\verb+#^remove!(#@list, #n)+ & Removes and returns the nth element of a number-list\\
+\hline
+\end{tabular}
 
-Kleene is based on the OpenFst library, and the finite-state machines 
-(the actual states and arcs) are built by OpenFst and are therefore
-\CPP{} objects, i.e.\@ all the states and arcs, comprising a \CPP{}
-\fsm{} object, reside in the \CPP{} memory space.
+\vspace{.5cm}
 
-On the Java side of Kleene, each finite-state machine is represented by a
-Java Fst object,\footnote{Defined in the file \texttt{Fst.java}.} and
-each allocated Fst object holds a pointer to the corresponding \CPP{}
-finite-state machine object.\footnote{The Java Fst object also keeps
-track of each \fsm{}'s private sigma, which is a concept alien to
-OpenFst.}  The memory taken up by the Fst object itself is Java memory,
-and can be reclaimed by the normal Java garbage collection.  But the
-memory required by the states and arcs is \CPP{} memory and is invisible
-to the Java garbage collector.
+The alias \verb+$^pop_back!($@list)+ is pre-defined for
+\verb+$^removeLast!($@list)+, and  \verb+#^pop_back!(#@list)+ is
+pre-defined as an alias for \verb+#^removeLast!(#@list)+.
 
-\subsection{Garbage Collection}
+The following functions add elements destructively to a list, changing
+the list, and returning the changed list.
 
-The Kleene parser and interpreter are written in Java, which
-automatically performs garbage collection of Java objects when they no
-longer have any references to them.  In general, Kleene users should
-never have to worry about garbage collection, and even lower-level Java
-programmers have little control over when garbage collection is done.  
+\vspace{.5cm}
 
-In case it should become necessary or useful, Kleene offers the
-\texttt{gc} command, which when evaluated suggests to Java that ``now
-would be a good time to perform garbage collection''.\footnote{Java does
-not necessarily have to accept the hint to perform garbage collection.
-The \texttt{gc} command calls \texttt{System.gc()} and
-\texttt{System.runFinalization()}, multiple times, which is alleged to
-nudge Java more aggressively.  In a Java Fst object, the
-\texttt{finalize()} method calls a native \CPP{} function that in turn
-calls the normal \texttt{delete} command of \CPP{} to delete the \CPP{}
-finite-state machine (the states and arcs in \CPP{} memory). The
-\texttt{finalize()} method is advertised as the way to release/delete
-``native'', i.e.\@ non-Java, resources, so it's just what Kleene needs;
-but there is much debate among Java experts about if and how
-\texttt{finalize()} should be relied on.}
+\noindent
+\begin{tabular}{|l|p{6.5cm}|}
+\hline
+\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the FSM-list, and return the
+modified list\\
+\hline
+\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the FSM-list, and return the modified
+list\\
+\hline
+\verb+$@^addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
+the FSM-list, and return the
+modified list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|p{6.5cm}|}
+\hline
+\verb+#@^push!(#num, #@list)+ & Push \verb!#num! on the front of the number-list, and return the
+modified list\\
+\hline
+\verb+#@^add!(#@list, #num)+ & Add \verb!#num! on the end of the number-list, and return the modified
+list\\
+\hline
+\verb+#@^addAt!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index of
+the number-list, and return the
+modified list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+The alias \verb+$@^push_back!($@list, $fst)+ is pre-defined for the function
+\verb+$@^add!($@list, $fst)+, and \verb+#@^push_back!(#@list, #num)+ is pre-defined as an
+alias for \verb+#@^add!(#@list, #num)+.
+
+The \verb+$@^set!($@list, #n, $fst)+ function and the parallel function for
+number-lists
+\verb+#@^set!(#@list, #n, #num)+ reset the list value at index
+\verb!#n! to \verb!$fst! and \verb!$num!, respectively, and return the modified list.
+
+\vspace{.5cm}
+
+\noindent
+\begin{tabular}{|l|p{5.5cm}|}
+\hline
+\verb+$@^set!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index, and return the
+modified list\\
+\hline
+\verb+#@^set!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index, and return the
+modified list\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\subsection{Functions Joining the Elements of a List}
+
+The function 
+\verb!$^reduceLeft($^bin, $@list)! takes as arguments a binary function
+\verb!$^bin! that takes two \fsm{} arguments and a list of \fsm{}s
+\verb!$@list!; and it returns an \fsm{} value.
+\verb!$^reduceLeft($^bin, $@list)!  
+applies the passed-in binary function to combine the members of
+the list from left to right and returns the result.  The behavior is best
+seen in the following example, where a list of \fsm{}s is reduced first
+by concatenation and then by composition.
 
 \begin{samepage}
 \begin{Verbatim}
-$foo = foo ;
-$bar = bar ;
-delete $foo, $bar ;
-gc ;
+$^concat($x, $y)  { return $x $y; }
+$^compose($x, $y) { return $x _o_ $y ; }
+
+$@list = $@(a:b, b:c, c:d) ;
+
+$catfsm = $^reduceLeft($^concat, $@list) ;
+// $catfsm encodes the relation  a:b b:c c:d
+
+$compfsm = $^reduceLeft($^compose, $@list) ;
+// $compfsm encodes the relation a:d
 \end{Verbatim}
 \end{samepage}
 
-\subsection{Java Memory Usage}
-
-Kleene also offers the \texttt{memory}
-command, which prints out a summary showing the maximum memory, the
-memory in use, and the free memory, as seen by Java.
+\verb!$^foldLeft($^bin, $@list, $init)! is like \verb!$^reduceLeft()! except that it has
+three arguments: a binary function, an \fsm{} list and an initial \fsm{} value.
+\verb!$^foldLeft()! is often preferable to \verb!$^reduceLeft()! because
+it returns the initial value, rather than throwing an exception, when
+the argument list is empty.
 
 \begin{Verbatim}
-memory ;
+$result = $^foldLeft($^concat, $@list, "") ;
+\end{Verbatim}
+
+Similarly, the numerical function 
+\verb!#^reduceLeft(#^bin, #@list)! 
+takes as arguments 
+a binary function \verb!#^bin! and
+a list of numbers \verb!#@list!,
+and it returns a number value.  In
+the following example, a list of numbers is reduced first by addition and then by
+multiplication.
+
+\begin{Verbatim}
+// define some binary functions
+#^add(#x, #y)  { return #x + #y ; }
+#^mult(#x, #y) { return #x * #y ; }
+
+#@list = #@(1, 2, 3, 4) ;
+
+#sum = #^reduceLeft(#^add, #@list) ;
+// #sum has the value 10
+
+#product = #^reduceLeft(#^mult, #@list) ;
+// #product has the value 24
+\end{Verbatim}
+
+\verb!#^foldLeft(#^bin, #@list, #init)! is like \verb!#^reduceLeft()! except that it
+has three arguments: a binary function, a number list and an initial number value.
+\verb!#^foldLeft()! is often preferable to \verb!#^reduceLeft()! because
+it returns the initial value, rather than throwing an exception, when
+the argument list is empty.
+
+With the \texttt{foldLeft} and \texttt{reduceLeft} functions, it is sometimes convenient to pass an
+anonymous function as the first argument, e.g.
+
+\begin{Verbatim}
+// calling foldLeft with anonymous functions
+#sum     = #^foldLeft(#^(#a, #b) {return #a + #b;}, #@list, 0) ;
+#product = #^foldLeft(#^(#a, #b) {return #a * #b;}, #@list, 1) ;
+\end{Verbatim}
+
+
+\subsection{Functions Returning the Map of a List}
+
+The \verb!$@^map($^mon, $@list)!
+applies the single-argument function \verb!$^mon! to each \fsm{} element of
+\verb!$@list! and returns a list of the returned \fsm{} values.  The arguments
+can be anonymous.  Note that the \verb!$@^map($^mon, $@list)! function has the sigil
+\verb!$@^!, indicating a function (function names are always immediately preceded by \verb!^!) that returns a list of \fsm{}s (\verb!$@!).
+
+\begin{Verbatim}
+$@inList = $@(a, b, c, d) ;
+
+// called with an anonymous function that concatenates
+//    the two arguments
+$@outList = $@^map($^($fst){ return $fst $fst ; }, $@inList) ;
+// $@outList will be $@(aa, bb, cc, dd)
+
+// called with an anonymous function and an anonymous list
+$@outList = $@^map($^($fst){ return $fst $fst ; }, 
+                   $@(a, b, c, d)) ;
+\end{Verbatim}
+
+Similarly, the 
+\verb!#@^map(#^mon, #@list)!  applies the single-argument 
+function \verb!#^mon! to each number
+element of \verb!#@list! and returns a list of the returned values.  The
+arguments can be anonymous.  Note that the \verb!#@^map(#^mon, #@list)! function has the sigil
+\verb!#@^!, indicating a function (function names are always immediately preceded by
+\verb!^!) that returns a list of numbers (\verb!#@!).
+
+\begin{Verbatim}
+#@inList = #@(0, 1, 2, 3) ;
+
+// called with an anonymous function
+#@outList = #@^map(#^(#n){ return #n + #n ; }, #@inList) ;
+// #@outList will be $@(0, 2, 4, 6)
+
+// called with an anonymous function and an anonymous list
+#@outList = #@^map(#^(#n) { return #n * #n ; }, #@(1, 2, 3, 4) ) ;
+// #@outlist will be $@(1, 4, 9, 16)
+\end{Verbatim}
+
+\subsection{Functions Returning the Sigma of an \fsm{}}
+
+The \verb+$@^getSigma($fst)+ function returns the sigma of the argument
+\fsm{} as a list of \fsm{}s, each one consisting of a start state and a final
+state, linked by one arc labeled with a symbol from the sigma.  Special symbols
+used only internally in Kleene are excluded from the sigma.
+
+The parallel \verb+#@^getSigma($fst)+ function returns the sigma of the argument
+\fsm{} as a list of integers.
+
+\begin{Verbatim}
+$fsm = abc ;
+
+$@list = $@^getSigma($fsm) ;
+#@list = #@^getSigma($fsm) ;
+\end{Verbatim}
+
+\subsection{Functions Returning the Size of a List}
+
+The \verb+#^size(+\textit{list}\verb!)! function takes a list argument,
+either an \fsm{}-list or a number-list, and returns the
+size as an integer.\footnote{Kleene does not, in general, support function
+overloading, wherein multiple functions of the same name are distinguished
+by the type and/or number of arguments they take.
+The \texttt{size} pseudo function is an exception,
+wired into the parser and specially interpreted to accept an argument of either list
+type.}
+
+\begin{Verbatim}
+#n = #^size(#@(1, 2, 3, 4)) ;
+
+#m = #^size($@(a, b, c, d, e, f)) ;
+\end{Verbatim}
+
+The \verb!#^isEmpty(!\emph{list}\verb!)! function takes a list argument and
+returns 1 (true) if the list is empty and 0 (false) otherwise.
+
+\section{Iteration through Members of a List}
+
+
+The \texttt{foreach} statement iterates through the elements of a list, allowing
+some operation or operations to be performed on each element.  The body of
+the \texttt{foreach} statement is a block or a single statement.
+
+\begin{Verbatim}
+foreach ($fsm in $@list) {
+    info $fsm ;
+}
+
+foreach ($fsm in $@list) info $fsm ;
+
+foreach (#num in #@list) {
+    info #num ;
+}
+
+foreach (#num in #@list) info #num ;
 \end{Verbatim}
 
 \noindent
-The format of the output, not shown here, will no doubt evolve as needs
-become clear.  Note that Kleene currently has no way to interrogate the
-memory usage or availability in the \CPP{} memory space.
-
-\subsection{Java Fst Objects}
-
-Kleene now keeps track of how many Java Fst objects have been allocated,
-and how many have been ``finalized'', and this information can be
-displayed by the \texttt{fsts} command.  When an Fst object has been
-finalized, the Java object itself should be garbage collected, and the
-corresponding OpenFst finite-state machine should be deleted.
+As a more concrete example, consider
 
 \begin{Verbatim}
-fsts ;
+$fsm = abc ;
+
+foreach (#cpv in #@^getSigma($fsm)) info #cpv ;
+// output:
+// Long value: 98
+// Long value: 99
+// Long value: 97
+\end{Verbatim}
+
+For each iteration of the block or statement, the iteration identifier,
+\verb!$fsm!, \verb!$num! and \verb!#cpv! in these examples, is bound, in
+the current frame, to the next item of the list, and after the
+\texttt{foreach} statement, the iteration identifier is left bound to the
+last value in the list.\footnote{The \texttt{foreach} statement does not,
+like a function call, trigger the allocation of a new frame.}  In the
+following example, the value of \verb!#num! at Point B is 3.
+
+\begin{Verbatim}
+#num = 0 ;      // Point A
+foreach (#num in #@(1, 2, 3)) {
+	print #num ;
+}
+info #num ;    // Point B
+\end{Verbatim}
+
+(KRB:  consider the wisdom of treating the iteration identifier this
+way.  Perhaps it should be (at least conceptually, a new identifier that
+is bound for each value, and perhaps it should disappear after the
+foreach loop is finished.)
+
+\section{User-Defined Functions and Lists}
+
+
+Users can define their own functions that take lists as arguments, and functions
+that return lists, e.g.\@
+
+\begin{Verbatim}
+$@^reverse($@list) {
+    $@result = $@() ;  // an empty list
+    foreach ($fsm in $@list) {
+        $@result = $@^push!($fsm, $@result) ;
+    }
+    return $@result ;
+}
+
+$@reversedList = $@^reverse($@(a, b, c)) ;
+\end{Verbatim}
+
+
+\section{Traditional Array-indexing Syntax}
+
+
+[KRB:  This section is work-in-progress.]
+
+Although the current implementation of lists provides access functions like
+\verb!$^get($@list, #n)!, to retrieve a value at a specified index, 
+some users might prefer to use postfixed indices in
+square brackets or parentheses, as in most implementations of arrays.
+
+\begin{Verbatim}
+// NOT implemented in Kleene
+$@arr[0]   // array indexing as in C/C++, Java
+$@arr(0)   // array indexing as in Scala
 \end{Verbatim}
 
 \noindent
-The command also displays the number of ``live'' Fsts, which is the
-difference between the number of allocated Fsts and the number of finalized Fsts.
+Assuming for a second that such post-fixed indexing is desired, it is not yet
+clear that it could be implemented easily in Kleene.
+Because square brackets normally denote symbol unions in Kleene regular
+expressions, tokenizing and
+parsing them differently when they are intended to indicate an index would be a
+challenge; the notation with parentheses, as used in Scala, might be easier to
+implement and
+less likely to cause confusion.  As is often the case, tokenization is a bigger
+challenge than the parsing.
 
-\subsection{Contents of the Main Symbol Table}
+If the expression denoting a list is just an
+identifier like \verb!$@list!, as in the examples above, the challenge is trivial.  But if the
+expression denoting a list is more complex, such as a function call returning a list,
+and having arbitrary arguments to tokenize and parse, then correctly tokenizing a
+post-fixed index expression that uses square brackets would be rather involved.
+Again, using parentheses might avoid most of the problem.
 
-The \texttt{symtab} command prints a list of the items defined in the main
-``program'' symbol table, and these items should match the icons in the \acro{gui} symtab
-window.
+Traditional arrays also allow setting of elements of the array, e.g.
 
 \begin{Verbatim}
-symtab ;
+$@arr[2] = a*b+[c-g]? ;
 \end{Verbatim}
 
-\subsubsection{Contents of the Global Symbol Table}
+\noindent
+and this would also present challenges for Kleene tokenization and parsing.
 
-The \texttt{gsymtab} command prints a list of the items defined in the global symbol
-table, which is the root of the Kleene environment and the mother of the
-``program'' symbol table.  The items in the list should correspond to the definitions
-in the system-supplied \texttt{.kleene/global/predefined.kl} start-up script.
-
-\begin{Verbatim}
-gsymtab ;
-\end{Verbatim}
-
-\subsection{C++ Memory Space}
-
-The Kleene system includes one custom-written non-OpenFst \CPP{} file,
-named \texttt{kleeneopenfst.cc}, that defines the ``native'' (\CPP{})
-functions directly callable from the Kleene interpreter and serves as the
-\acro{jni} bridge between Kleene and the OpenFst library.  As with any
-program involving C or \CPP{}, there is a significant danger of memory
-leaks; finding and plugging them will be a high priority.
-
-Another possible and significant source of \CPP{} memory leaks would be
-the creation of native finite-state machines that are never deleted; the
-\texttt{fsts} command, described above, may provide clues to tracking
-down such leaks.  Kleene currently has no direct way to interrogate the
-memory usage/availability in the \CPP{} memory space.\footnote{Memory
-profilers may provide some help here.}
+At this point, we should continue to think about post-fixed indexing
+syntax.  As Kleene lists are not really arrays, and as \texttt{foreach}
+statements are provided for iterating easily through lists, I believe
+that we can dispense with postfix iteration altogether.
 
 

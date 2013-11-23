@@ -276,6 +276,183 @@ Java_OpenFstLibraryWrapper_oneStringFstNative
 	return (jlong)(uintptr_t) fstp ;
 }
 
+
+/* First draft for Mans Hulden's _eq() algorithm, for an alphabet {a, b, c},
+ * need to construct an FST equivalent to
+ * ~$^contains( \[ a .* \[ [^a] || \[ b .* \[ [^b] || \[ c .* \[ [^c] )
+ * that constrains the equivalence of two symbols appearing after a
+ * left delimiters (shown here as [)
+ *
+ * This approach was abandoned in favor of implementing eq() directly in
+ * Kleene code, in predefined.kl
+ */
+
+/* 
+void AddConstrainArcs(StdVectorFst * fstp, int stateNum, int other_id, 
+		jint * intArray, int size) {
+	fstp->AddArc(stateNum, StdArc(other_id, other_id, 0.0, stateNum)) ;
+	int cpv ;
+	for (int i = 0; i < size; i++) {
+		cpv = intArray[i] ;
+		fstp->AddArc(stateNum, StdArc(cpv, cpv, 0.0, stateNum)) ;
+	}
+}
+
+JNIEXPORT jlong JNICALL
+Java_OpenFstLibraryWrapper_eqConstrainEqualityFstNative
+	(JNIEnv *env, jclass cls,
+	 jint other_id,			// code point value of OTHER_ID
+	 jint left_delim,		// code point value of the left delimiter,
+	 						//    just [ in Hulden's examples
+	 jintArray intArray)	// pass in an array of (typically 
+	 						//	alphabetic) code-point values
+							//	than can occur in reduplicated strings
+{
+	// get access to the array of integers passed in
+	jboolean isCopy ;
+	jint * intArrayElements = env->GetIntArrayElements(intArray, &isCopy) ;
+	jint size = env->GetArrayLength(intArray) ;
+
+	// create the start state, which is also final
+	StdVectorFst *fstp = new StdVectorFst() ;
+	fstp->AddState() ;   // will be state 0
+	fstp->SetStart(0) ;
+	fstp->SetFinal(0, 0.0) ;
+
+	// make state 1, which is also final
+	fstp->AddState() ;
+	fstp->SetFinal(1, 0.0) ;
+
+	// add the basic arcs
+	fstp->AddArc(0, StdArc(left_delim, left_delim, 0.0, 1)) ;
+	fstp->AddArc(1, StdArc(left_delim, left_delim, 0.0, 1)) ;
+	fstp->AddArc(1, StdArc(other_id, other_id, 0.0, 0)) ;
+	AddConstrainArcs(fstp, 0, other_id, intArrayElements, size) ;
+
+	int twoStateNum, threeStateNum, cpv ;
+	for (int i = 0; i < size; i++) {
+		cpv = intArrayElements[i] ;
+		twoStateNum = fstp->AddState() ;
+		fstp->SetFinal(twoStateNum, 0.0) ;
+		fstp->AddArc(1, StdArc(cpv, cpv, 0.0, twoStateNum)) ;
+		threeStateNum = fstp->AddState() ;
+		fstp->SetFinal(threeStateNum, 0.0) ;
+		fstp->AddArc(twoStateNum, StdArc(left_delim, left_delim, 0.0, threeStateNum)) ;
+		fstp->AddArc(threeStateNum, StdArc(cpv, cpv, 0.0, twoStateNum)) ;
+
+		AddConstrainArcs(fstp, twoStateNum, other_id, intArrayElements, size) ;
+	}
+	if (isCopy == JNI_TRUE) {
+		env->ReleaseIntArrayElements(intArray, intArrayElements, 0) ;
+	}
+	return (jlong)(uintptr_t) fstp ;
+}
+
+
+JNIEXPORT jlong JNICALL
+Java_OpenFstLibraryWrapper_eqConsumeSymbolFstNative
+	(JNIEnv *env, jclass cls,
+	 jint other_id,			// code point value of OTHER_ID
+	 jint left_delim,		// code point value of the left delimiter,
+	 						//    just [ in Hulden's examples
+	 jintArray intArray)	// pass in an array of (typically 
+	 						//	alphabetic) code-point values
+							//	than can occur in reduplicated strings
+{
+	// create the start state, which is also final
+	StdVectorFst *fstp = new StdVectorFst() ;
+
+	int zeroStateNum, oneStateNum ;
+
+	zeroStateNum = fstp->AddState() ;
+	fstp->SetStart(zeroStateNum) ;
+	fstp->SetFinal(zeroStateNum, 0.0) ;
+
+	// make state 1, which is also final
+	oneStateNum = fstp->AddState() ;
+	fstp->SetFinal(oneStateNum, 0.0) ;
+
+	// add the basic arcs
+	fstp->AddArc(zeroStateNum, StdArc(other_id, other_id, 0.0, zeroStateNum)) ;
+	fstp->AddArc(zeroStateNum, StdArc(left_delim, left_delim, 0.0, oneStateNum)) ;
+	fstp->AddArc(oneStateNum, StdArc(left_delim, left_delim, 0.0, oneStateNum)) ;
+	fstp->AddArc(oneStateNum, StdArc(other_id, other_id, 0.0, zeroStateNum)) ;
+
+	// get access to the array of integers passed in
+	jboolean isCopy ;
+	jint * intArrayElements = env->GetIntArrayElements(intArray, &isCopy) ;
+	jint size = env->GetArrayLength(intArray) ;
+
+	int cpv ;
+	int newStateNum ;
+	// loop through the integer array
+	for (int i = 0; i < size; i++) {
+		cpv = intArrayElements[i] ;
+		newStateNum = fstp->AddState() ;
+
+		fstp->AddArc(zeroStateNum, StdArc(cpv, cpv, 0.0, zeroStateNum)) ;
+		fstp->AddArc(zeroStateNum, StdArc(left_delim, cpv, 0.0, newStateNum)) ;
+		fstp->AddArc(oneStateNum, StdArc(left_delim, cpv, 0.0, newStateNum)) ;
+		fstp->AddArc(newStateNum, StdArc(cpv, left_delim, 0.0, zeroStateNum)) ;
+	}
+
+	if (isCopy == JNI_TRUE) {
+		env->ReleaseIntArrayElements(intArray, intArrayElements, 0) ;
+	}
+	return (jlong)(uintptr_t) fstp ;
+}
+*/
+
+
+/* for Mans Hulden's _eq() algorithm, 
+ * need to construct an FST equivalent to  \[ \] -> ""
+ * that deletes the matched delimiters when there is nothing
+ * left between them
+ *
+ * Now done in Kleene code
+ */
+
+/*
+JNIEXPORT jlong JNICALL
+Java_OpenFstLibraryWrapper_eqDeleteEmptyDelimitersFstNative
+	(JNIEnv *env, jclass cls,
+	 jint other_id,			// code point value of OTHER_ID
+	 jint left_delim,		// code point value of the left delimiter,
+	 						//    just [ in Hulden's examples
+	 jint right_delim)		// just ] in Hulden's examples
+{
+	int zeroStateNum, oneStateNum, twoStateNum ;
+
+	StdVectorFst *fstp = new StdVectorFst() ;
+
+	// create the state state, which is also final
+	zeroStateNum = fstp->AddState() ;
+	fstp->SetStart(zeroStateNum) ;
+	fstp->SetFinal(zeroStateNum, 0.0) ;
+
+	oneStateNum = fstp->AddState() ;
+	fstp->SetFinal(oneStateNum, 0.0) ;
+
+	twoStateNum = fstp->AddState() ;
+	// not final
+
+	int epsilon = 0 ;	// built into OpenFst
+
+	fstp->AddArc(zeroStateNum, StdArc(other_id, other_id, 0.0, zeroStateNum)) ;
+	fstp->AddArc(zeroStateNum, StdArc(right_delim, right_delim, 0.0, zeroStateNum)) ;
+	fstp->AddArc(zeroStateNum, StdArc(left_delim, epsilon, 0.0, twoStateNum)) ;
+	fstp->AddArc(zeroStateNum, StdArc(left_delim, left_delim, 0.0, oneStateNum)) ;
+
+	fstp->AddArc(oneStateNum, StdArc(left_delim, left_delim, 0.0, oneStateNum)) ;
+	fstp->AddArc(oneStateNum, StdArc(left_delim, epsilon, 0.0, twoStateNum)) ;
+	fstp->AddArc(oneStateNum, StdArc(other_id, other_id, 0.0, zeroStateNum)) ;
+
+	fstp->AddArc(twoStateNum, StdArc(right_delim, epsilon, 0.0, zeroStateNum)) ;
+
+	return (jlong)(uintptr_t) fstp ;
+}
+*/
+
 JNIEXPORT jlong JNICALL
 Java_OpenFstLibraryWrapper_copyFstNative
   (JNIEnv *env, jclass cls,
@@ -2204,6 +2381,7 @@ Java_OpenFstLibraryWrapper_getLabelsNative
 				!aiter.Done(); 
 				aiter.Next()) {
 			const StdArc &arc = aiter.Value() ;
+			// get both the input and output label
 			sigmaSet.insert((int)arc.ilabel) ;
 			sigmaSet.insert((int)arc.olabel) ;
 		}
@@ -2228,7 +2406,7 @@ Java_OpenFstLibraryWrapper_getLabelsNative
 	// set the whole Java array directly from the local C++ array
 	env->SetIntArrayRegion(retArr, 0, size, (jint *)nativeIntArray) ;
 
-	delete[] nativeIntArray ;
+	delete[] nativeIntArray ;	// else get a memory leak
 
 	return retArr ;
 }
@@ -2253,6 +2431,7 @@ Java_OpenFstLibraryWrapper_getOutputLabelsNative
 				!aiter.Done(); 
 				aiter.Next()) {
 			const StdArc &arc = aiter.Value() ;
+			// get just the output label`a
 			sigmaSet.insert((int)arc.olabel) ;
 		}
 	}
@@ -2276,7 +2455,7 @@ Java_OpenFstLibraryWrapper_getOutputLabelsNative
 	// set the whole Java array directly from the local C++ array
 	env->SetIntArrayRegion(retArr, 0, size, (jint *)nativeIntArray) ;
 
-	delete[] nativeIntArray ;
+	delete[] nativeIntArray ;  // else get a memory leak
 
 	return retArr ;
 }
@@ -4005,3 +4184,159 @@ Java_OpenFstLibraryWrapper_convertCaseNative
 
 	return retArr ;
 }
+
+// Notes for flatten, for use in transducer rules, 
+// where the input -> output LHS is expressed as a single transducer,
+// e.g.
+//
+// a:b -> /  left _ right
+// 
+// This transducer, a:b or whatever,  will initially be compiled as a 
+// normal transducer, and then needs to be "flattened" out into
+// the kind of one-level (acceptor) FSM (consisting of pair strings) that 
+// is usually constructed by Mans Hulden's rule-compilation "align" algorithm.  
+// e.g.  a:b c:d is flattened to the one-level   a  b  c  d
+// or really, in OpenFst   a:a  b:b  c:d  d:d
+
+JNIEXPORT void JNICALL
+Java_OpenFstLibraryWrapper_flattenInPlaceNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr, jint hardEpsilonSymVal, jint otherIdSymVal, jint otherNonIdSymVal) {
+
+	// get a ptr to the orig (input Fst)
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	StateId newStateId ;
+
+	// need to add new states to fstp, so avoid the use of 
+	// StateIterator, which can be confused by the addition of new states
+
+	int stateCount = (int) (fstp->NumStates()) ;  // get the state count
+	StateId s ;
+	Label ilabel ;
+	Label olabel ;
+	Weight weight ;
+	StateId nextstate ;
+
+	// loop through the original states of the FSM
+	for (int i = 0; i < stateCount; i++) {
+		s = (StateId) i ;
+
+		// iterate through the exit arcs of one state
+		for (MutableArcIterator<StdVectorFst> aiter(fstp, s) ;
+			!aiter.Done() ;
+			aiter.Next()) {
+			StdArc arc = aiter.Value() ;
+
+			// store info from the orig arc
+			ilabel = arc.ilabel ;
+			if (ilabel == 0)	// epsilon
+				ilabel = hardEpsilonSymVal ;
+				// in a flattened FSM, need to hard a hardEpsilonSymbol
+				// to avoid losing the transition to epsilonRemove
+			else if (ilabel == otherNonIdSymVal)
+				ilabel = otherIdSymVal ;
+				// on input label, change OTHER_NONID to OTHER_ID so that
+				// multiple "OTHER" input arcs can be determinized (on the input
+				// side, both OTHER_ID and OTHER_NONID match the same symbols;
+				// the difference lies in the output symbol
+			olabel = arc.olabel ;
+			if (olabel == 0)	// epsilon
+				olabel = hardEpsilonSymVal ;
+			// output arc can be a hard normal symbol, a hard epsilon symbol, 
+			// OTHER_ID (to mirror the input), or OTHER_NONID (requiring some
+			// special output like ? or <other/>
+			weight = arc.weight ;
+			nextstate = arc.nextstate ;
+
+			// split orig arc into two arcs, an input arc, followed by
+			// an output arc; with a new intermediate state inserted
+
+			newStateId = fstp->AddState() ;
+
+			// reset values of the original arc (now the input arc)
+			arc.ilabel = ilabel ;	// both .ilabel and .olabel get the original ilabel value
+			arc.olabel = ilabel ;
+			// set the weight of the input arc to neutral, to allow
+			// easier determinization
+			arc.weight = TropicalWeight::One() ;	// neutral weight
+			// repoint the original arc to the new state
+			arc.nextstate = newStateId ;
+
+			// and create a new (output) arc from newStateId to orig nextstate,
+			// with the original olabel (on both sides), and with the original arc's weight
+			fstp->AddArc(newStateId, StdArc(olabel, olabel, weight, nextstate)) ;
+
+			aiter.SetValue(arc) ; 
+		}
+	}
+	return ;
+}
+
+JNIEXPORT void JNICALL
+Java_OpenFstLibraryWrapper_flatten4RuleInPlaceNative
+  (JNIEnv *env, jclass cls,
+   jlong fstPtr, jint hardEpsilonSymVal) {
+
+	// get a ptr to the orig (input Fst)
+	StdVectorFst * fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+	StateId newStateId ;
+
+	// need to add new states to fstp, so avoid the use of 
+	// StateIterator, which can be confused by the addition of new states
+
+	int stateCount = (int) (fstp->NumStates()) ;  // get the state count
+	StateId s ;
+	Label ilabel ;
+	Label olabel ;
+	Weight weight ;
+	StateId nextstate ;
+
+	// loop through the original states of the FSM
+	for (int i = 0; i < stateCount; i++) {
+		s = (StateId) i ;
+
+		// iterate through the exit arcs of one state
+		for (MutableArcIterator<StdVectorFst> aiter(fstp, s) ;
+			!aiter.Done() ;
+			aiter.Next()) {
+			StdArc arc = aiter.Value() ;
+
+			// store info from the orig arc
+			ilabel = arc.ilabel ;
+			if (ilabel == 0)	// epsilon
+				ilabel = hardEpsilonSymVal ;
+				// in a flattened FSM, need to hard a hardEpsilonSymbol
+				// to avoid losing the transition to epsilonRemove
+			olabel = arc.olabel ;
+			if (olabel == 0)	// epsilon
+				olabel = hardEpsilonSymVal ;
+			// output arc can be a hard normal symbol, a hard epsilon symbol, 
+			// OTHER_ID (to mirror the input), or OTHER_NONID (requiring some
+			// special output like ? or <other/>
+			weight = arc.weight ;
+			nextstate = arc.nextstate ;
+
+			// split orig arc into two arcs, an input arc, followed by
+			// an output arc; with a new intermediate state inserted
+
+			newStateId = fstp->AddState() ;
+
+			// reset values of the original arc (now the input arc)
+			arc.ilabel = ilabel ;	// both .ilabel and .olabel get the original ilabel value
+			arc.olabel = ilabel ;
+			// set the weight of the input arc to neutral, to allow
+			// easier determinization
+			arc.weight = TropicalWeight::One() ;	// neutral weight
+			// repoint the original arc to the new state
+			arc.nextstate = newStateId ;
+
+			// and create a new (output) arc from newStateId to orig nextstate,
+			// with the original olabel (on both sides), and with the original arc's weight
+			fstp->AddArc(newStateId, StdArc(olabel, olabel, weight, nextstate)) ;
+
+			aiter.SetValue(arc) ; 
+		}
+	}
+	return ;
+}
+

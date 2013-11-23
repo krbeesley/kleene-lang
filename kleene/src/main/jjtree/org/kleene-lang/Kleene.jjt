@@ -165,26 +165,33 @@ import javax.swing.JFrame ;
 
 public class Kleene {
 
-	// just one KleeneGUI is used during a Kleene session
+	// Just one KleeneGUI is used during a Kleene session
     static KleeneGUI gui = null ;
 
-    // just one Environment used throughout in one Kleene session;
+    // Just one Environment is used throughout in one Kleene session;
 	// env is the handle to all the Frames (each with a symbol table)
 	// in the Environment
 	static Environment env = new Environment() ;
 
-	// allocate a single InterpData (reused--passed around the interpreter)
+	// Allocate a single InterpData (reused--passed around the interpreter)
 	static InterpData interpData = new InterpData() ;
 	// The object is initialized for processing OUTSIDE of a GUI
 	// 		interpData.reset() 
 	// or inside a GUI
 	//      interpData.resetForGUI(KleeneGUI g) as necessary.
 
-    // allocate a single InterpreterKleeneVisitor
+    // Allocate a single InterpreterKleeneVisitor
 	// (reused for interpreting each statement)
+	// The constructor for InterpreterKleeneVisitor calls
+	// lib.AddOtherId() and lib.AddOtherNonId() that add the
+	// special OTHER_ID and OTHER_NONID symbols to the symbol table.
+	// N.B. with OpenFst, 0 (zero) is wired in as the epsilon value
+	// for the integer arc labels.
 	static InterpreterKleeneVisitor interp = 
-               new InterpreterKleeneVisitor(env) ;
+               			new InterpreterKleeneVisitor(env) ;
 
+	// by default, ast printout on the terminal (used once for
+	// debugging) is OFF.  A command-line flag sets it on.
 	static boolean astRequested = false ;
 
 
@@ -668,7 +675,7 @@ public class Kleene {
 														// has already determined that it's
 														// followed by a left paren
 
-			// built-in functions followed by a left parent, i.e.
+			// built-in functions followed by a left paren, i.e.
 			// there is some kind of arg list following.
 			|| (
 					(	t.kind == NET_REVERSE_FUNC_ID
@@ -689,6 +696,10 @@ public class Kleene {
 					||	t.kind == NET_DIAC_FUNC_ID
 
 					||	t.kind == NET_SHORTESTPATH_FUNC_ID
+					||	t.kind == NET_FLATTEN_DEST_FUNC_ID
+					||	t.kind == NET_FLATTEN_FUNC_ID
+					||	t.kind == NET_FLATTEN4RULE_DEST_FUNC_ID
+					||	t.kind == NET_FLATTEN4RULE_FUNC_ID
 					||	t.kind == NET_INPUTPROJ_DEST_FUNC_ID
 					||	t.kind == NET_INPUTPROJ_FUNC_ID
 					||	t.kind == NET_OUTPUTPROJ_DEST_FUNC_ID
@@ -700,6 +711,8 @@ public class Kleene {
 					|| 	t.kind == NET_RM_WEIGHT_FUNC_ID
 					||	t.kind == NET_SUBST_SYMBOL_DEST_FUNC_ID
 					||	t.kind == NET_SUBST_SYMBOL_FUNC_ID
+					||	t.kind == NET_EQ_DEST_FUNC_ID
+					||	t.kind == NET_EQ_FUNC_ID
 					||	t.kind == NET_READ_XML_FUNC_ID
 					||	t.kind == NET_RAND_GEN_FUNC_ID
 					||	t.kind == NET_TO_STRING_FUNC_ID
@@ -777,6 +790,7 @@ public class Kleene {
 					(	t.kind == LNG_PATHCOUNT_FUNC_ID
 					||	t.kind == LNG_STATECOUNT_FUNC_ID
 					||	t.kind == LNG_ARCCOUNT_FUNC_ID
+					||	t.kind == LNG_GET_INT_CPV_FUNC_ID
 					||	t.kind == LNG_ARITY_FUNC_ID
 
 					// boolean functions
@@ -786,6 +800,7 @@ public class Kleene {
 					||	t.kind == LNG_IS_LBOUNDED_FUNC_ID
 					||	t.kind == LNG_IS_ACCEPTOR_FUNC_ID
 					||	t.kind == LNG_IS_TRANSDUCER_FUNC_ID
+					||	t.kind == LNG_OUTPUT_LABELS_INCLUDE_CPV_FUNC_ID
 
 					||	t.kind == LNG_IS_WEIGHTED_FUNC_ID
 					||	t.kind == LNG_IS_IDETERMINISTIC_FUNC_ID
@@ -809,6 +824,8 @@ public class Kleene {
 					||	t.kind == DBL_RINT_FUNC_ID
 					||	t.kind == DBL_DOUBLE_FUNC_ID
 					||	t.kind == LNG_LONG_FUNC_ID
+					||	t.kind == DBL_LOG_FUNC_ID
+
 					||	t.kind == LNG_SIZE_FUNC_ID
 					||	t.kind == LNG_IS_EMPTY_FUNC_ID    // used for testing lists
 
@@ -935,7 +952,7 @@ TOKEN_MGR_DECLS : {
 	int stateBeforeDelimitedComment ;
 }
 
-// do NOT include IN_DOUBLE_QUOTES, IN_SQUARE_BRACKETS, IN_DELIMITED_COMMENT
+// do NOT include states IN_DOUBLE_QUOTES, IN_SQUARE_BRACKETS, IN_DELIMITED_COMMENT
 <DEFAULT, NON_INITIAL>
 SKIP: {
    	" "
@@ -951,7 +968,7 @@ SKIP: {
 	"/*"	{ 
 				commentNestingDepth = 1; 
 				stateBeforeDelimitedComment = curLexState ;
-				SwitchTo(IN_DELIMITED_COMMENT) ;
+				SwitchTo(IN_DELIMITED_COMMENT) ;	// new lexical state
 			}
 }
 
@@ -978,9 +995,9 @@ SKIP: {
 				SwitchTo(stateBeforeDelimitedComment) ;
 			}
   		 }  		
-|
-   // or just match and skip any character
-   < ~[] >
+	|
+   		// or just match and skip any character
+   		< ~[] >
 }
 
 <IN_DOUBLE_QUOTES>
@@ -1097,6 +1114,7 @@ TOKEN: {
 < IN_SQUARE_BRACKET_MULTICHAR_NAME >
 TOKEN : {
 
+	// these two are illegal inside square brackets
 	< BAD_TOKEN7: "\n" >
 |	< BAD_TOKEN8: "\r" >
 	// a single quote signals the end of the multichar symbol,
@@ -1105,7 +1123,7 @@ TOKEN : {
 |	< SQUARE_BRACKET_MULTICHAR_SYMBOL: "'" > 
 	{ 
 		// get rid of the surrounding single quotes
-		// (they are just delimiters--not part of the name)
+		// (they are just delimiters--not part of the actual name)
 	  image.deleteCharAt(0) ;
 	  image.deleteCharAt(image.length() - 1) ;
 
@@ -1133,8 +1151,7 @@ TOKEN : {
 < IN_SQUARE_BRACKET_MULTICHAR_NAME >
 MORE : {
 	"\\'" 
-	{ // delete the literalizing backslash, leaving the literal
-	  //   single quote
+	{ // delete the literalizing backslash, leaving the literal single quote
 	   image.deleteCharAt(image.length() - 2) ;
 	}
 }
@@ -1145,9 +1162,14 @@ MORE : {
 }
 
 // DEFAULT state is the "initial" state
-// typically find keywords in this state
-// for greater efficiency in tokenization, order the string literals by length,
-// 	shorter to longer; allows the DFA to be constructed more efficiently
+// typically find Kleene keywords in this state, and then switch into the
+// NON_INITIAL state
+//
+//  For greater efficiency in tokenization, order the string literals by length,
+// 	shorter to longer; allows the DFA to be constructed more efficiently, see
+//  "Tips for writing a good JavaCC lexical specification" at
+//  https://javacc.java.net/doc/lexertips.html
+
 < DEFAULT >
 TOKEN: {
 
@@ -1158,11 +1180,13 @@ TOKEN: {
 
     // if ( boolean test) {  }
 	// need to switch into NON_INITIAL state to tokenize the boolean test;
-    // when closing paren is found, need to switch back to DEFAULT
+    // when closing paren is found, need to switch back to DEFAULT state
 |   < IF_RW: "if" >
-		{  in_parenthesized = true ;
-		   paren_count = 0 ;
-		   SwitchTo(NON_INITIAL) ;  // to tokenize the parenthesized boolean test
+		{  
+			// see TOKEN_MGR_DECLS
+			in_parenthesized = true ;
+		   	paren_count = 0 ;
+		   	SwitchTo(NON_INITIAL) ;  // to tokenize the parenthesized boolean test
 		}
 |	< GARBAGE_COLLECT_RW:	"gc" > : NON_INITIAL
 
@@ -1181,22 +1205,29 @@ TOKEN: {
 // strings of 5 symbols
 
 |   < ELSIF_RW: 			"elsif" >
-		{  in_parenthesized = true ;
-		   paren_count = 0 ;
-		   SwitchTo(NON_INITIAL) ;
+		{  
+			// to tokenize the parenthesized boolean expression
+			in_parenthesized = true ;
+		   	paren_count = 0 ;
+		   	SwitchTo(NON_INITIAL) ;
 		}
 |   < WHILE_RW: 			"while" >
-		{  in_parenthesized = true ;
-		   paren_count = 0 ;
-		   SwitchTo(NON_INITIAL) ;
+		{  
+			// to tokenize the parenthesized boolean expression
+			in_parenthesized = true ;
+		   	paren_count = 0 ;
+		   	SwitchTo(NON_INITIAL) ;
 		}
 |   < UNTIL_RW: 			"until" >
-		{  in_parenthesized = true ;
-		   paren_count = 0 ;
-		   SwitchTo(NON_INITIAL) ;
+		{  
+			// to tokenize the parenthesized boolean expression
+			in_parenthesized = true ;
+		   	paren_count = 0 ;
+		   	SwitchTo(NON_INITIAL) ;
 		}
 |   < SIGMA1_RW: 			"sigma" > : NON_INITIAL
-|   < SIGMA2_RW: 			"alphabet" > : NON_INITIAL
+// see also SIGMA2_RW below "alphabet" equivalent with 8 characters
+
 	// see "println" below
 |	< PRINT_RW: 			"print" > : NON_INITIAL
 |   < BREAK_RW: 			"break" >	// leave in DEFAULT state
@@ -1235,12 +1266,16 @@ TOKEN: {
 
 	// see "symtab" above
 |	< GSYMTAB_REPORT_RW:	"gsymtab" > : NON_INITIAL
+
 |	< REQUIRE_RW: 			"require" > : NON_INITIAL
 	// see "print" above, "sysprint" and "sysprintln" below
+
 |	< PRINTLN_RW: 			"println" > : NON_INITIAL
+
     // foreach ($n in $@list) { }
 |   < FOREACH_RW: "foreach" >
 		{
+			// to tokenize the following parenthesized expression
 			in_parenthesized = true ;
 			paren_count = 0 ;
 			SwitchTo(ITERATOR_STATE) ;
@@ -1248,17 +1283,25 @@ TOKEN: {
 
 // strings of 8 symbols
 
+	// see SIGMA1_RW above (alternative)
+|   < SIGMA2_RW: 			"alphabet" > : NON_INITIAL
+
 	// see "optimize!" below
 |	< OPTIMIZE_RW:			"optimize" > : NON_INITIAL
+
 	// see also "extern" above
 |	< EXTERNAL_RW1:			"external" > : NON_INITIAL
+
 	// see "minimize!" below
 |	< MINIMIZE_RW:			"minimize" > : NON_INITIAL
+
 	// see "sysPrintln" below
 |	< SYS_PRINT_RW: 		"sysPrint" > : NON_INITIAL
+
 |	< WRITEXML_RW: 			"writeXml" > : NON_INITIAL
-|	< WRITEXML_STATE_ORIENTED_RW: 	"writeXmlStateOriented" > : NON_INITIAL
+
 |	< WRITEDOT_RW: 			"writeDot" > : NON_INITIAL
+
 |   < CONTINUE_RW: 			"continue" >  // leave in DEFAULT state
 
 // strings of 9 symbols
@@ -1299,16 +1342,18 @@ TOKEN: {
 	// see "synchronize" above
 |	< SYNCHRONIZE2_RW:		"synchronize!" > : NON_INITIAL
 
-// long strings
+// longer strings
 
-|	< SAP_RTN_CONVENTIONS_RW:  	"SapRtnConventions" >    // stay in DEFAULT state
-|   < TESTTOKENSXMLFILE_RW:		"testTokensXMLFile" >  : NON_INITIAL
-|   < TESTTOKENSTEXTFILE_RW: 	"testTokensTextFile" > : NON_INITIAL
+|	< SAP_RTN_CONVENTIONS_RW:  		"SapRtnConventions" >    // stay in DEFAULT state
+|   < TESTTOKENSXMLFILE_RW:			"testTokensXMLFile" >  : NON_INITIAL
+|   < TESTTOKENSTEXTFILE_RW: 		"testTokensTextFile" > : NON_INITIAL
+|	< WRITEXML_STATE_ORIENTED_RW: 	"writeXmlStateOriented" > : NON_INITIAL
 
 	// regular expressions
 	// remember that longer matches have precedence over shorter matches
 	// see plain "delete" above
 |	< DELETE_ALL_RW:      	"delete" ( <WHITESPACE> )+ "all" > : NON_INITIAL
+
 //|	< DELETE_SELECTED_RW: 	"delete" ( <WHITESPACE> )+ "selected" > : NON_INITIAL
 }
 
@@ -1333,14 +1378,12 @@ TOKEN: {
 |	< ITERATOR_IN2: "_E_" >    : NON_INITIAL
 
 	// recognize the $n in foreach ($n in $@list) { }
-|   < ITERATOR_NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+|   < ITERATOR_NET_ID: "$" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
 											   )* > 
 
 	// recognize the #n in foreach (#n in #@list) { }
-	// couldn't used <NUM_PREFIX> here, as it clashed with the #
-	// used in rule word-boundaries
 |   < ITERATOR_NUM_ID: "#" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
 	                                           | <DECIMAL_DIGIT> 
 											   | "_"
@@ -1355,7 +1398,7 @@ TOKEN: {
 	// $foo = 'abc' d e 'fg ;   
 	// If a literal single quote is needed, use literalized \'
 
-< NON_INITIAL >     // start of a multichar-symbol name
+< NON_INITIAL >     // start of a multichar-symbol name such as '[Noun]'
 MORE: {
 	"'" : IN_MULTICHAR_NAME
 }
@@ -1418,10 +1461,13 @@ TOKEN: {
 // order simple strings by length, shorter to longer, to allow
 //	a smaller, more efficient tokenizer DFA to be built
 
+
 // strings of 1 character
 
+   	< ANY: "." >	// match ANY symbol
+
 	// find a double quote, switch into IN_DOUBLE_QUOTES state
-    < LEFT_DOUBLE_QUOTE: 		"\"" >   : IN_DOUBLE_QUOTES
+|   < LEFT_DOUBLE_QUOTE: 		"\"" >   : IN_DOUBLE_QUOTES
 
 	// find a left square bracket, switch into IN_SQUARE_BRACKETS state
 |   < LSQUARE: 					"["  >   : IN_SQUARE_BRACKETS
@@ -1526,6 +1572,8 @@ TOKEN: {
 |   < COMPOSITION_OP_ASCII: 		"_o_" >
 |   < EPSILON_ASCII: 				"_e_" >
 
+// strings of 4 characters
+
 // strings of 5 characters
 
 |	< MAX_L2R_DIRECTIVE:	"{max}" >
@@ -1627,9 +1675,13 @@ TOKEN: {
 //|   < LEFT_RULE_ARROW_MIN_R2L:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
 //		<LCURLY> (<WHITESPACE>)* "minr2l" (<WHITESPACE>)* <RCURLY>  >
 
-//|	
+//|
+
+    < ANY_ANY: "." ( <WHITESPACE> )* ":" ( <WHITESPACE> )* "." > 
+
 	// plain "where" is equivalent to "where matched"
-	< WHERE_MATCHED_LCURLY: "{" ( <WHITESPACE> )* "where" ( ( <WHITESPACE> )+ "matched" )? >
+|	< WHERE_MATCHED_LCURLY: "{" ( <WHITESPACE> )* "where" ( ( <WHITESPACE> )+ "matched" )? >
+	// "where mixed" has to be spelled out 
 |   < WHERE_MIXED_LCURLY:   "{" ( <WHITESPACE> )* "where" (<WHITESPACE>)+ "mixed" >
 |   < HEX_INT_LITERAL: ( "0x" | "0X" ) ( <HEX_DIGIT> )+ >
         {
@@ -1642,7 +1694,7 @@ TOKEN: {
 |   < DEC_INT_LITERAL: ( <DECIMAL_DIGIT> )+ >
 }
 
-// iterator state is for:   foreach ($n in $@list) { ... }
+// iterator state is for parenthesized expression in:   foreach ($n in $@list) { ... }
 < DEFAULT, NON_INITIAL, ITERATOR_STATE >
 TOKEN: {
 	< LPAREN: "(" >
@@ -1675,12 +1727,7 @@ TOKEN: {
 TOKEN: {
 
 
-    // $net
-    < NET_ID: <NET_PREFIX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
-	                                           | <DECIMAL_DIGIT> 
-											   | "_"
-											   )* > : NON_INITIAL
-
+	// the name of a function, e.g.
     // $^union
     // could be DEFAULT or NON_INITIAL
 
@@ -1697,712 +1744,55 @@ TOKEN: {
     // DEF       NON_INIT   DEF        NON_INIT   DEF
     //           count-parens
 
-// built-in functions, with names starting __, not used directly by users;
-// these built-in functions are "wrapped" in ~/.kleene/global/predefined.kl
+	// In NON_INITIAL state, e.g.
+	// $result = $^union($a, $b)
+
+// built-in functions, with names starting $^__ or #^__, not used directly by users;
+// rather these built-in functions are "wrapped" in ~/.kleene/global/predefined.kl
+// i.e.   $^__reverse($fsm) is wrapped by the simpler $^reverse($fsm)
 
 // N.B.  if adding a function to this list, also examine mustBeRegex()
-//		and the expression() production
+//		and the expression() production.
+// in practice, when adding a new function, always do it on the model of an
+// existing function.  Make parallel additions throughout.
 
-|   < NET_REVERSE_FUNC_ID:    <NET_PREFIX> <CIRCUMFLEX> "__reverse" >
+// as usual, longer matches have precedence over shorter matches.
+// if two longest patterns match the same input, the one that appears
+// earliest in this file gets priority
 
-|   < NET_INVERT_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__invert!" >
-|   < NET_INVERT_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__invert" >
+// strings of 1 character
 
-|   < NET_OPTIMIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__optimize!" >
-|   < NET_OPTIMIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__optimize" >
+// LCURLY needs to be found in DEFAULT (for block) or NON_INITIAL state
+    < LCURLY: "{" >
 
-|   < NET_RMEPSILON_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__rmEpsilon!" >
-|   < NET_RMEPSILON_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__rmEpsilon" >
+// see LPAREN under < DEFAULT, NON_INITIAL, ITERATOR_STATE >
 
-|   < NET_DETERMINIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__determinize!" >
-|   < NET_DETERMINIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__determinize" >
-
-|   < NET_MINIMIZE_DEST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__minimize!" >
-|   < NET_MINIMIZE_FUNC_ID:     	<NET_PREFIX> <CIRCUMFLEX> "__minimize" >
-
-|   < NET_SYNCHRONIZE_DEST_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__synchronize!" >
-|   < NET_SYNCHRONIZE_FUNC_ID:     <NET_PREFIX> <CIRCUMFLEX> "__synchronize" >
-
-|	< NET_CASE_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__case" >
-|	< NET_DIAC_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__diac" >
-
-|	< NET_SHORTESTPATH_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__shortestPath" >
-
-|   < NET_INPUTPROJ_DEST_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__inputproj!" >
-|   < NET_INPUTPROJ_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__inputproj" >
-
-|   < NET_OUTPUTPROJ_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__outputproj!" >
-|   < NET_OUTPUTPROJ_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__outputproj" >
-
-|	< NET_CLOSE_SIGMA_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__closeSigma!" >
-|	< NET_CLOSE_SIGMA_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__closeSigma" >
-
-|   < NET_COPY_FUNC_ID:       <NET_PREFIX> <CIRCUMFLEX> "__copy" >
-
-|	< NET_RM_WEIGHT_DEST_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__rmWeight!" >
-|	< NET_RM_WEIGHT_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__rmWeight" >
-|	< NET_SUBST_SYMBOL_DEST_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol!" >
-|	< NET_SUBST_SYMBOL_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "__substSymbol" >
-
-| 	< NET_READ_XML_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__readXml" >
-
-| 	< NET_RAND_GEN_FUNC_ID:   <NET_PREFIX> <CIRCUMFLEX> "__randGen" >
-
-|	< NET_TO_STRING_FUNC_ID:  <NET_PREFIX> <CIRCUMFLEX> "__toString" >
-|   < NET_IMPLODE_FUNC_ID:    <NET_PREFIX> <CIRCUMFLEX> "__implode" >
-|	< NET_EXPLODE_FUNC_ID:	  <NET_PREFIX> <CIRCUMFLEX> "__explode" >
-
-// functions for retrieving individual networks from network lists 
-|	< NET_GET_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__get" >
-|	< NET_GETLAST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__getLast" >
-|	< NET_HEAD_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__head" >
-
-|	< NET_POP_DEST_FUNC_ID:			<NET_PREFIX> <CIRCUMFLEX> "__pop!" >
-|	< NET_REMOVE_DEST_FUNC_ID:		<NET_PREFIX> <CIRCUMFLEX> "__remove!">
-|	< NET_REMOVELAST_DEST_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "__removeLast!" >
-
-// functions for retrieving individual numbers from num lists 
-|	< NUM_HEAD_FUNC_ID:		<NUM_FUNC_PREFIX> "__head" >
-|	< NUM_GETLAST_FUNC_ID:	<NUM_FUNC_PREFIX> "__getLast" >
-|	< NUM_GET_FUNC_ID:		<NUM_FUNC_PREFIX> "__get" >
-
-|	< NUM_POP_DEST_FUNC_ID:			<NUM_FUNC_PREFIX> "__pop!" >
-|	< NUM_REMOVELAST_DEST_FUNC_ID:	<NUM_FUNC_PREFIX> "__removeLast!" >
-|	< NUM_REMOVE_DEST_FUNC_ID:		<NUM_FUNC_PREFIX> "__remove!" >
-
-// wired-in, need to match following "(" to avoid having longer match 
-// override it.  The getNet function returns a network given a
-// network that encodes the name of the network
-|	< NET_GET_NET_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "getNet" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-// wired-in, need to match following "(" to avoid having longer match 
-// override it.  sub creates a "reference" to a subnetwork, used in
-// RTNs
-|	< NET_SUB_FUNC_ID: <NET_PREFIX> <CIRCUMFLEX> "sub" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< LNG_PATHCOUNT_FUNC_ID:  <NUM_FUNC_PREFIX> "__pathCount">
-|   < LNG_STATECOUNT_FUNC_ID: <NUM_FUNC_PREFIX> "__stateCount">
-|   < LNG_ARCCOUNT_FUNC_ID:   <NUM_FUNC_PREFIX> "__arcCount">
-
-|   < LNG_ARITY_FUNC_ID:      <NUM_FUNC_PREFIX> "__arity">
-
-// boolean functions
-|	< LNG_IS_RTN_FUNC_ID:	<NUM_FUNC_PREFIX>         "__isRtn">
-|	< LNG_IS_CYCLIC_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isCyclic">
-|	< LNG_IS_UBOUNDED_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isUBounded">
-|	< LNG_IS_LBOUNDED_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isLBounded">
-|	< LNG_IS_ACCEPTOR_FUNC_ID:	<NUM_FUNC_PREFIX>     "__isAcceptor">
-|	< LNG_IS_TRANSDUCER_FUNC_ID:	<NUM_FUNC_PREFIX> "__isTransducer">
-
-|	< LNG_IS_WEIGHTED_FUNC_ID:	<NUM_FUNC_PREFIX> 			"__isWeighted">
-|	< LNG_IS_IDETERMINISTIC_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isIDeterministic">
-|	< LNG_IS_ODETERMINISTIC_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isODeterministic">
-|	< LNG_IS_EPSILONFREE_FUNC_ID:	<NUM_FUNC_PREFIX> 		"__isEpsilonFree">
-			// i.e. is free of two-sided epsilons
-|	< LNG_IS_EMPTY_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	  	"__isEmptyLanguage">
-|	< LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isEmptyStringLanguage">
-|	< LNG_CONTAINS_EMPTY_STRING_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__containsEmptyString">
-|	< LNG_IS_STRING_FUNC_ID:	<NUM_FUNC_PREFIX> 				"__isString">
-			// i.e. is single string language
-|	< LNG_CONTAINS_OTHER_FUNC_ID: <NUM_FUNC_PREFIX>				"__containsOther">
-
-//|	< LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID:	<NUM_FUNC_PREFIX> 	"__isUniversalLanguage">
-			// KRB: don't try to do this here;
-			// #^isUniversalLanguage now defined in predefined.kl
-			// but won't be reliable until 'compact alphabet' is implemented
-
-//|	< LNG_EQUIVALENT_FUNC_ID:	<NUM_FUNC_PREFIX> "__equivalent">
-			// KRB: think about this one
-
-|	< NUM_ABS_FUNC_ID:			<NUM_FUNC_PREFIX> "__abs">
-|   < DBL_CEIL_FUNC_ID:			<NUM_FUNC_PREFIX> "__ceil">
-|	< DBL_FLOOR_FUNC_ID:		<NUM_FUNC_PREFIX> "__floor">
-|	< LNG_ROUND_FUNC_ID:		<NUM_FUNC_PREFIX> "__round">
-|	< DBL_RINT_FUNC_ID:			<NUM_FUNC_PREFIX> "__rint">
-|	< DBL_DOUBLE_FUNC_ID:		<NUM_FUNC_PREFIX> "__double">
-|	< LNG_LONG_FUNC_ID:			<NUM_FUNC_PREFIX> "__long">
-
-// wired-in function names:
-// need to (temporarily) match a following "(" to avoid matching, e.g.,  "size" if the next
-// token is really something longer like "sizeFoo"
-|	< LNG_SIZE_FUNC_ID:	<NUM_FUNC_PREFIX> "size" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-// wired-in, #^isEmpty( list ) used for net lists and number lists
-|	< LNG_IS_EMPTY_FUNC_ID:	<NUM_FUNC_PREFIX> "isEmpty" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|   < NET_START_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "start" (<WHITESPACE>)* "(">
-	{
-		input_stream.backup(1) ;
-		SwitchTo(NON_INITIAL) ;
-	}
-    // for $^start($>foo) 
-
-|   < NET_PARALLEL_FUNC_ID:      <NET_PREFIX> <CIRCUMFLEX> "parallel" (<WHITESPACE>)* "(">
-	{
-		input_stream.backup(1) ;
-		SwitchTo(NON_INITIAL) ;
-	}
-    // for $^parallel(rule, rule ...) to compile rules in parallel 
-
-|   < VOID_FUNC_ANON: <CIRCUMFLEX> (<WHITESPACE>)* "(" >
+|   < RPAREN: ")" >
         {
-	     	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-		// for ^(args ...)??
-
-		// KRB:  think about this again
-		//     the name alone could be an argument in a function call
-
-		// in a void_func_definition, the tokenizer starts in DEFAULT (initial) state,
-		// then needs to switch to NON_INITIAL to tokenize the (params),
-		// then (the tricky part) it needs to switch back to DEFAULT to
-		// tokenize the block
-
-		//  a void function call (a kind of stand-alone statement) should also work with this plan
-		//  ^myfunc (params) ;
-		//  The ^myfunc will be first token in the line, 
-		//		so the tokenizer will be in the DEFAULT state;
-		//  Then it will shift into NON_INITIAL for the params, and then back to DEFAULT for
-		//  the terminating semicolon.
-
-		// ^foo(params) { ...
-    // the tricky switch back to DEFAULT state for the block
-    // requires counting to find a matching closing right paren
-|   < VOID_FUNC_ID_BEFORE_ARGLIST :          
-                     <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
-		                                             | <DECIMAL_DIGIT>
-		                                             | "_"
-													 )* 
-													 ( "!" )?
-													 (<WHITESPACE>)* "(" > 
-        {  
-	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
-			// fix the image (a StringBuffer)
-	    	image.deleteCharAt(image.length() - 1) ;
-			// set the matchedToken.image (a String), trimming off any whitespaces
-	    	matchedToken.image = image.toString().trim() ;
-
-            if ( curLexState == DEFAULT ) {
-	        	in_parenthesized = true ;
-	        	paren_count = 0 ;
-	        	SwitchTo(NON_INITIAL) ;
+	        if (in_parenthesized) {
+	            paren_count -= 1 ;
+	            if (paren_count == 0) {
+		            in_parenthesized = false ;
+		            SwitchTo(DEFAULT) ;
+		        }
             }
         }
-|   < VOID_FUNC_ID_NO_ARGLIST:          
-                     <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
-		                                             | <DECIMAL_DIGIT>
-		                                             | "_"
-													 )* 
-													 ( "!" )? > : NON_INITIAL
-|   < VOID_FUNC_FUNC_ANON: 
-        <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-	     	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-|   < VOID_FUNC_FUNC_ID_BEFORE_ARGLIST :          
-        <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* 
-		( "!" )?
-		(<WHITESPACE>)* "(" >
-        {  
-	    	input_stream.backup(1) ;   // lop off the "("
 
-	    	image.deleteCharAt(image.length() - 1) ;
-	    	matchedToken.image = image.toString().trim() ;
+// EQUAL_SIGN needs to be found in DEFAULT state
+// (after param_list in a function definition) 
+// or in the NON_INITIAL state
+|   < EQUAL_SIGN: "=" >
 
-            if ( curLexState == DEFAULT ) {
-	        	in_parenthesized = true ;
-	        	paren_count = 0 ;
-	        	SwitchTo(NON_INITIAL) ;
-            }
-        }
-|   < VOID_FUNC_FUNC_ID_NO_ARGLIST:          
-        <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* 
-		( "!" )? > : NON_INITIAL
+// could encounter SEMICOLON in DEFAULT or NON_INITIAL state
+|   < SEMICOLON: ";" > : DEFAULT
 
+// default one-character match of anything, so that the tokenizer
+// will never fail.  This will be overridden by any longer match.
 
-|   < NET_FUNC_ANON: <NET_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-	     	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
+|   < CHAR: ~[] >
 
-// pseudo-function-- need to match the left paren so that it isn't overriden by a longer
-// match below with NET_FUNC_ID_BEFORE_ARGLIST
+// strings of 2 characters (put this here?)
 
-|	< NET_EMBED_RTN_SUBNETS_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "embedRtnSubnets"
-(<WHITESPACE>)* "(">
-        {
-	     	input_stream.backup(1) ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-|	< NET_EXPAND_RTN_FUNC_ID:	<NET_PREFIX> <CIRCUMFLEX> "expandRtn"
-(<WHITESPACE>)* "(">
-        {
-	     	input_stream.backup(1) ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-
-
-		// in a net_func_definition, the tokenizer starts in DEFAULT (initial) state,
-		// then needs to switch to NON_INITIAL to tokenize the (params),
-		// then (the tricky part) it needs to switch back to DEFAULT to
-		// tokenize the block
-
-		// $^foo(params) { ...
-
-    // the tricky switch back to DEFAULT state for the block
-    // requires counting to find a matching closing right paren
-|   < NET_FUNC_ID_BEFORE_ARGLIST :          
-        <NET_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
-		                                             | <DECIMAL_DIGIT>
-		                                             | "_"
-													 )* 
-													 ( "!" )?
-													 (<WHITESPACE>)* "(" > 
-        {  
-	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
-
-	    	image.deleteCharAt(image.length() - 1) ;
-	    	matchedToken.image = image.toString().trim() ;
-
-            if ( curLexState == DEFAULT ) {
-	        	in_parenthesized = true ;
-	        	paren_count = 0 ;
-	        	SwitchTo(NON_INITIAL) ;
-            }
-        }
-|   < NET_FUNC_ID_NO_ARGLIST:          
-        <NET_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
-		                                             | <DECIMAL_DIGIT>
-		                                             | "_"
-													 )* 
-													 ( "!" )? > : NON_INITIAL
-	// the $^ token will start the counting of parens
-
-    // could be DEFAULT OR NON_INITIAL
-    // if DEFAULT could be either
-    // 
-    // net func func assignment
-    // $^^addsuff = $^^foo ;
-    // $^^addsuff = $^^(paramlist) {     return exp ;         } ;
-    // DEF          NON_INIT             DEF   NON_INIT   DEF
-    //              count-parens
-    // or syntactic variant, net func func definition
-    // $^^addsuff(paramlist)   = {    }   ;
-    // DEF       NON_INIT      DEF
-    //           count-parens
-
-|   < NET_FUNC_FUNC_ANON: 
-        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-	     input_stream.backup(1) ;
-	     in_parenthesized = true ;
-	     paren_count = 0 ;
-	     SwitchTo(NON_INITIAL) ;
-        }
-|   < NET_FUNC_FUNC_ID_BEFORE_ARGLIST:          
-        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* 
-		( "!" )?
-		(<WHITESPACE>)* "(" >
-        {  
-	    input_stream.backup(1) ;   // lop off the "("
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-
-            if ( curLexState == DEFAULT ) {
-	        in_parenthesized = true ;
-	        paren_count = 0 ;
-	        SwitchTo(NON_INITIAL) ;
-            }
-        }
-|   < NET_FUNC_FUNC_ID_NO_ARGLIST:          
-        <NET_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* 
-		( "!" )? > : NON_INITIAL
-
-|   < RRPROD_ID: <NET_PREFIX> <RANGLE> <UNICODE_ID_LETTER> 
-        ( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* > : NON_INITIAL
-
-//|   < NUM_ID: <NUM_PREFIX> <UNICODE_ID_LETTER> 
-// can't use NUM_PREFIX because the # needs to be tokenizable as word boundary
-|   < NUM_ID: "#" <UNICODE_ID_LETTER> 
-        ( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_"
-		)* > : NON_INITIAL
-
-|   < NUM_FUNC_ANON:  <NUM_FUNC_PREFIX> (<WHITESPACE>)* "(" >
-        {
-		 input_stream.backup(1) ;
-	     in_parenthesized = true ;
-	     paren_count = 0 ;
-	     SwitchTo(NON_INITIAL) ;
-        }
-|   < NUM_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_FUNC_PREFIX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT>
-		| "_"
-		)* 
-		( "!" )?
-		(<WHITESPACE>)* "(" >
-        {  
-	    input_stream.backup(1) ;   // lop off the "("
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-
-            if ( curLexState == DEFAULT ) {
-	        in_parenthesized = true ;
-	        paren_count = 0 ;
-	        SwitchTo(NON_INITIAL) ;
-            }
-        }
-|   < NUM_FUNC_ID_NO_ARGLIST:
-        <NUM_FUNC_PREFIX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT>
-		| "_"
-		)* 
-		( "!" )?
-		> : NON_INITIAL
-
-|   < NUM_FUNC_FUNC_ANON: 
-        <NUM_FUNC_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(">
-        {
-		 input_stream.backup(1) ;
-	     in_parenthesized = true ;
-	     paren_count = 0 ;
-	     SwitchTo(NON_INITIAL) ;
-        }
-
-|   < NUM_FUNC_FUNC_ID_BEFORE_ARGLIST:
-        <NUM_FUNC_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
-		<DECIMAL_DIGIT> | "_")* (<WHITESPACE>)* "(">
-        {  
-	    input_stream.backup(1) ;   // lop off the "("
-
-	    image.deleteCharAt(image.length() - 1) ;
-	    matchedToken.image = image.toString().trim() ;
-
-            if ( curLexState == DEFAULT ) {
-	        in_parenthesized = true ;
-	        paren_count = 0 ;
-	        SwitchTo(NON_INITIAL) ;
-            }
-        }
-|   < NUM_FUNC_FUNC_ID_NO_ARGLIST:
-        <NUM_FUNC_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
-		<DECIMAL_DIGIT> | "_")* > : NON_INITIAL
-
-|   < NET_LIST_ID: <NET_PREFIX> <LIST_PREFIX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
-
-|   < NET_LIST_LIT_PREFIX: <NET_PREFIX> <LIST_PREFIX> (<WHITESPACE>)* "(" >
-        { input_stream.backup(1) ; }
-
-|   < NET_LIST_FUNC_ANON:
-        <NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-		 	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-
-|   < NET_LIST_FUNC_FUNC_ANON:
-        <NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-		 	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-
-|   < NUM_LIST_FUNC_FUNC_ANON:
-        <NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-		 	input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-
-// built-in, need to match ( so that longer match for 
-// NET_LIST_FUNC_ID_BEFORE_ARGLIST
-// does not override it); wired in (not __getSlice) because it has a variable
-// number of arguments (so I can't wrap it in .kleene/global/predefined.kl)
-
-|	< NET_LIST_GET_SLICE_FUNC_ID:	
-	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_GET_SLICE_FUNC_ID:	
-	<NUM_LIST_PREFIX> <CIRCUMFLEX> "getSlice" (<WHITESPACE>)* "(">
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_PUSH_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__push!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_PUSH_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__push!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_ADD_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__add!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_ADD_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__add!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_ADDAT_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__addAt!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__addAt!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_SET_DEST_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__set!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_SET_DEST_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__set!" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-
-|	< NET_LIST_TAIL_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__tail" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_TAIL_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__tail" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_COPY_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__copy" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_COPY_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__copy" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NET_LIST_GET_SIGMA_FUNC_ID:	<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX>
-"__getSigma" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|	< NUM_LIST_GET_SIGMA_FUNC_ID:	<NUM_LIST_PREFIX> <CIRCUMFLEX>
-"__getSigma" (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			SwitchTo(NON_INITIAL) ;
-		}
-
-|   < NET_LIST_FUNC_ID_BEFORE_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			image.deleteCharAt(image.length() - 1) ;
-			matchedToken.image = image.toString().trim() ;
-
-			if ( curLexState == DEFAULT ) {
-				in_parenthesized = true ;
-				paren_count = 0 ;
-				SwitchTo(NON_INITIAL) ;
-			}
-		}
-
-|   < NET_LIST_FUNC_ID_NO_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
-
-|   < NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			image.deleteCharAt(image.length() - 1) ;
-			matchedToken.image = image.toString().trim() ;
-
-			if ( curLexState == DEFAULT ) {
-				in_parenthesized = true ;
-				paren_count = 0 ;
-				SwitchTo(NON_INITIAL) ;
-			}
-		}
-
-|   < NET_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
-		<NET_PREFIX> <LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
-
-|   < NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			image.deleteCharAt(image.length() - 1) ;
-			matchedToken.image = image.toString().trim() ;
-
-			if ( curLexState == DEFAULT ) {
-				in_parenthesized = true ;
-				paren_count = 0 ;
-				SwitchTo(NON_INITIAL) ;
-			}
-		}
-
-|   < NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
-		<NUM_LIST_PREFIX> <CIRCUMFLEX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
-
-|   < NUM_LIST_ID: <NUM_LIST_PREFIX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
-
-|   < NUM_LIST_LIT_PREFIX: <NUM_LIST_PREFIX> (<WHITESPACE>)* "(" >
-        { input_stream.backup(1) ; }
-
-|   < NUM_LIST_FUNC_ANON:
-        <NUM_LIST_PREFIX> <CIRCUMFLEX> (<WHITESPACE>)* "(" >
-        {
-			input_stream.backup(1) ;
-	     	in_parenthesized = true ;
-	     	paren_count = 0 ;
-	     	SwitchTo(NON_INITIAL) ;
-        }
-
-|   < NUM_LIST_FUNC_ID_BEFORE_ARGLIST: 
-		<NUM_LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_")* 
-		( "!" )?
-		(<WHITESPACE>)* "(" >
-		{
-			input_stream.backup(1) ;
-			image.deleteCharAt(image.length() - 1) ;
-			matchedToken.image = image.toString().trim() ;
-
-			if ( curLexState == DEFAULT ) {
-				in_parenthesized = true ;
-				paren_count = 0 ;
-				SwitchTo(NON_INITIAL) ;
-			}
-		}
-
-|   < NUM_LIST_FUNC_ID_NO_ARGLIST: 
-		<NUM_LIST_PREFIX> <CIRCUMFLEX> <UNICODE_ID_LETTER> 
-		( <UNICODE_ID_LETTER> 
-		| <DECIMAL_DIGIT> 
-		| "_")*
-		( "!" )? > : NON_INITIAL
-
-
-// KRB:  added 20 Jan 2009   
-// N.B. the notation backslash-uHHHH is already handled in the front-end
-
-// here handle backslash-UHHHHHHHH
-//      and    backslash-u{H...}
-
-|   < ESCAPE_HEX_PYTHON: "\\U"  ( <HEX_DIGIT> ){8} > 
-	// discard the initial backslash and U
-    {   matchedToken.image = image.substring(2) ; }
-
-|   < ESCAPE_HEX_PERL:   "\\U{" ( <HEX_DIGIT> )+  "}" >
-	// discard the initial backslash, U and left curly,
-	//   and discard the final curly
-      {   image.deleteCharAt( image.length() - 1 ) ;
-		  matchedToken.image = image.substring(3) ; 
-	  }
 // literalized symbols (otherwise special)
 |   < ESCAPE_CHAR: "\\" ( "$"
                         | "#"
@@ -2469,44 +1859,770 @@ TOKEN: {
 		}
 	}
 
-// LCURLY needs to be found in DEFAULT (for block) or NON_INITIAL state
-|   < LCURLY: "{" >
 
-// see LPAREN under < DEFAULT, NON_INITIAL, ITERATOR_STATE >
 
-|   < RPAREN: ")" >
+// strings of 6 characters
+
+|	< NET_EQ_FUNC_ID: 					"$^__eq" >
+
+// strings of 7 characters
+
+|	< NET_EQ_DEST_FUNC_ID: 				"$^__eq!" >
+|	< NET_GET_FUNC_ID:					"$^__get" >  	// get net from list
+|	< NUM_GET_FUNC_ID:					"#^__get" >	// get num from list
+|	< NUM_ABS_FUNC_ID:					"#^__abs" >
+|	< DBL_LOG_FUNC_ID:					"#^__log" >
+
+// strings of 8 characters
+
+|	< NET_CASE_FUNC_ID:					"$^__case" >
+|	< NET_DIAC_FUNC_ID:					"$^__diac" >
+|   < NET_COPY_FUNC_ID:       			"$^__copy" >
+|	< NET_HEAD_FUNC_ID:					"$^__head" > 	// get net from list
+|	< NET_POP_DEST_FUNC_ID:				"$^__pop!" >
+|	< NUM_HEAD_FUNC_ID:					"#^__head" >
+|	< NUM_POP_DEST_FUNC_ID:				"#^__pop!" >
+|   < DBL_CEIL_FUNC_ID:					"#^__ceil" >
+|	< DBL_RINT_FUNC_ID:					"#^__rint" >
+|	< LNG_LONG_FUNC_ID:					"#^__long" >
+
+// strings of 9 characters
+
+|	< LNG_IS_RTN_FUNC_ID:				"#^__isRtn" >
+|   < LNG_ARITY_FUNC_ID:      			"#^__arity" >
+|	< DBL_FLOOR_FUNC_ID:				"#^__floor" >
+|	< LNG_ROUND_FUNC_ID:				"#^__round" >
+
+
+// strings of 10 characters
+
+|   < NET_INVERT_FUNC_ID:     			"$^__invert" >
+
+|	< DBL_DOUBLE_FUNC_ID:				"#^__double" >
+
+// strings of 11 characters
+
+|   < NET_REVERSE_FUNC_ID:         		"$^__reverse" >
+|   < NET_INVERT_DEST_FUNC_ID:     		"$^__invert!" >
+|	< NET_FLATTEN_FUNC_ID:      		"$^__flatten" >
+| 	< NET_READ_XML_FUNC_ID:   			"$^__readXml" >
+| 	< NET_RAND_GEN_FUNC_ID:   			"$^__randGen" >
+|   < NET_IMPLODE_FUNC_ID:    			"$^__implode" >
+|	< NET_EXPLODE_FUNC_ID:	  			"$^__explode" >
+|	< NET_GETLAST_FUNC_ID:				"$^__getLast" >
+|	< NET_REMOVE_DEST_FUNC_ID:			"$^__remove!" >
+
+|	< NUM_GETLAST_FUNC_ID:				"#^__getLast" >
+|	< NUM_REMOVE_DEST_FUNC_ID:			"#^__remove!" >
+
+// strings of 12 characters
+
+|   < NET_OPTIMIZE_FUNC_ID:     		"$^__optimize" >
+|   < NET_MINIMIZE_FUNC_ID:     		"$^__minimize" >
+|	< NET_FLATTEN_DEST_FUNC_ID:      	"$^__flatten!" >
+|	< NET_RM_WEIGHT_FUNC_ID:  			"$^__rmWeight" >
+|	< NET_TO_STRING_FUNC_ID:  			"$^__toString" >
+
+|   < LNG_ARCCOUNT_FUNC_ID:   			"#^__arcCount" >
+|	< LNG_IS_CYCLIC_FUNC_ID:			"#^__isCyclic" >
+|	< LNG_IS_STRING_FUNC_ID:			"#^__isString" >
+			// i.e. is single string language
+
+// strings of 13 characters
+
+|   < NET_OPTIMIZE_DEST_FUNC_ID:    	"$^__optimize!" >
+|   < NET_RMEPSILON_FUNC_ID:     		"$^__rmEpsilon" >
+|   < NET_MINIMIZE_DEST_FUNC_ID:		"$^__minimize!" >
+|   < NET_INPUTPROJ_FUNC_ID:  			"$^__inputproj" >
+|	< NET_RM_WEIGHT_DEST_FUNC_ID:  		"$^__rmWeight!" >
+
+|	< LNG_PATHCOUNT_FUNC_ID:  			"#^__pathCount" >
+|   < LNG_GET_INT_CPV_FUNC_ID:   		"#^__getIntCpv" >
+
+// strings of 14 characters
+
+|   < NET_RMEPSILON_DEST_FUNC_ID:   	"$^__rmEpsilon!" >
+|   < NET_INPUTPROJ_DEST_FUNC_ID:  		"$^__inputproj!" >
+|   < NET_OUTPUTPROJ_FUNC_ID: 			"$^__outputproj" >
+|	< NET_CLOSE_SIGMA_FUNC_ID: 			"$^__closeSigma" >
+
+|	< LNG_IS_UBOUNDED_FUNC_ID:			"#^__isUBounded" >
+|	< LNG_IS_LBOUNDED_FUNC_ID:			"#^__isLBounded" >
+|	< LNG_IS_ACCEPTOR_FUNC_ID:			"#^__isAcceptor" >
+|   < LNG_STATECOUNT_FUNC_ID: 			"#^__stateCount" >
+|	< LNG_IS_WEIGHTED_FUNC_ID:			"#^__isWeighted" >
+//|	< LNG_EQUIVALENT_FUNC_ID:			"#^__equivalent">
+			// KRB: think about this one
+
+// strings of 15 characters
+
+|   < NET_DETERMINIZE_FUNC_ID:     		"$^__determinize" >
+|   < NET_SYNCHRONIZE_FUNC_ID:     		"$^__synchronize" >
+|   < NET_OUTPUTPROJ_DEST_FUNC_ID: 		"$^__outputproj!" >
+|	< NET_CLOSE_SIGMA_DEST_FUNC_ID: 	"$^__closeSigma!" >
+|	< NET_SUBST_SYMBOL_FUNC_ID: 		"$^__substSymbol" >
+|	< NET_REMOVELAST_DEST_FUNC_ID:		"$^__removeLast!" >
+
+|	< NUM_REMOVELAST_DEST_FUNC_ID:		"#^__removeLast!" >
+
+// strings of 16 characters
+
+|   < NET_DETERMINIZE_DEST_FUNC_ID:     "$^__determinize!" >
+|   < NET_SYNCHRONIZE_DEST_FUNC_ID:     "$^__synchronize!" >
+|	< NET_SHORTESTPATH_FUNC_ID: 		"$^__shortestPath" >
+|	< NET_SUBST_SYMBOL_DEST_FUNC_ID: 	"$^__substSymbol!" >
+|	< NET_FLATTEN4RULE_FUNC_ID:      	"$^__flatten4rule" >
+
+
+|	< LNG_IS_TRANSDUCER_FUNC_ID:	 	"#^__isTransducer" >
+
+// strings of 17 characters
+
+|	< NET_FLATTEN4RULE_DEST_FUNC_ID:    "$^__flatten4rule!" >
+
+|	< LNG_CONTAINS_OTHER_FUNC_ID: 		"#^__containsOther" >
+|	< LNG_IS_EPSILONFREE_FUNC_ID:		"#^__isEpsilonFree" >
+			// i.e. is free of two-sided epsilons
+
+// strings of 18 characters
+// strings of 19 characters
+
+|	< LNG_IS_EMPTY_LANGUAGE_FUNC_ID:	"#^__isEmptyLanguage" >
+
+// strings of 20 characters
+
+|	< LNG_IS_IDETERMINISTIC_FUNC_ID:	"#^__isIDeterministic" >
+|	< LNG_IS_ODETERMINISTIC_FUNC_ID:	"#^__isODeterministic" >
+
+// strings of 22 characters
+
+|	< LNG_CONTAINS_EMPTY_STRING_FUNC_ID:	"#^__containsEmptyString" >
+
+// strings of 25 characters
+
+|	< LNG_IS_EMPTY_STRING_LANGUAGE_FUNC_ID:	"#^__isEmptyStringLanguage" >
+
+// strings of 26 characters
+
+|	< LNG_OUTPUT_LABELS_INCLUDE_CPV_FUNC_ID: "#^__outputLabelsIncludeCpv" >
+
+}
+
+// this TOKEN production for regular expressions to be matched
+< DEFAULT, NON_INITIAL >
+TOKEN: {
+
+	// regular expressions need to be matched
+
+    // $fsm		variable representing an FSM value
+     < NET_ID: "$" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+	                                           | <DECIMAL_DIGIT> 
+											   | "_"
+											   )*     > : NON_INITIAL
+
+// wired-in, need to match following "(" to avoid having longer match 
+// override it.  The getNet function returns a network given a
+// network that encodes the name of the network
+|	< NET_GET_NET_FUNC_ID: "$^getNet" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+// wired-in, need to match following "(" to avoid having longer match 
+// override it.  sub creates a "reference" to a subnetwork, used in
+// RTNs
+|	< NET_SUB_FUNC_ID: "$^sub" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+// Wired-in functions parse/interpret the arguments in some special way.  Like
+// Lisp "special forms"
+// Wired-in function names cannot be shadowed to get an alias.  
+
+// wired-in function names:
+// need to (temporarily) match a following "(" to avoid matching, e.g.,  "size" if the next
+// token is really something longer like "sizeFoo"
+|	< LNG_SIZE_FUNC_ID:	"#^size" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+// wired-in, #^isEmpty( list ) used for net lists and number lists
+|	< LNG_IS_EMPTY_FUNC_ID:	"#^isEmpty" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+// wired-in
+|   < NET_START_FUNC_ID:      "$^start" (<WHITESPACE>)* "(">
+	{
+		input_stream.backup(1) ;
+		SwitchTo(NON_INITIAL) ;
+	}
+    // for $^start($>foo) 
+
+// wired-in
+|   < NET_PARALLEL_FUNC_ID:      "$^parallel" (<WHITESPACE>)* "(">
+	{
+		input_stream.backup(1) ;
+		SwitchTo(NON_INITIAL) ;
+	}
+    // for $^parallel(rule, rule ...) to compile rules in parallel 
+
+// wired-in, anonymous function or "function literal"
+|   < VOID_FUNC_ANON: "^" (<WHITESPACE>)* "(" >
         {
-	        if (in_parenthesized) {
-	            paren_count -= 1 ;
-	            if (paren_count == 0) {
-		            in_parenthesized = false ;
-		            SwitchTo(DEFAULT) ;
-		        }
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+		// for ^(args ...)??
+
+		// KRB:  think about this again
+		//     the name alone could be an argument in a function call
+
+		// in a void_func_definition, the tokenizer starts in DEFAULT (initial) state,
+		// then needs to switch to NON_INITIAL to tokenize the (params),
+		// then (the tricky part) it needs to switch back to DEFAULT to
+		// tokenize the block
+
+		//  a void function call (a kind of stand-alone statement) should also work with this plan
+		//  ^myfunc (params) ;
+		//  The ^myfunc will be first token in the line, 
+		//		so the tokenizer will be in the DEFAULT state;
+		//  Then it will shift into NON_INITIAL for the params, and then back to DEFAULT for
+		//  the terminating semicolon.
+
+		// ^foo(params) { ...
+    // the tricky switch back to DEFAULT state for the block
+    // requires counting to find a matching closing right paren
+
+|   < VOID_FUNC_ID_BEFORE_ARGLIST :          
+                     "^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )?
+													 (<WHITESPACE>)* "(" > 
+        {  
+	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
+			// fix the image (a StringBuffer)
+	    	image.deleteCharAt(image.length() - 1) ;
+			// set the matchedToken.image (a String), trimming off any whitespaces
+	    	matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
             }
         }
 
+|   < VOID_FUNC_ID_NO_ARGLIST:          
+                     "^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )? > : NON_INITIAL
+|   < VOID_FUNC_FUNC_ANON: 
+        "^^" (<WHITESPACE>)* "(" >
+        {
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
 
-// EQUAL_SIGN needs to be found in DEFAULT state
-// (after param_list in a function definition) 
-// or in the NON_INITIAL state
-|   < EQUAL_SIGN: "=" >
-//|   < COLON_EQUAL_SIGN: ":=" >
+|   < VOID_FUNC_FUNC_ID_BEFORE_ARGLIST :          
+        "^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    	input_stream.backup(1) ;   // lop off the "("
 
-|   < ANY_ANY: "." ( <WHITESPACE> )* ":" ( <WHITESPACE> )* "." > 
-// why does ANY need to be recognized either in DEFAULT or
-// NON_INITIAL state?  
-|   < ANY: "." >
+	    	image.deleteCharAt(image.length() - 1) ;
+	    	matchedToken.image = image.toString().trim() ;
 
-// could encounter SEMICOLON in DEFAULT or NON_INITIAL state
-|   < SEMICOLON: ";" > : DEFAULT
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
+            }
+        }
 
-// unmatched single quotes (not caught above as delimiting a multichar
-//    symbol like '+Noun' or '[NOUN]' are caught here so that they
-//	  cause parsing to fail.  A literalized single quote, \', should
-//	  still work.
-//|   < UNMATCHED_SINGLE_QUOTE: "'">
+|   < VOID_FUNC_FUNC_ID_NO_ARGLIST:          
+        "^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )? > : NON_INITIAL
 
-|   < CHAR: ~[] >
+|   < NET_FUNC_ANON: "$^" (<WHITESPACE>)* "(" >
+        {
+	     	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+// wired-in
+// pseudo-function-- need to match the left paren so that it isn't overriden by a longer
+// match below with NET_FUNC_ID_BEFORE_ARGLIST
+
+|	< NET_EMBED_RTN_SUBNETS_FUNC_ID:	"$^embedRtnSubnets"
+(<WHITESPACE>)* "(">
+        {
+	     	input_stream.backup(1) ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+// wired-in
+|	< NET_EXPAND_RTN_FUNC_ID:	"$^expandRtn"
+(<WHITESPACE>)* "(">
+        {
+	     	input_stream.backup(1) ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+
+		// in a net_func_definition, the tokenizer starts in DEFAULT (initial) state,
+		// then needs to switch to NON_INITIAL to tokenize the (params),
+		// then (the tricky part) it needs to switch back to DEFAULT to
+		// tokenize the block
+
+		// $^foo(params) { ...
+
+    // the tricky switch back to DEFAULT state for the block
+    // requires counting to find a matching closing right paren
+
+|   < NET_FUNC_ID_BEFORE_ARGLIST :          
+        "$^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )?
+													 (<WHITESPACE>)* "(" > 
+        {  
+	    	input_stream.backup(1) ;   // backup to re-tokenize the "("
+
+	    	image.deleteCharAt(image.length() - 1) ;
+	    	matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        	in_parenthesized = true ;
+	        	paren_count = 0 ;
+	        	SwitchTo(NON_INITIAL) ;
+            }
+        }
+
+|   < NET_FUNC_ID_NO_ARGLIST:          
+        "$^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> 
+		                                             | <DECIMAL_DIGIT>
+		                                             | "_"
+													 )* 
+													 ( "!" )? > : NON_INITIAL
+	// the $^ token will start the counting of parens
+
+    // could be DEFAULT OR NON_INITIAL
+    // if DEFAULT could be either
+    // 
+    // net func func assignment
+    // $^^addsuff = $^^foo ;
+    // $^^addsuff = $^^(paramlist) {     return exp ;         } ;
+    // DEF          NON_INIT             DEF   NON_INIT   DEF
+    //              count-parens
+    // or syntactic variant, net func func definition
+    // $^^addsuff(paramlist)   = {    }   ;
+    // DEF       NON_INIT      DEF
+    //           count-parens
+
+|   < NET_FUNC_FUNC_ANON: 
+        "$^^" (<WHITESPACE>)* "(" >
+        {
+	     input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+|   < NET_FUNC_FUNC_ID_BEFORE_ARGLIST:          
+        "$^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NET_FUNC_FUNC_ID_NO_ARGLIST:          
+        "$^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* 
+		( "!" )? > : NON_INITIAL
+
+|   < RRPROD_ID: "$>" <UNICODE_ID_LETTER> 
+        ( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* > : NON_INITIAL
+
+|   < NUM_ID: "#" <UNICODE_ID_LETTER> 
+        ( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_"
+		)* > : NON_INITIAL
+
+|   < NUM_FUNC_ANON:  "#^" (<WHITESPACE>)* "(" >
+        {
+		 input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+|   < NUM_FUNC_ID_BEFORE_ARGLIST:
+        "#^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT>
+		| "_"
+		)* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NUM_FUNC_ID_NO_ARGLIST:
+        "#^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT>
+		| "_"
+		)* 
+		( "!" )?
+		> : NON_INITIAL
+
+|   < NUM_FUNC_FUNC_ANON: 
+        "#^^" (<WHITESPACE>)* "(">
+        {
+		 input_stream.backup(1) ;
+	     in_parenthesized = true ;
+	     paren_count = 0 ;
+	     SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_FUNC_FUNC_ID_BEFORE_ARGLIST:
+        "#^^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+		<DECIMAL_DIGIT> | "_")* (<WHITESPACE>)* "(">
+        {  
+	    input_stream.backup(1) ;   // lop off the "("
+
+	    image.deleteCharAt(image.length() - 1) ;
+	    matchedToken.image = image.toString().trim() ;
+
+            if ( curLexState == DEFAULT ) {
+	        in_parenthesized = true ;
+	        paren_count = 0 ;
+	        SwitchTo(NON_INITIAL) ;
+            }
+        }
+|   < NUM_FUNC_FUNC_ID_NO_ARGLIST:
+        "#^^" <UNICODE_ID_LETTER> ( <UNICODE_ID_LETTER> |
+		<DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NET_LIST_ID: "$@" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NET_LIST_LIT_PREFIX: "$@" (<WHITESPACE>)* "(" >
+        { input_stream.backup(1) ; }
+
+|   < NET_LIST_FUNC_ANON:
+        "$@^" (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NET_LIST_FUNC_FUNC_ANON:
+        "$@^^" (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_LIST_FUNC_FUNC_ANON:
+        "#@^^" (<WHITESPACE>)* "(" >
+        {
+		 	input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+// built-in, need to match ( so that longer match for 
+// NET_LIST_FUNC_ID_BEFORE_ARGLIST
+// does not override it); wired in (not __getSlice) because it has a variable
+// number of arguments (so I can't wrap it in .kleene/global/predefined.kl)
+
+|	< NET_LIST_GET_SLICE_FUNC_ID:	
+		"$@^getSlice" (<WHITESPACE>)* "(">
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_GET_SLICE_FUNC_ID:	
+		"#@^getSlice" (<WHITESPACE>)* "(">
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_PUSH_DEST_FUNC_ID:	
+		"$@^__push!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_PUSH_DEST_FUNC_ID:	
+		"#@^__push!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_ADD_DEST_FUNC_ID:	
+		"$@^__add!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_ADD_DEST_FUNC_ID:	
+		"#@^__add!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_ADDAT_DEST_FUNC_ID:	
+		"$@^__addAt!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_ADDAT_DEST_FUNC_ID:	
+		"#@^__addAt!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_SET_DEST_FUNC_ID:	
+		"$@^__set!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_SET_DEST_FUNC_ID:	
+		"#@^__set!" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_TAIL_FUNC_ID:	
+		"$@^__tail" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_TAIL_FUNC_ID:	
+		"#@^__tail" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_COPY_FUNC_ID:	
+		"$@^__copy" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_COPY_FUNC_ID:	
+		"#@^__copy" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NET_LIST_GET_SIGMA_FUNC_ID:	
+		"$@^__getSigma" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|	< NUM_LIST_GET_SIGMA_FUNC_ID:	
+		"#@^__getSigma" (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			SwitchTo(NON_INITIAL) ;
+		}
+
+|   < NET_LIST_FUNC_ID_BEFORE_ARGLIST: 
+		"$@^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NET_LIST_FUNC_ID_NO_ARGLIST: 
+		"$@^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NET_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
+		"$@^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NET_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
+		"$@^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NUM_LIST_FUNC_FUNC_ID_BEFORE_ARGLIST: 
+		"#@^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? (<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NUM_LIST_FUNC_FUNC_ID_NO_ARGLIST: 
+		"#@^^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* ("!")? > : NON_INITIAL
+
+|   < NUM_LIST_ID: "#@" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> | <DECIMAL_DIGIT> | "_")* > : NON_INITIAL
+
+|   < NUM_LIST_LIT_PREFIX: "#@" (<WHITESPACE>)* "(" >
+        { input_stream.backup(1) ; }
+
+|   < NUM_LIST_FUNC_ANON:
+        "#@^" (<WHITESPACE>)* "(" >
+        {
+			input_stream.backup(1) ;
+	     	in_parenthesized = true ;
+	     	paren_count = 0 ;
+	     	SwitchTo(NON_INITIAL) ;
+        }
+
+|   < NUM_LIST_FUNC_ID_BEFORE_ARGLIST: 
+		"#@^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_")* 
+		( "!" )?
+		(<WHITESPACE>)* "(" >
+		{
+			input_stream.backup(1) ;
+			image.deleteCharAt(image.length() - 1) ;
+			matchedToken.image = image.toString().trim() ;
+
+			if ( curLexState == DEFAULT ) {
+				in_parenthesized = true ;
+				paren_count = 0 ;
+				SwitchTo(NON_INITIAL) ;
+			}
+		}
+
+|   < NUM_LIST_FUNC_ID_NO_ARGLIST: 
+		"#@^" <UNICODE_ID_LETTER> 
+		( <UNICODE_ID_LETTER> 
+		| <DECIMAL_DIGIT> 
+		| "_")*
+		( "!" )? > : NON_INITIAL
+
+
+// KRB:  added 20 Jan 2009   
+// N.B. the notation backslash-uHHHH is already handled in the front-end
+
+// here handle backslash-UHHHHHHHH
+//      and    backslash-u{H...}
+
+|   < ESCAPE_HEX_PYTHON: "\\U"  ( <HEX_DIGIT> ){8} > 
+	// discard the initial backslash and U
+    {   matchedToken.image = image.substring(2) ; }
+
+|   < ESCAPE_HEX_PERL:   "\\U{" ( <HEX_DIGIT> )+  "}" >
+	// discard the initial backslash, U and left curly,
+	//   and discard the final curly
+      {   image.deleteCharAt( image.length() - 1 ) ;
+		  matchedToken.image = image.substring(3) ; 
+	  }
 }
 
 
@@ -2514,17 +2630,7 @@ TOKEN: {
 // other tokens:  marked with initial #
 <*>
 TOKEN: {
-    < #NET_PREFIX:  "$" >
-
-//|   < #NUM_PREFIX:  "#" >		// caused problems with # word-boundary in
-//								// rule contexts
-
-|   < #NUM_FUNC_PREFIX:  "#^" >
-|	< #NUM_LIST_PREFIX:  "#@" >
-
-|   < #LIST_PREFIX:  "@" >
-
-|   < #WHITESPACE:        ( " " | "\t" | "\n" ) >
+    < #WHITESPACE:        ( " " | "\t" | "\n" ) >
 |   < #DECIMAL_DIGIT:     [ "0"-"9" ] >
 |   < #HEX_DIGIT:         [ "0"-"9", "a"-"f", "A"-"F" ] >
 
@@ -3295,12 +3401,12 @@ void test_statement() #test_statement: {}
 
 void assert_statement() #assert_statement: {}
 {
-	<ASSERT_RW> numexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
+	<ASSERT_RW> 	numexp() ( <COMMA_OP> regexp() )?          <SEMICOLON>
 }
 
 void require_statement() #require_statement: {}
 {
-	<REQUIRE_RW> numexp() ( <COMMA_OP> regexp() )? <SEMICOLON>
+	<REQUIRE_RW> 	numexp() ( <COMMA_OP> regexp() )?          <SEMICOLON>
 }
 
 
@@ -3581,6 +3687,7 @@ void primary_numexp(): {}
 | 	lng_pathcount_func_call()		// __pathCount()
 | 	lng_statecount_func_call()		// __stateCount()
 | 	lng_arccount_func_call()		// __arcCount()
+|	lng_get_int_cpv_func_call()		// __getIntCpv()
 
 | 	lng_arity_func_call()         	// __arity()
 
@@ -3591,6 +3698,7 @@ void primary_numexp(): {}
 |	lng_is_lbounded_func_call()		// __isLBounded()
 |	lng_is_acceptor_func_call()		// __isAcceptor()
 |	lng_is_transducer_func_call()	// __isTransducer()
+|	lng_output_labels_include_cpv_func_call()  // __outputLabelsIncludeCpv
 
 |	lng_is_weighted_func_call()			// __isWeighted()
 |	lng_is_ideterministic_func_call()	// __isIDeterministic()
@@ -3617,6 +3725,7 @@ void primary_numexp(): {}
 |	lng_is_empty_func_call()
 | 	dbl_double_func_call()
 | 	dbl_rint_func_call()
+| 	dbl_log_func_call()
 
 // functions for getting an individual number from a list of
 // numbers
@@ -3730,6 +3839,9 @@ void poss_rule_exp() :
 }
 {
 	(
+		// This section just for rules that start with ~~~, the MARKUP_OP
+		// (they must be left-arrow rules, with no left_markup_insertion)
+
 		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
 						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
 		// must be a left-arrow rule, with markup on the upper side,
@@ -3742,21 +3854,23 @@ void poss_rule_exp() :
 		// 1 node on the jjtree stack
 		// must be a rule left arrow here
 		(  
-			// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+		  	// <-? {max}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MAX_L2R_DIRECTIVE>
 				// KRB: do not allow markup here
 				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 
-				( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							| <WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+		|  	// <- {max}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MAX_L2R_DIRECTIVE>
@@ -3769,9 +3883,25 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							| <WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_R2L>
+		|  	// <-? {xam}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MAX_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+		|  	// <- {xam}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MAX_R2L_DIRECTIVE>
@@ -3784,9 +3914,25 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							| <WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l(rule_section_count)
+				#rule_left_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+		|  	// <-? {min}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// <- {min}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_L2R_DIRECTIVE>
@@ -3799,9 +3945,25 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							| <WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+		|  	// <-? {nim}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						    where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// <- {nim}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_R2L_DIRECTIVE>
@@ -3814,9 +3976,25 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							| <WHERE_MIXED_LCURLY>)
 						    where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l(rule_section_count)
+				#rule_left_arrow_min_r2l_oblig(rule_section_count)
 
-		|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+		|	// <-?
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
+							| <WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|	// <-
+		    ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				(
 					// Catch a parsing problem found by Paola
 					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -3843,14 +4021,18 @@ void poss_rule_exp() :
 				)
 		)
 
-	| 	unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
+	| 	// in poss_rule_exp()
+		// This sub-section covers rules that start with a regular expression
+	
+		unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
 
 		// when something starts out looking like a regular expression,
 		// it could be the start of an alternation rule, or a language
 		// restriction expression; after finding a unioned_exp(), see
 		// if the next token is an arrow operator or a <MARKUP_OP>
 
-		// N.B. the LHS parts of an alternation rule or language restriction
+		// N.B. Unless we have a "transducer rule",
+		// the LHS parts of an alternation rule or language restriction
 		// expression shouldn't be semantic transducers, but they could still be
 		// acceptors and have the syntactic form of a cross-product expression,
 		// e.g.   a:a -> b:b
@@ -3861,12 +4043,44 @@ void poss_rule_exp() :
 		// N.B. if the composition operator (_o_) appears inside a sub-expression of a rule
 		// then it must be in parentheses
 
-		// N.B. this disjunction here is optional ( ... )?
-		(  
+		// We have already parsed a unioned_exp(), a possible start of an alternation rule;
+
+		// N.B. the following disjunction, leading to parsing rules, is optional ( ... )?
+		( 
 			// right-arrow rules:  N.B. IF EDITED, SEE rule() AND MAKE PARALLEL EDITS
+			
+			// KRB:  one location for transducer rules, e.g.
+			//  a:x ->? / left _ right
+			//  a:x -> / left _ right
+
+			//  a:x ->? / left _ right
+			// LOOKAHEAD(3)
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_opt(rule_section_count)
+
+			//	a:x -> / left _ right
+			// LOOKAHEAD(2)
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_oblig(rule_section_count)
+
+		   // ->?
 		   LOOKAHEAD(2)
-		   // old <RIGHT_RULE_ARROW_OPT>
-		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+		       ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()		
 				#rule_lhs(2) { rule_section_count = 1 ; }
@@ -3878,7 +4092,8 @@ void poss_rule_exp() :
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_opt(rule_section_count)
 
-		|  ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+		|  // ->
+		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
 				// KRB:  here possibility of markup rules
 				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
@@ -3895,9 +4110,84 @@ void poss_rule_exp() :
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
 
-		|   // old <RIGHT_RULE_ARROW_MAX_L2R> 
+		//|	// {max} ->? /
+			// LOOKAHEAD(4)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//	{max} -> /
+			// LOOKAHEAD(3)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
+
+		//|	// {max} <-? /
+			// LOOKAHEAD(4)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//	{max} <- /
+			// LOOKAHEAD(3)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
+
+		|   // {max} ->?
+			LOOKAHEAD(3)
+				<MAX_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+					#rule_lhs_upper(1)
+					rule_lhs_lower_or_markup()
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_right_arrow_max_l2r_opt(rule_section_count)
+
+		|   // {max} ->
 			<MAX_L2R_DIRECTIVE>
-			// followed by
 			( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
@@ -3908,9 +4198,85 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_l2r(rule_section_count)
+				#rule_right_arrow_max_l2r_oblig(rule_section_count)
 
-		|   // old <RIGHT_RULE_ARROW_MAX_R2L> 
+		//|	// {xam} ->? /
+			// LOOKAHEAD(4)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//	{xam} -> /
+			// LOOKAHEAD(3)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
+
+		//|	// {xam} <-? /
+			// LOOKAHEAD(4)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//	{xam} <- /
+			// LOOKAHEAD(3)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
+
+		|   // {xam} ->?
+			LOOKAHEAD(3)
+				<MAX_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_r2l_opt(rule_section_count)
+
+		|   // {xam} ->
 				<MAX_R2L_DIRECTIVE> 
 				// followed by
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
@@ -3923,9 +4289,85 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l(rule_section_count)
+				#rule_right_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <RIGHT_RULE_ARROW_MIN_L2R> 
+		//|	// {min} ->? /
+			// LOOKAHEAD(4)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//	{min} -> /
+			// LOOKAHEAD(3)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
+
+		//|	// {min} <-? /
+			// LOOKAHEAD(4)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//	{min} <- /
+			// LOOKAHEAD(3)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
+
+		|  	// {min} ->?
+			LOOKAHEAD(3)
+				<MIN_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// {min} ->
 				<MIN_L2R_DIRECTIVE>
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -3937,9 +4379,85 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_l2r(rule_section_count)
+				#rule_right_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// old <RIGHT_RULE_ARROW_MIN_R2L>
+		//|	// {nim} ->? /
+			// LOOKAHEAD(4)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//	{nim} -> /
+			// LOOKAHEAD(3)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
+
+		//|	// {nim} <-? /
+			// LOOKAHEAD(4)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//	{nim} <- /
+			// LOOKAHEAD(3)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
+
+		|  	// {nim} ->?
+			LOOKAHEAD(3)
+				<MIN_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// {nim} ->
 				<MIN_R2L_DIRECTIVE> 
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -3951,28 +4469,45 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l(rule_section_count)
+				#rule_right_arrow_min_r2l_oblig(rule_section_count)
 
 
 			// left-arrow rules    a <- b / l _ r where ...
 
-		|  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-			LOOKAHEAD(2)
-			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-				#rule_lhs_upper(1)
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
+	// |
+			//// KRB:  one location for transducer rules, e.g.
+			//  a:x <-? / left _ right
+			//  a:x <- / left _ right
 
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+			//  a:x <-? / left _ right
+			// LOOKAHEAD(3)
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_opt(rule_section_count)
 
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
+			//	a:x <- / left _ right
+			// LOOKAHEAD(2)
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_L2R>
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+		|  	// <-? {max}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
 				<MAX_L2R_DIRECTIVE>
 				#rule_lhs_upper(1)
 				// KRB: do not allow markup here
@@ -3984,9 +4519,42 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+		|  	// <- {max}
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<MAX_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
+
+		|  	// <-? {xam}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MAX_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+		|  	// <- {xam}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MAX_R2L_DIRECTIVE>
@@ -4000,9 +4568,26 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l(rule_section_count)
+				#rule_left_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+		|  	// <-? {min}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// <- {min}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_L2R_DIRECTIVE>
@@ -4016,9 +4601,26 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+		|  	// <-? {nim}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// <- {nim}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_R2L_DIRECTIVE>
@@ -4032,9 +4634,25 @@ void poss_rule_exp() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l(rule_section_count)
+				#rule_left_arrow_min_r2l_oblig(rule_section_count)
 
-		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+		|  	// <-?
+			LOOKAHEAD(2)
+			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+
+		|  // <-
+		   ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
 				(
 					// Catch a parsing problem found by Paola
@@ -4072,7 +4690,131 @@ void poss_rule_exp() :
 			// there must now be a left-rule-arrow of some kind
 
 			(  
-			  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
+			  	// <-? {max}
+				LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				<MAX_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r_opt(rule_section_count)
+
+			|  	// <- {max}
+				LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<MAX_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r_oblig(rule_section_count)
+
+			|  	// <-? {xam}
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MAX_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+			|  	// <- {xam}
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MAX_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_r2l_oblig(rule_section_count)
+
+			|  	// <-? {min}
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MIN_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+			|  	// <- {min}
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_L2R_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_oblig(rule_section_count)
+
+			|  	// <-? {nim} 
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MIN_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+			|  	// <- {nim} 
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<MIN_R2L_DIRECTIVE>
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_r2l_oblig(rule_section_count)
+
+			|	// <-?
 				LOOKAHEAD(2)
 					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
 					// KRB: do not allow markup here
@@ -4086,67 +4828,8 @@ void poss_rule_exp() :
 							   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_opt(rule_section_count)
 
-			|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
-				LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<MAX_L2R_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r(rule_section_count)
-
-			|  	// old <LEFT_RULE_ARROW_MAX_R2L>
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MAX_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l(rule_section_count)
-
-			|  	// old <LEFT_RULE_ARROW_MIN_L2R>
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_L2R_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r(rule_section_count)
-
-			|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l(rule_section_count)
-
-			|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			|	// <-
+			    ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 					(
 						// Catch a parsing problem found by Paola
 						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
@@ -4193,8 +4876,10 @@ void rule() :
 }
 {
 	(
-		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
-						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
+		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  
+						//		(insert empty string to left)
+						// or                      ~~~   <-  X  / ...  
+						//		(insert empty string both sides, a no-op)
 		// must be a left-arrow rule, with markup on the upper side,
 		// lacking an explicit left_markup_insertion (will be interpreted as empty string)
 		{ markup_exp_count = 0 ; }
@@ -4205,9 +4890,11 @@ void rule() :
 		// 1 node on the jjtree stack
 		// must be a rule left arrow here
 		(  
-			// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+		  	// <-? {max}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				<MAX_L2R_DIRECTIVE>
 				// KRB: do not allow markup here
 				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
@@ -4217,9 +4904,9 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+		|  	// <- {max}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				<MAX_L2R_DIRECTIVE>
@@ -4232,9 +4919,25 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+		|  	// <-? {xam}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MAX_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+		|  	// <- {xam}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MAX_R2L_DIRECTIVE>
@@ -4247,9 +4950,25 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l(rule_section_count)
+				#rule_left_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+		|  	// <-? {min}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_L2R_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// <- {min}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_L2R_DIRECTIVE>
@@ -4262,9 +4981,25 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_R2L> 
+		|  	// <-? {nim} 
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_R2L_DIRECTIVE>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// <- {nim} 
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_R2L_DIRECTIVE>
@@ -4277,7 +5012,21 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l(rule_section_count)
+				#rule_left_arrow_min_r2l_oblig(rule_section_count)
+
+		|	// <-?
+			LOOKAHEAD(2)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
 
 		|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				(
@@ -4307,15 +5056,49 @@ void rule() :
 		)
 
 
-	| 	unioned_exp()
+	| 	// in rule()
+		// sub-section starting with unioned_exp()
+		
+		unioned_exp()
 
 		// N.B. here the following parenthesized expression is not optional; this production
 		// is called when you really need a rule, i.e. inside $^parallel(rule, rule, ...)
 		(
-			// right-arrow rules:  N.B. IF EDITED, SEE poss_rule_exp() AND MAKE PARALLEL EDITS
+
+			// right-arrow rules
+			// N.B. if edited, see poss_rule_exp() and MAKE PARALLEL EDITS
+
+			// KRB:  one location for transducer rules, e.g.
+			//  a:x ->? / left _ right
+			//  a:x -> / left _ right
+
+			//  a:x ->? / left _ right
+			// LOOKAHEAD(3)
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_opt(rule_section_count)
+
+			//	a:x -> / left _ right
+			// LOOKAHEAD(2)
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_oblig(rule_section_count)
 
 		  	LOOKAHEAD(2)
-			// old <RIGHT_RULE_ARROW_OPT>
+			// ->?
 		 	( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
@@ -4328,7 +5111,8 @@ void rule() :
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_opt(rule_section_count)
 
-		|  ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+		|  // ->
+		    ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
 				// KRB: allow markup here
 				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
@@ -4345,7 +5129,83 @@ void rule() :
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
 
-		|   // old <RIGHT_RULE_ARROW_MAX_L2R> 
+		//|	// {max} ->? /
+			// LOOKAHEAD(4)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//	{max} -> /
+			// LOOKAHEAD(3)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
+
+		//|	// {max} <-? /
+			// LOOKAHEAD(4)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//	{max} <- /
+			// LOOKAHEAD(3)
+			// <MAX_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
+
+		|   // {max} ->?
+			LOOKAHEAD(3)
+				<MAX_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_l2r_opt(rule_section_count)
+
+		|   // {max} ->
 				<MAX_L2R_DIRECTIVE>
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4357,9 +5217,86 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_l2r(rule_section_count)
+				#rule_right_arrow_max_l2r_oblig(rule_section_count)
 
-		|  	// old <RIGHT_RULE_ARROW_MAX_R2L> 
+		//|	// {xam} ->? /
+			// LOOKAHEAD(4)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//	{xam} -> /
+			// LOOKAHEAD(3)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
+
+		//|	// {xam} <-? /
+			// LOOKAHEAD(4)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//	{xam} <- /
+			// LOOKAHEAD(3)
+			// <MAX_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
+
+
+		|  	// {xam} ->?
+		    LOOKAHEAD(3)
+				<MAX_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_max_r2l_opt(rule_section_count)
+
+		|  	// {xam} ->
 				<MAX_R2L_DIRECTIVE> 
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4371,9 +5308,85 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l(rule_section_count)
+				#rule_right_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <RIGHT_RULE_ARROW_MIN_L2R>
+		//|	// {min} ->? /
+			// LOOKAHEAD(4)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//	{min} -> /
+			// LOOKAHEAD(3)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
+
+		//|	// {min} <-? /
+			// LOOKAHEAD(4)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//	{min} <- /
+			// LOOKAHEAD(3)
+			// <MIN_L2R_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
+
+		|  	// {min} ->?
+			LOOKAHEAD(3)
+				<MIN_L2R_DIRECTIVE>
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// {min} ->
 				<MIN_L2R_DIRECTIVE>
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4385,9 +5398,85 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_l2r(rule_section_count)
+				#rule_right_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// old <RIGHT_RULE_ARROW_MIN_R2L> 
+		//|	// {nim} ->? /
+			// LOOKAHEAD(4)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//	{nim} -> /
+			// LOOKAHEAD(3)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
+
+		//|	// {nim} <-? /
+			// LOOKAHEAD(4)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <QUESTION_MARK> 
+			// <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//	{nim} <- /
+			// LOOKAHEAD(3)
+			// <MIN_R2L_DIRECTIVE>
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+			// <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
+
+		|  	// {nim} ->?
+			LOOKAHEAD(3)
+				<MIN_R2L_DIRECTIVE> 
+				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_right_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// {nim} -> 
 				<MIN_R2L_DIRECTIVE> 
 				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4399,14 +5488,47 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l(rule_section_count)
+				#rule_right_arrow_min_r2l_oblig(rule_section_count)
 
 			// left-arrow rules
 
-		|  	// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-			LOOKAHEAD(2)
-			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+	// |
+			//// KRB:  one location for transducer rules, e.g.
+			//  a:x <-? / left _ right
+			//  a:x <- / left _ right
+
+			//  a:x <-? / left _ right
+			// LOOKAHEAD(3)
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
+			//// new AST node
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_opt(rule_section_count)
+
+			//	a:x <- / left _ right
+			// LOOKAHEAD(2)
+			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <SLASH_OP>
+			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+			//// this kind of rule must have a slash, but optionally a real right-hand side
+			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//// new AST node
+			//	#rule_transducer_left_arrow_oblig(rule_section_count)
+
+		|  	// <-? {max}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+				<QUESTION_MARK>
+				<MAX_L2R_DIRECTIVE>
 				#rule_lhs_upper(1)
+				// KRB: do NOT allow markup here
 				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
 
@@ -4415,9 +5537,9 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_L2R>
+		|  	// <- {max}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				<MAX_L2R_DIRECTIVE>
@@ -4431,9 +5553,26 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r(rule_section_count)
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MAX_R2L> 
+		|  	// <-? {xam}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )  
+				<QUESTION_MARK>
+				<MAX_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB: do NOT allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+		|  	// <- {xam}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )  
 				<MAX_R2L_DIRECTIVE>
@@ -4447,9 +5586,26 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l(rule_section_count)
+				#rule_left_arrow_max_r2l_oblig(rule_section_count)
 
-		|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+		|  	// <-? {min}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_L2R_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+		|  	// <- {min}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_L2R_DIRECTIVE>
@@ -4463,9 +5619,26 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r(rule_section_count)
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
 
-		|  	// OLD <LEFT_RULE_ARROW_MIN_R2L> 
+		|  	// <-? {nim}
+			LOOKAHEAD(3)
+				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+				<QUESTION_MARK>
+				<MIN_R2L_DIRECTIVE>
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+		|  	// <- {nim}
 			LOOKAHEAD(2)
 				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 				<MIN_R2L_DIRECTIVE>
@@ -4479,7 +5652,21 @@ void rule() :
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l(rule_section_count)
+				#rule_left_arrow_min_r2l_oblig(rule_section_count)
+
+		|  	// <-?
+			LOOKAHEAD(2)
+			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
 
 		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 				#rule_lhs_upper(1)
@@ -4506,8 +5693,6 @@ void rule() :
 				)
 
 
-
-
 			// left-arrow markup rules
 
 		|  <MARKUP_OP> 				// Y ~~~ Z <- X  /  left _ right
@@ -4520,9 +5705,11 @@ void rule() :
 			// there must now be a left-rule-arrow of some kind
 
 			(  
-				// old ( <LEFT_RULE_ARROW_OPT> | <LEFT_RULE_ARROW_OPT_ASCII> )
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+			  	// <-? {max}
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+					<QUESTION_MARK>
+					<MAX_L2R_DIRECTIVE>
 					// KRB: do NOT allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
@@ -4532,9 +5719,9 @@ void rule() :
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_opt(rule_section_count)
+					#rule_left_arrow_max_l2r_opt(rule_section_count)
 
-			|  	// old <LEFT_RULE_ARROW_MAX_L2R> 
+			|  	// <- {max}
 				LOOKAHEAD(2)
 					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 					<MAX_L2R_DIRECTIVE>
@@ -4547,9 +5734,25 @@ void rule() :
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r(rule_section_count)
+					#rule_left_arrow_max_l2r_oblig(rule_section_count)
 
-			|  	// OLD <LEFT_RULE_ARROW_MAX_R2L> 
+			|  	// <-? {xam} 
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MAX_R2L_DIRECTIVE>
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_r2l_opt(rule_section_count)
+
+			|  	// <- {xam} 
 				LOOKAHEAD(2)
 					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 					<MAX_R2L_DIRECTIVE>
@@ -4562,9 +5765,25 @@ void rule() :
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l(rule_section_count)
+					#rule_left_arrow_max_r2l_oblig(rule_section_count)
 
-			|  	// old <LEFT_RULE_ARROW_MIN_L2R> 
+			|  	// <-? {min}
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MIN_L2R_DIRECTIVE>
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_opt(rule_section_count)
+
+			|  	// <- {min}
 				LOOKAHEAD(2)
 					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 					<MIN_L2R_DIRECTIVE>
@@ -4577,9 +5796,25 @@ void rule() :
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r(rule_section_count)
+					#rule_left_arrow_min_l2r_oblig(rule_section_count)
 
-			|  	// OLD <LEFT_RULE_ARROW_MIN_R2L> 
+			|  	// <-? {nim} 
+				LOOKAHEAD(3)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
+					<QUESTION_MARK>
+					<MIN_R2L_DIRECTIVE>
+					// KRB:  do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_r2l_opt(rule_section_count)
+
+			|  	// <- {nim} 
 				LOOKAHEAD(2)
 					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
 					<MIN_R2L_DIRECTIVE>
@@ -4592,7 +5827,21 @@ void rule() :
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l(rule_section_count)
+					#rule_left_arrow_min_r2l_oblig(rule_section_count)
+
+			|	// <-?
+				LOOKAHEAD(2)
+					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
+					// KRB: do NOT allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_opt(rule_section_count)
 
 			|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
 					(
@@ -4654,7 +5903,7 @@ void rule_rhs() #rule_rhs: {}
 // contexts for rules
 // N.B. alternation-rule contexts now come in two flavors,
 //   _		where the left and right context must be acceptors
-//  2_2     where the left and right contexts are interpreted as transducers
+//  _2_     where the left and right contexts are interpreted as transducers
 
 void rule_context() : 
 { int context_sections = 0 ; }
@@ -4785,7 +6034,7 @@ void complement_exp():
 
 void iterated_exp(): {}
 {
-  crossproduct_or_weight_exp() (  LOOKAHEAD(1) ( <ASTERISK_OP>    #kleene_star(1)
+  crossproduct_exp() (  LOOKAHEAD(1) ( <ASTERISK_OP>    #kleene_star(1)
                                                |  <PLUS_SIGN_OP>  #kleene_plus(1)
                                                |  <QUESTION_MARK> #optional(1)
 		                   	                   |  iteration_exp() #iterated_exp(2)
@@ -4804,27 +6053,6 @@ void iteration_exp(): {}
                       )
            | <COMMA_OP> numexp() <RCURLY>                #iteration_high(1)
            )
-}
-
-void crossproduct_or_weight_exp(): {}
-{
-	crossproduct_exp()
-|   weight_exp()
-}
-
-// don't allow weights to participate in crossproduct_exp,
-// disallow a:<0.2> even syntactically (weights attach to a PATH,
-// not a projection of a path
-void weight_exp() #weight_exp: {}
-{
-    <LANGLE>  weight_value_exp()  <RANGLE>
-}
-
-void weight_value_exp(): {}
-{
-	numexp()
-//  LOOKAHEAD(numexp_lookahead()) numexp()
-//| regexp()
 }
 
 void crossproduct_exp(): {}
@@ -4857,6 +6085,12 @@ void primary_regexp():
 
 | net_func_call()
 // $^foo(args)      $^(params){block}(args)
+| weight_exp()		// <0.1> works just fine, as a primary_regexp(), even in
+					// crossproducts like a:<0.1>.  This a:<0.1> was once
+					// thought inappropriate because weights belong to a PATH,
+					// not to a projection.  But a:(<0.1>) was possible, and it
+					// compiled equivalent to a:"" <0.1>.  Even (<0.1>):(<0.2>)
+					// compiled equivalent to <0.1><0.2>.  Hence, no problem.
 
 // built-in functions that return net (FST)
 
@@ -4884,6 +6118,12 @@ void primary_regexp():
 | net_diac_func_call()
 
 | net_shortestPath_func_call()
+
+| net_flatten_dest_func_call()
+| net_flatten_func_call()
+
+| net_flatten4rule_dest_func_call()
+| net_flatten4rule_func_call()
 
 | net_inputproj_dest_func_call()
 | net_inputproj_func_call()
@@ -4917,6 +6157,8 @@ void primary_regexp():
 | net_rm_weight_func_call()
 | net_subst_symbol_dest_func_call()
 | net_subst_symbol_func_call()
+| net_eq_dest_func_call()
+| net_eq_func_call()
 | net_read_xml_func_call()
 | net_rand_gen_func_call()
 
@@ -5029,6 +6271,22 @@ void net_func_call() #net_func_call: {}
   	net_func_exp() arg_list()
 }
 
+// It was originally thought inappropriate to allow weights
+// in crossproduct, e.g.  a:<0.1> was blocked syntactically.
+// However, a:(<0.1>) gets interpreted just like a:"" <0.1>,
+// so there's no point in disallowing the a:<0.1> syntax.
+void weight_exp() #weight_exp: {}
+{
+    <LANGLE>  weight_value_exp()  <RANGLE>
+}
+
+void weight_value_exp(): {}
+{
+	numexp()
+//  LOOKAHEAD(numexp_lookahead()) numexp()
+//| regexp()
+}
+
 void net_reverse_func_call() #net_reverse_func_call: {}
 {
 	<NET_REVERSE_FUNC_ID> regexp_one_arg_list() 
@@ -5105,11 +6363,30 @@ void net_diac_func_call() #net_diac_func_call: {}
 	<NET_DIAC_FUNC_ID> diac_arg_list()
 }
 
-
 void net_shortestPath_func_call() #net_shortestPath_func_call: {}
 {
 	<NET_SHORTESTPATH_FUNC_ID> regexp_numexp_arg_list() 
-	// must have one arg, a regexp
+	// must have one arg, a numexp
+}
+
+void net_flatten_dest_func_call() #net_flatten_dest_func_call: {}
+{
+	<NET_FLATTEN_DEST_FUNC_ID> regexp_one_arg_list() 
+}
+
+void net_flatten_func_call() #net_flatten_func_call: {}
+{
+	<NET_FLATTEN_FUNC_ID> regexp_one_arg_list() 
+}
+
+void net_flatten4rule_dest_func_call() #net_flatten4rule_dest_func_call: {}
+{
+	<NET_FLATTEN4RULE_DEST_FUNC_ID> regexp_one_arg_list() 
+}
+
+void net_flatten4rule_func_call() #net_flatten4rule_func_call: {}
+{
+	<NET_FLATTEN4RULE_FUNC_ID> regexp_one_arg_list() 
 }
 
 void net_inputproj_dest_func_call() #net_inputproj_dest_func_call: {}
@@ -5167,6 +6444,16 @@ void net_subst_symbol_func_call() #net_subst_symbol_func_call: {}
 	<NET_SUBST_SYMBOL_FUNC_ID> regexp_three_arg_list()
 }
 
+void net_eq_dest_func_call() #net_eq_dest_func_call: {}
+{
+	<NET_EQ_DEST_FUNC_ID> regexp_three_arg_list()
+}
+
+void net_eq_func_call() #net_eq_func_call: {}
+{
+	<NET_EQ_FUNC_ID> regexp_three_arg_list()
+}
+
 void net_read_xml_func_call() #net_read_xml_func_call: {}
 {
 	<NET_READ_XML_FUNC_ID> regexp_one_arg_list()
@@ -5211,6 +6498,11 @@ void lng_arccount_func_call() #lng_arccount_func_call: {}
 	<LNG_ARCCOUNT_FUNC_ID> regexp_one_arg_list()
 }
 
+void lng_get_int_cpv_func_call() #lng_get_int_cpv_func_call: {}
+{
+	<LNG_GET_INT_CPV_FUNC_ID> regexp_one_arg_list()
+}
+
 void lng_arity_func_call() #lng_arity_func_call: {}
 {
 	<LNG_ARITY_FUNC_ID> regexp_one_arg_list() 
@@ -5246,6 +6538,11 @@ void lng_is_acceptor_func_call() #lng_is_acceptor_func_call: {}
 void lng_is_transducer_func_call() #lng_is_transducer_func_call: {}
 {
 	<LNG_IS_TRANSDUCER_FUNC_ID> regexp_one_arg_list() 
+}
+
+void lng_output_labels_include_cpv_func_call() #lng_output_labels_include_cpv_func_call: {}
+{
+	<LNG_OUTPUT_LABELS_INCLUDE_CPV_FUNC_ID> regexp_numexp_arg_list() 
 }
 
 void lng_is_weighted_func_call() #lng_is_weighted_func_call: {}
@@ -5521,6 +6818,12 @@ void dbl_rint_func_call() #dbl_rint_func_call: {}
 {
 	<DBL_RINT_FUNC_ID> numexp_one_arg_list()
 }
+
+void dbl_log_func_call() #dbl_log_func_call: {}
+{
+	<DBL_LOG_FUNC_ID> numexp_one_arg_list()
+}
+
 
 //**************** void_func_exp() *******************
 

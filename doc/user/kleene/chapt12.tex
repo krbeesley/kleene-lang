@@ -1,0 +1,131 @@
+\chapter{Conclusion}
+
+\section{Current Development Status}
+
+At the time of writing, the following \Kleene{} features are working:
+
+\begin{itemize}
+\item
+Interpretation of regular expressions and setting of variables
+\item
+Maintenance of identifier-value mappings in an environment of linked frames
+\item
+Automatic assignment of internal arc-label integers to syntactic
+symbols\footnote{OpenFst automata in the standard tropical
+semiring
+store all arc labels as 32-bit integers.  In \Kleene{}, single symbols are always stored using their
+official Unicode code point values, including supplementary characters; and
+multi-character symbols are assigned an arbitrary code point value from
+a Unicode Private Use Area, starting with Plane 15.  If necessary, for
+automata using unusually
+large alphabets of multi-character symbols, code values beyond the Unicode
+21-bit range will be used, providing over 4 billion symbol distinctions.}
+\item
+Automatic maintenance of a private alphabet (sigma) for each network, and support
+for \acro{other} (also called \acro{unknown}) characters
+\item
+Automatic optimization of networks using RmEpsilon(), Determinize() and Minimize(), as much
+as is automatically possible and safe, based on network characteristics
+\item
+Interpretation of language-restriction expressions
+\item
+Interpretation of alternation-rule expressions
+\item
+Interpretation of right-linear phrase-structure grammars
+\item
+Initial support for Recursive Transition Networks (\acro{rtn}s)
+\item
+Interpretation of arithmetic expressions and setting of variables
+\item
+Definition and calling of functions that return network and arithmetic values
+\item
+Definition and calling of meta-functions that return functions
+\item
+Definition and calling of void functions, which return no value
+\item
+Implementation of a Unicode-friendly \acro{xml} language for textual representation of
+networks\footnote{OpenFst still uses an \acro{ascii}-limited textual format inherited from
+\acro{at\&t} (\url{http://www.research.att.com/~fsmtools/fsm/man4/fsm.5.html}).}
+\item
+Support of network lists and number lists, and iteration over lists.
+\end{itemize}
+
+\noindent
+Unicode is supported in \Kleene{} to the extent that it is supported in
+Java and the Java Swing library---which is pretty well---and users can
+install and use their own Unicode fonts and Java Input
+Methods\footnote{\url{http://javadesktop.org/articles/InputMethod/index.html}}
+in their own Java platforms.  Some issues, including Unicode
+normalization and the expansion of the \Kleene{} tokenizer to allow any
+Unicode letter character to appear in identifiers, still require some
+thought and work.
+
+The Java wrapping of OpenFst functions and the \acro{gui} are well
+advanced, but not complete.  \Kleene{} runs on Linux and \init{os~x}.
+Windows support may be offered in the future.
+
+\section{Work to be Done}
+
+Major planned features remaining to be implemented include:
+
+\begin{itemize}
+\item
+Implementation of a platform-neutral binary file format for
+input/output of networks
+\item
+Harmonization of symbol-integer mappings between networks built
+during different \Kleene{} sessions\footnote{All
+networks built during a single \Kleene{} session share the same symbol-to-integer mappings.  As
+\Kleene{} automatically maps all single characters to their official Unicode code point values,
+assigning arbitrary Private Use Area (\acro{pua}) code point values only to multi-character symbols, only the
+multi-character-symbol mappings need to be harmonized when combining networks built
+during different sessions.  This harmonization is not a problem for the Kleene-native \acro{xml}
+format, but will be a challenge if Kleene networks are stored in the OpenFst binary format.}
+\item
+Writing practical runtime code and \init{api}s to allow \Kleene{}-built \fst{}s to be integrated easily into
+applications
+\item
+Conversion of Kleene finite-state machines into stand-alone Java and C++ runtime code
+\item
+Generalization of the interpreter, which currently handles only the default
+Tropical Semiring, to handle multiple semirings
+\end{itemize}
+
+\noindent
+Eventually, it is hoped to support graphical
+drag-and-drop programming of networks within the \acro{gui}.
+
+
+\section{Acknowledgements}
+
+I am indebted to a number of people, primarily the whole OpenFst team,
+and especially Cyril Allauzen, for making the OpenFst library
+\citep{allauzen+riley+schalkwyk+skut+mohri:2007} available and for
+providing patient explanations and advice.
+
+The algorithm for restriction expressions was kindly provided by M\r{a}ns
+Huld\'en \citep{hulden:2009fsmnlp,hulden:2009thesis}; it is similar in
+several ways to the algorithm of Yli-Jyr\"a and Koskenniemi
+\citep{yli-jyra+koskenniemi:2004}.  Huld\'en also kindly provided his
+latest algorithms for compiling alternation rules
+\citep{hulden:2009thesis}, along with explanations and encouragement in
+private communications.
+
+My \acro{sap} colleague Paola Nieddu performed the testing, and Phil
+Sours wrote the \acro{sap} \acro{rtn} runtime code.  Sours also
+ported OpenFst to the Windows platform.  Both Nieddu and Sours
+contributed to the design and implementation of Kleene.
+
+Lauri Karttunen, my old boss at Xerox Research, taught my most of what I know about finite-state
+computing, plus much that I have forgotten.  His c-fsm library, and his
+twolc, lexc and xfst languages, are the model for
+much of the semantics of Kleene.
+
+Many others have gone out of their way to provide information, help or
+encouragement, including Andr\'e Kempe, Mike Wilkens,
+Helmut Schmid, Natasha Lloyd, and Kemal Oflazer.  I have not always
+followed their advice, and any infelicities in the \Kleene{} language and
+\acro{gui} are my responsibility.
+
+\section{The Future of Kleene}
+

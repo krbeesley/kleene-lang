@@ -332,12 +332,45 @@ $^randGen($fst, #npath = 15, #max_length = 50) {
 }
 // "round to int"?  Returns the double value that is closest in value to the argument and is equal to a mathematical integer.
 
+// natural log (Java Math.log(double d))
+#^log(#num) {
+	return #^__log(#^__double(#num)) ;
+}
+
+// convert probability to cost (for weights in the Tropical Semiring)
+// e.g.  #^prob2c(0.5)    convert probability of .5 to the cost
+// where cost is -log(p)
+#^prob2c(#num) {
+	return - #^__log(#^__double(#num)) ;
+}
+
+// express the weights as percentages, for conversion to costs
+#^pct2c(#num) {
+	return - #^__log(#^__double(#num / 100.0)) ;
+}
+
 $^invert!($fst) {
 	return $^__invert!($fst) ;  // built-in, destructive
 }
 
 $^invert($fst) {
 	return $^__invert($fst) ;  // built-in
+}
+
+$^flatten!($fst) {
+	return $^__flatten!($fst) ;	// built-in
+}
+
+$^flatten($fst) {
+	return $^__flatten($fst) ;	// built-in
+}
+
+$^flatten4rule!($fst) {
+	return $^__flatten4rule!($fst) ;	// built-in
+}
+
+$^flatten4rule($fst) {
+	return $^__flatten4rule($fst) ;	// built-in
 }
 
 // optimizations
@@ -759,4 +792,117 @@ $@^map($^func, $@list) {
 #^containsOther($fst) {
 	return #^__containsOther($fst) ;
 }
+
+#^getIntCpv($fst) {
+	return #^__getIntCpv($fst) ;
+}
+
+#^outputLabelsIncludeCpv($fst, #cpv) {
+	return #^__outputLabelsIncludeCpv($fst, #cpv) ;
+}
+
+// Hulden's _eq() algorithm for implementing reduplication, triplication
+
+$^eq($L, $left, $right) {
+	// this $^eq() is often called from $^redup(), see below
+
+	// $L FST should be marked up with $left and $right delimiters,
+	// in matching pairs.  $^eq constrains the contents of all
+	// $left ... $right pairs in a string to be equal.
+
+	require #^isAcceptor($left), "The second argument to $^eq() must be an acceptor." ;
+	require #^isAcceptor($right), "The third argument to $^eq() must be an acceptor." ;
+
+	// otherwise, $left and $right can be arbitrary languages,
+	// insert (after $left, and before $right)
+	// standardized internal symbols for convenience
+
+	$insertBrackets = (	~$^contains($left | $right)
+						($left "":'KLEENEeqLB' | "":'KLEENEeqRB' $right)
+					  )*
+					  ~$^contains($left | $right) ;
+	$Lbracketed = $L _o_ $insertBrackets ;
+
+	// no brackets
+	$nobr = ~$^contains('KLEENEeqLB' | 'KLEENEeqRB') ;
+
+	// filter to match strings with correctly paired brackets,
+	// and only strings with two or more of them (with zero or one,
+	// there is no reduplication to do)
+	$bracketFilter = $nobr 'KLEENEeqLB' $nobr 'KLEENEeqRB' $nobr
+					('KLEENEeqLB' $nobr 'KLEENEeqRB' $nobr)+ ;
+
+	// not used in Hulden's algorithm, probably a relic
+	//$removeBrackets = ('KLEENEeqLB':"" | 'KLEENEeqRB':"" | $nobr)* ;
+
+	// calculate reduplications only for strings that have matching,
+	// properly nested 'KLEENEeqLB' ... 'KLEENEeqRB' groupS (plural)
+
+	// $Lbypass (don't reduplicate this subset of strings from $L)
+	$Lbypass = $Lbracketed _o_ 
+				~$bracketFilter _o_
+				'KLEENEeqLB' | 'KLEENEeqRB' -> "" ;
+	
+	// $Leq strings have the proper delimiter format for reduplication
+	$Leq = $Lbracketed _o_ $bracketFilter ;
+
+	// extract an FSM with the move-alphabet (containing all and only
+	// symbols that appear between the delimiters)
+
+	$moveAlphFsm = $^outputProj(	
+			$Leq _o_
+			( [^'KLEENEeqLB']:""* 'KLEENEeqLB':"" [^'KLEENEeqRB']* 'KLEENEeqRB':"" )*
+			[^'KLEENEeqLB']:""*
+				   				) ;
+	$move = ~.* ;
+	foreach ($sym in $@^getSigma($moveAlphFsm)) {
+		$move = $move | 
+		  ( [^'KLEENEeqLB']* 'KLEENEeqLB':$sym $sym:'KLEENEeqLB' )* [^'KLEENEeqLB']* ;
+	}
+
+	$cleanup = [^'KLEENEeqLB']* ('KLEENEeqLB':"" 'KLEENEeqRB':"" [^'KLEENEeqLB']*)*  | 
+	           ~$^contains('KLEENEeqLB' 'KLEENEeqRB') ;
+
+	// get the int code point value of the left-boundary symbol
+	#KLEENEeqLBcpv = #^getIntCpv('KLEENEeqLB') ;
+
+	while (#true) {
+		$Leq = $Leq _o_ $cleanup ;
+		if (!#^outputLabelsIncludeCpv($Leq, #KLEENEeqLBcpv)) break ;
+		$Leq = $Leq _o_ $move ;
+	}
+
+	return $L _o_ ($^outputProj($Leq) | $Lbypass) ;
+}
+
+// most common cases of reduplication can be modeled by calling $^redup($lang, $sep)
+// where $lang is a language of syllables, prosodic feet, or whatever that needs
+// to be reduplicated, and $sep is the separator character (usually "-" or "")
+$^redup($lang, $sep="") {
+	require #^isAcceptor($lang), "First argument to $^redup() must be an acceptor." ;
+	require !#^isCyclic($lang), "First argument to $^redup() must be a finite acceptor."
+	;
+	require !#^containsOther($lang), "First argument to $^redup() must not contain OTHER." ;
+	require !#^isEmptyLanguage($lang), 
+		"First argument to $^redup() must not be the empty language." ;
+	require !#^isEmptyStringLanguage($lang), 
+		"First argument to $^redup() must not be the empty string language." ;
+
+	require #^isAcceptor($sep), "Second argument to $^redup() must be an acceptor." ;
+	require !#^isEmptyLanguage($sep), 
+		"Second argument to $^redup() must not be the empty language." ;
+
+	return $^substSymbol!(
+				$^substSymbol!(
+					$^eq( 'KLEENEredupLB' $lang 'KLEENEredupRB' $sep 'KLEENEredupLB' $lang 'KLEENEredupRB',
+						  'KLEENEredupLB',
+						  'KLEENEredupRB'),
+					'KLEENEredupLB',
+					""
+				),
+				'KLEENEredupRB',
+				""
+			) ;
+}
+	
 

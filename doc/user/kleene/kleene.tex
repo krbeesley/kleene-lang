@@ -81,6 +81,12 @@
 \usepackage{fancyvrb}  	% \begin{Verbatim}[fontsize=\small]
 \usepackage{upquote}	% to get straight quotes in \verb and verbatim
 
+\usepackage{cprotect}	% allows the use of \verb and the verbatim
+						% environment in footnotes and titles, e.g.
+						% \cprotect\section{  \verb!...! } which is usually
+						%    impossible
+						% \cprotect\footnote{}
+
 \usepackage[outerbars]{changebar}
 % supports \cbstart and \cbend, also the changebar environment
 % N.B. that changebars don't seem to work well over page breaks
@@ -292,7 +298,7 @@ full responsibility for any problems, failures or infelicities.
 \begin{quote}
 Lauri Karttunen, M\r{a}ns Huld\'en, Paola Nieddu, Phil Sours, André Kempe, 
 Mike Wilkens,
-Kemal Oflazer
+Kemal Oflazer, Natasha Lloyd
 \end{quote}
 
 \noindent

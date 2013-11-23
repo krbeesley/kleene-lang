@@ -1,6 +1,17 @@
 
 		Kleene Version Notes
 
+2013-11-22
+	Added $^flatten($fst) and $^flatten!($fst)
+	Added $^flatten4rule($fst) and $^flatten4rule!($fst), to be used in
+	compiling "transducer rules"
+
+2013-11-07
+	Added #^log(#num) function (natural log)
+	Added #^p2c(#num) function (convert probability arg to cost value, 
+		where cost of probability p is -log(p)
+	Added $^redup($lang, $sep="") function
+
 2013-06-17
 	Version v0.9.3.5
 	Beta release candidate to show to a few close friends

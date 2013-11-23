@@ -1,559 +1,341 @@
-\chapter{Lists}
+\chapter{Arithmetic Expressions}
 
+\section{Mindtuning for Arithmetic Expressions}
 
-\section{Lists of \fsm{}s and Numbers}
+While \Kleene{} is designed primarily for creating and manipulating
+finite-state networks, it does support arithmetic expressions, variables
+that hold arithmetic values, functions that return arithmetic values,
+etc.  Variables with an arithmetic value are marked with a \# sigil,
+functions that return an arithmetic value with \verb!#^!, etc.  Wherever a
+simple integer or float can appear in \Kleene{} syntax, including
+numbered iterations like \verb!a{2,4}! and weights like \verb!<0.1>!, an
+arbitrarily complex arithmetic expression can appear, e.g.\@ 
+\verb!a{2, #maxlength - 1}! and \verb!<#defaultweight + .01>!.\footnote{Internally,
+\Kleene{} stores arithmetic values as either a Long or a Double object.}
 
-In addition to individual \fsm{}s, and individual numbers,
-Kleene also supports collections of \fsm{}s and collections of numbers.
-These collections are implemented as linked lists,\footnote{In the
-underlying Java code, they are implemented as LinkedList objects.} and
-functions are provided to manipulate them as lists, stacks, queues and
-double-ended queues (also known as deques, pronounced \emph{decks}).
-They will be referred to collectively herein as lists.
+The arguments passed to a function could be any mix of regular
+expressions and arithmetic expressions, and one of the biggest challenges
+during \Kleene{} design and development was the distinguishing and proper
+tokenization/parsing of the two separate expression types.  For example,
+both use the plus sign as an operator, but in arithmetic expressions it
+is a binary infix operator of fairly low precedence, e.g.\@  \verb!2+3!,
+while in regular expressions it is a unary postfix operator of fairly
+high precedence, e.g.\@ \verb!ab+c!.  Distinguishing the two
+expression types by inventing new operators---either for regular
+expressions or for arithmetic expressions---was judged to be
+completely unacceptable; and forcing users to surround regular
+expressions, or arithmetic expressions, with some kind of explicit
+delimiters, such as the Perl slashes /\ldots/, was deemed inelegant
+and undesirable.
 
-Kleene lists must be homogeneous; that is, a single list must contain
-only \fsm{}s, or only numbers, though the numbers may be a mix of
-integers\footnote{Kleene integers are always stored internally as Java
-Long objects.} and floats.\footnote{Kleene floats are always stored
-internally as Java Double objects.}  Kleene lists are sometimes referred
-to informally as arrays, but they are technically lists and are better
-thought of as such.\footnote{Readers familiar with Lisp and Scheme are
-warned that Kleene lists cannot contain lists.}
+The solution adopted was to define a systematic set of sigils starting
+with \verb!$! for network-value variables and functions, and \verb!#! for
+arithmetic-value variables and functions.  Parser lookahead distinguishes
+\verb!#a+#b! as an arithmetic expression, involving addition, from
+\verb!$a+$b!, which is a regular expression indicating the concatenation
+of one or more iterations of network \verb!$a! with network \verb!$b!.
+Once the sigil system is mastered, users can, in almost all cases, simply
+type familiar regular and arithmetic expressions in appropriate places. 
 
-Kleene provides syntax to represent, assign, access and manipulate lists.
-Lists can be passed as arguments to functions, and functions can
-return a list as a result.  A \texttt{foreach} statement supports
-iteration through the members of a list.
+The remaining problematic cases are expressions like \verb!2! and
+\verb!2+3!, which start with digits.  Are they arithmetic expressions,
+having a integer or float value, or regular expressions, having a network
+value?  The \Kleene{} solution is to treat bare digits by default as
+arithmetic expressions.  To be interpreted as literal characters, and
+therefore regular expressions, digits must be literalized in the usual
+\Kleene{} ways:
 
-The sigil \verb!$@! marks lists of \fsm{}s, and \verb!#@! marks lists of
-numbers. 
+\begin{itemize}
+\item
+Using the prefix backslash literalizer:  \verb!\2!
+\item
+Surrounding them with double quotes: \verb!"2"!, or
+\item
+Putting them in square-bracketed expressions: \verb![2]! \verb![^2]! \verb![0-9]! \verb![^0-9]!
+\end{itemize}
 
-\section{List Literals, Identifiers, and Assignment}
+\section{Primary Arithmetic Expressions}
 
-List literals, also known as anonymous lists, are denoted by the
-appropriate sigil, \verb!$@! for \fsm{}s and \verb!#@! for numbers, followed
-by a parenthesized list of elements.
-
-\begin{Verbatim}
-$@(dog, cat, a, a*b+[c-g])  // a literal list of 4 FSMs 
-
-#@(12, -45, 2.47, 0.326, 0) // a literal list of 5 numbers
-\end{Verbatim}
-
-\noindent
-An identifier of the form \verb!$@!\emph{name} can be bound to an
-\fsm{}-list value; and, in parallel, an identifier of the form
-\verb!#@!\emph{name} can be bound to a number-list value.
-
-\begin{Verbatim}
-$@foo = $@(a, b, $fsm1, $fsm2, (dog|cat|elephant)s?) ;
-
-#@bar = #@(1, 2, 12.23, 9, -234) ;
-\end{Verbatim}
-
-\noindent
-When such assignment statements are executed in the \acro{gui}, the lists are
-represented by named icons that appear automatically in the symbol-table window.
-
-The \texttt{info} and \texttt{delete} commands work with list identifiers
-just as they do with individual \fsm{} and number identifiers.
-
-\begin{Verbatim}
-info $@foo ;
-info #@bar ;
-
-delete $@foo ;
-delete #@bar ;
-\end{Verbatim}
-
-\noindent
-In the \acro{gui}, these commands can be accessed by right-clicking on a list
-icon.
-
-\section{Pre-Defined Functions Operating on Lists}
-
-\subsubsection{Functions Accessing the Elements of a List} 
-Individual list
-elements can be accessed non-destructively from a list using the
-following pre-defined functions.  Note that index counting starts at 0
-(zero).
+The primary arithmetic expressions are the following:
 
 \vspace{.5cm}
 
+\renewcommand\tabcolsep{1.25mm}
+
 \noindent
-\begin{tabular}{|l|l|}
+\begin{tabular}{|p{5.5cm}|l|}
 \hline
-\verb!$^head($@list)! & Returns the zeroth FSM element of the argument list\\
+\verb!0 1 42!  & decimal integers\\
 \hline
-\verb!$^getLast($@list)! & Returns the last FSM element of the argument list\\
+\verb!0x1 0X1 0x1A 0X23ABC! & hex integers\\
 \hline
-\verb!$^get($@list, #n)! & Returns the nth FSM element of the argument list\\
+\verb!2.5 .234 103.! & decimal floats\\
+\hline
+\verb!#n #count #foo! & names of variables denoting an arithmetic value\\
+\hline
+\verb!#^abs(#numexp)! \verb!#^arcCount($regexp)!
+\verb!#^stateCount($regexp)! \verb!#^myfunction(!\emph{args}\verb!)! & names of functions returning an arithmetic value\\
+%\hline
+%\verb!#@arr[1]! & arithmetic array reference\\
 \hline
 \end{tabular}
 
 \vspace{.5cm}
 
 \noindent
-Such functions return \fsm{}s and can be called in the usual ways, 
-e.g.
+Note that \Kleene{} does not support octal (base 8) representations of integers.
 
-\begin{Verbatim}
-$@mylist = $@(a, b, c, d) ;
-$fsm = $^head($@mylist) ;
-\end{Verbatim}
+\section{Arithmetic Expression Operators}
 
-\noindent
-would set \verb!$fsm! to the \fsm{} denoted by \texttt{a}.
+The following regular expression operators are available, 
+listed from high to low precedence.
 
-Parallel functions are defined for number-lists:
-
-\vspace{.5cm}
+\vspace{0.5cm}
 
 \noindent
-\begin{tabular}{|l|l|}
+\begin{tabular}{|l|l|l|l|}
 \hline
-\verb!#^head(#@list)! & Returns the zeroth number element of the argument list\\
+( ) &  parenthetical grouping & circumfix &\\
 \hline
-\verb!#^getLast(#@list)! & Returns the last number element of the argument list\\
+\verb!+ -! & positive, negative & prefix &\\
 \hline
-\verb!#^get(#@list, #n)! & Returns the nth number element of the argument list\\
+\verb!* / %! & multiply, divide, mod & infix & left assoc.\\
+\hline
+\verb!+ -!  & add/subtract & infix & left assoc.\\
+\hline
+\verb/< <= >= == != >/ & Boolean comparisons & infix & left assoc.\\
+\hline
+\verb/!/ & Boolean NOT  & prefix & \\
+\hline
+\verb!&&! & Boolean AND & infix & left assoc.\\
+\hline
+\verb!||! & Boolean OR  & infix & left assoc.\\
 \hline
 \end{tabular}
 
-\vspace{.5cm}
-
-The following functions return a new list containing all or part of the
-elements of the argument list.  These operations are non-destructive.
-
-\vspace{.5cm}
+\vspace{0.5cm}
 
 \noindent
-\begin{tabular}{|l|p{4.5cm}|}
+The result of boolean operations is always 1 (true) or 0 (false).  There
+is no separate boolean type in Kleene.
+
+\section{Arithmetic Functions}
+
+The following pre-defined arithmetic-valued functions are provided.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|}
 \hline
-\verb!$@^copy($@list)! & Returns a shallow copy of the argument FSM-list\\
+\verb!#^pathCount($fst)! \\
+\verb!#^stateCount($fst)! \\
+\verb!#^arcCount($fst)! \\
+\verb!#^arity($fst)! \\
 \hline
-\verb!$@^tail($@list)! & Returns a new list containing all but the first element of the
-argument FSM-list\\
+\verb!#^abs(#num)! \\
+\verb!#^ceil(#num)! \\
+\verb!#^floor(#num)! \\
+\verb!#^round(#num)! \\
+\verb!#^log(#num)! \\
+\verb!#^prob2c(#num)! \\
+\verb!#^pct2c(#num)! \\
 \hline
-\verb!$@^getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
-indicated elements of the argument FSM-list\\
+\verb!#^long(#num)! or \verb!#^int(#num)! \\
+\verb!#^double(#num)! or \verb!#^float(#num)! \\
+\verb!#^rint(#num)! \\
 \hline
 \end{tabular}
 
-\vspace{.5cm}
+\vspace{0.5cm}
+
+In Kleene there is no difference between \verb!#^long(#num)! and
+\verb!#^int(#num)!; both are stored as long integers.\footnote{Long
+integers are stored internally as Java Long objects.}  Similarly, there
+is no difference between \verb!#^double(#num)! and \verb!#^float(#num)!;
+both are stored as double values.\footnote{Double values are stored
+internally as Java Double objects.}  
+
+The \verb!#^log(#num)! function returns the natural logarithm of the
+argument.
+The \verb!#^prob2c(#num)! takes an argument that represents a probability,
+where probabilities range from 1.0 (certain) to 0.0 (impossible), and
+returns a cost weight suitable for the Tropical Semiring.\footnote{In
+	the Tropical Semiring, the weights are \emph{costs}.  For any
+probability \emph{p}, the corresponding cost is $-$log(p).  A probability
+of 1.0 corresponds to a cost of 0.0, and a probability of 0.0
+corresponds to an infinite cost.}  The \verb!#^prob2c(#num)! function might
+be used in examples like the following,
+
+\begin{Verbatim}[fontsize=\small]
+$fsm = a b ( c <#^prob2c(0.1)> | d <#^prob2c(0.9)> ) ;
+\end{Verbatim}
 
 \noindent
-\begin{tabular}{|l|p{4.5cm}|}
+where the path containing \emph{c} has 0.1 probability, and the path containing
+\emph{d} has 0.9 probability.  The \verb!#^pct2c(#num)! is similar but allows you
+to express the weights as percentages, e.g.\ 10\% vs.\ 90\%.  The following example is equivalent to the
+one just above.
+
+\begin{Verbatim}[fontsize=\small]
+$fsm = a b ( c <#^pct2c(10)> | d <#^pct2c(90)> ) ;
+\end{Verbatim}
+
+
+[KRB:  explain why the \verb!#^pathCount()! is not completely accurate.
+Explain the other functions..]  
+
+\section{Boolean Functions}
+
+\subsection{Special Case of Arithmetic Functions}
+
+Boolean functions are special cases of arithmetic functions that return 1 for true and 0 for false.  They
+are typically used in if-else expressions or in loops for testing qualities of finite-state machines.
+The predefined boolean functions are 
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|}
 \hline
-\verb!#@^copy(#@list)! & Returns a shallow copy of the argument number-list\\
+\verb!#^isAcceptor($fst)! \\
+\verb!#^isTransducer($fst)! \\
+\verb!#^isRtn($fst)! \\
 \hline
-\verb!#@^tail(#@list)! & Returns a new list containing all but the first element of the
-argument number-list\\
+\verb!#^isWeighted($fst)! \\
+\verb!#^isIDeterministic($fst)! or \verb!#^isUDeterministic($fst)!\\
+\verb!#^isODeterministic($fst)! or \verb!#^isLDeterministic($fst)!\\
+\verb!#^isCyclic($fst)!\\
+\verb!#^isIBounded($fst)! or \verb!#^isUBounded($fst)!\\
+\verb!#^isOBounded($fst)! or \verb!#^isLBounded($fst)!\\
+\verb!#^containsOther($fst)! \\
+\verb!#^hasClosedAlphabet($fst)! \\
+\verb!#^isEpsilonFree($fst)! \\
 \hline
-\verb!#@^getSlice(#@list, #n, #r:#s, ...)! & Returns a new list containing the
-indicated elements of the argument number-list\\
+\verb!#^isEmptyLanguage($fst)! \\
+\verb!#^isEmptyStringLanguage($fst)! \\
+\verb!#^isString($fst)! or \verb!#^isSingleStringLanguage($fst)!\\
+\verb!#^containsEmptyString($fst)! \\
+\verb!#^isUniversalLanguage($fst)! \\
 \hline
 \end{tabular}
 
-\vspace{.5cm}
-
+\vspace{0.5cm}
 \noindent
-The statement
+and others will no doubt be defined as they become needed.
 
-\begin{Verbatim}
-$@tailList = $@^tail($@(a, b, c)) ;
+The \verb!#^isAcceptor($fst)! function returns true if and only if the
+argument network is semantically an
+acceptor.  In OpenFst, where all arc labels \emph{i}:\emph{o} in a finite-state machine
+are two-level, with an input label \emph{i} and an output label \emph{o}, an acceptor is a special case of a
+machine wherein each arc-label mapping is an identity mapping.\footnote{If the finite-state machine contains an arc labeled
+\acro{other\_nonid:other\_nonid}, then it will look like an acceptor to the OpenFst library, but in Kleene such
+a network is semantically and in practice a transducer; if \verb!#^isAcceptor()! is called on such
+a network the return value is 0 (false).  Conversely, if
+\verb!#^isTransducer()! is called on any network that
+contains an arc labeled \acro{other\_nonid:other\_nonid}, the return value is 1 (true).}
+
+The \verb!#^isTransducer($fst)! function returns true if and only if the argument network is semantically a
+non-identity transducer.  Thus if the machine contains any arc label like a:b, where the upper label is
+different from the lower label, \verb!#^isTransducer! will return true.\footnote{If the argument contains an
+arc labeled 
+\acro{other\_nonid:other\_nonid},
+then it will look like an identity relation to OpenFst itself, but in
+Kleene this is semantically a non-identity transducer and \verb!#^isTransducer! will return 0 (false).}
+
+The \verb!#^isWeighted($fst)! function returns true if and only if the argument
+finite-state machine contains any arc
+with a non-neutral weight value.
+
+The \verb!#^isIDeterministic($fst)! function returns true if and only if the finite-state machine is \emph{input}-side
+deterministic, where ``input'' here is taken in the OpenFst sense of the upper side.
+Similarly, the function \verb!#^isODeterministic($fst)! returns true if and only if the
+network is \emph{output}-side deterministic, in the OpenFst sense.\footnote{The spellings IDeterministic and ODeterministic are
+used inside the OpenFst library.}
+
+The \verb!#^isCyclic($fst)! function returns true if and only if the finite-state machine has cycles, also
+known as loops.
+
+The \verb!#^isIBounded($fst)! function returns true if and only if the finite-state machine has no input side
+epsilon loops.
+
+The \verb!$^isOBounded($fst)! function returns true if and only if the finite-state machine has no output side
+epsilon loops.
+
+The \verb!#^containsOther($fst)! function returns true if and only if the network
+contains at least one \acro{other\_id} or \acro{other\_nonid} label.
+Conversely, 
+\verb!#^hasClosedAlphabet($fst)! returns true if and only if the
+alphabet of the network is closed, i.e.\@ the network does not contain any 
+\acro{other\_id} or \acro{other\_nonid} labels.  Thus
+\verb!#^hasClosedAlphabet($fst)! is equivalent to 
+\verb@!#^containsOther($fst)@.
+
+The \verb!#^isEpsilonFree($fst)! function returns true if and only if the network contains no
+\acro{epsilon:epsilon} arcs,
+i.e.\@ no double-sided epsilon labels.  Because Kleene routinely runs epsilon-removal
+on all networks, which removes such double-sided epsilon arcs, unless such removal is
+explicitly turned off, there is seldom any practical need to call 
+\verb!#^isEpsilonFree($fst)!.
+
+The \verb!#^isEmptyLanguage($fst)! function returns true if and only if the network encodes the empty
+language, i.e.\@ the language that contains no strings at all, not even the empty string.
+
+The \verb!#^isEmptyStringLanguage($fst)! function returns true if and only if the network encodes the
+empty-string language, i.e.\@ the language that contains only the empty string.
+
+The \verb!#^isString($fst)! function, aliased as \verb!#^isSingleStringLanguage($fst)!, returns true if
+and only if the network encodes a language of exactly one string.
+
+The \verb!#^containsEmptyString($fst)! function returns true if and only if the network encodes a
+language that contains the empty string.
+
+The \verb!#^isUniversalLanguage($fst)! function returns true if and only if the network encodes the
+universal language, i.e.\@ the language that contains all possible strings.  [KRB, 2012-08-19:  This
+function will not be fully reliable until a ``compact sigma'' function is implemented.]
+
+\subsection{Assert and Require Statements}
+
+The \verb!assert(#numexp, $regexp)! statement has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!assert(#numexp, $regexp)! statement is typically used
+for testing.
+
+\begin{Verbatim}[fontsize=\small]
+$fst = a - a ;
+assert(#^isEmptyLanguage($fst), 
+        "Should denote the empty language.") ;
+
+$fst2 = a* ;
+assert(#^containsEmptyString($fst2), 
+        "Should contain the empty string.") ;
 \end{Verbatim}
 
-\noindent
-sets \verb!$@tailList! to the value \verb!$@(b, c)!.  As in Scheme,
-Haskell and Scala, the \texttt{head} and \texttt{tail} functions throw an
-exception if the argument is an empty list.  The call
+In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!require(#numexp, $regexp)! statement is typically used
+in user-defined functions to impose semantic restrictions on the
+arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
+and \verb!require(#numexp, $regexp)! arguments could be debated.  One
+possibility would be to implement a global switch that would cause all
+\verb!assert(#numexp, $regexp)! statements, but not 
+\verb!require(#numexp, $regexp)! statements, to be ignored at runtime.}
 
-\begin{Verbatim}
-$@newList = $@^getSlice($@list, 2, 4, 7:10) ;
-\end{Verbatim}
+\begin{Verbatim}[fontsize=\small]
+#^myIntersect($a, $b) {
+	require(#^isAcceptor($a) && #^isAcceptor($b), 
+    "The arguments to #^myIntersect must denote an acceptor.") ;
 
-\noindent
-sets \verb!$@newList! to a list containing items 2, 4, 7, 8 and 9 of
-\verb!$@list!.  Note that index counting starts at 0, and the notation
-\emph{n}:\emph{m} is inclusive of \emph{n} but exclusive of \emph{m}, so
-\texttt{7:10} includes 7, 8 and 9.
-
-The following functions destructively return an individual element from
-the argument list, removing that element from the list.  As elsewhere in
-Kleene, destructive function names are marked with a final \verb+!+.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6cm}|}
-\hline
-\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a FSM-list\\
-\hline
-\verb+$^removeLast!($@list)+ & Removes and returns the last element of a
-FSM-list\\
-\hline
-\verb+$^remove!($@list, #n)+ & Removes and returns the nth element of a
-FSM-list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6cm}|}
-\hline
-\verb+#^pop!(#@list)+ & Removes and returns the zeroth element of a number-list\\
-\hline
-\verb+#^removeLast!(#@list)+ & Removes and returns the last element of a number-list\\
-\hline
-\verb+#^remove!(#@list, #n)+ & Removes and returns the nth element of a number-list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-The alias \verb+$^pop_back!($@list)+ is pre-defined for
-\verb+$^removeLast!($@list)+, and  \verb+#^pop_back!(#@list)+ is
-pre-defined as an alias for \verb+#^removeLast!(#@list)+.
-
-The following functions add elements destructively to a list, changing
-the list, and returning the changed list.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6.5cm}|}
-\hline
-\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the FSM-list, and return the
-modified list\\
-\hline
-\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the FSM-list, and return the modified
-list\\
-\hline
-\verb+$@^addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
-the FSM-list, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6.5cm}|}
-\hline
-\verb+#@^push!(#num, #@list)+ & Push \verb!#num! on the front of the number-list, and return the
-modified list\\
-\hline
-\verb+#@^add!(#@list, #num)+ & Add \verb!#num! on the end of the number-list, and return the modified
-list\\
-\hline
-\verb+#@^addAt!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index of
-the number-list, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-The alias \verb+$@^push_back!($@list, $fst)+ is pre-defined for the function
-\verb+$@^add!($@list, $fst)+, and \verb+#@^push_back!(#@list, #num)+ is pre-defined as an
-alias for \verb+#@^add!(#@list, #num)+.
-
-The \verb+$@^set!($@list, #n, $fst)+ function and the parallel function for
-number-lists
-\verb+#@^set!(#@list, #n, #num)+ reset the list value at index
-\verb!#n! to \verb!$fst! and \verb!$num!, respectively, and return the modified list.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{5.5cm}|}
-\hline
-\verb+$@^set!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index, and return the
-modified list\\
-\hline
-\verb+#@^set!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\subsection{Functions Joining the Elements of a List}
-
-The function 
-\verb!$^reduceLeft($^bin, $@list)! takes as arguments a binary function
-\verb!$^bin! that takes two \fsm{} arguments and a list of \fsm{}s
-\verb!$@list!; and it returns an \fsm{} value.
-\verb!$^reduceLeft($^bin, $@list)!  
-applies the passed-in binary function to combine the members of
-the list from left to right and returns the result.  The behavior is best
-seen in the following example, where a list of \fsm{}s is reduced first
-by concatenation and then by composition.
-
-\begin{samepage}
-\begin{Verbatim}
-$^concat($x, $y)  { return $x $y; }
-$^compose($x, $y) { return $x _o_ $y ; }
-
-$@list = $@(a:b, b:c, c:d) ;
-
-$catfsm = $^reduceLeft($^concat, $@list) ;
-// $catfsm encodes the relation  a:b b:c c:d
-
-$compfsm = $^reduceLeft($^compose, $@list) ;
-// $compfsm encodes the relation a:d
-\end{Verbatim}
-\end{samepage}
-
-\verb!$^foldLeft($^bin, $@list, $init)! is like \verb!$^reduceLeft()! except that it has
-three arguments: a binary function, an \fsm{} list and an initial \fsm{} value.
-\verb!$^foldLeft()! is often preferable to \verb!$^reduceLeft()! because
-it returns the initial value, rather than throwing an exception, when
-the argument list is empty.
-
-\begin{Verbatim}
-$result = $^foldLeft($^concat, $@list, "") ;
-\end{Verbatim}
-
-Similarly, the numerical function 
-\verb!#^reduceLeft(#^bin, #@list)! 
-takes as arguments 
-a binary function \verb!#^bin! and
-a list of numbers \verb!#@list!,
-and it returns a number value.  In
-the following example, a list of numbers is reduced first by addition and then by
-multiplication.
-
-\begin{Verbatim}
-// define some binary functions
-#^add(#x, #y)  { return #x + #y ; }
-#^mult(#x, #y) { return #x * #y ; }
-
-#@list = #@(1, 2, 3, 4) ;
-
-#sum = #^reduceLeft(#^add, #@list) ;
-// #sum has the value 10
-
-#product = #^reduceLeft(#^mult, #@list) ;
-// #product has the value 24
-\end{Verbatim}
-
-\verb!#^foldLeft(#^bin, #@list, #init)! is like \verb!#^reduceLeft()! except that it
-has three arguments: a binary function, a number list and an initial number value.
-\verb!#^foldLeft()! is often preferable to \verb!#^reduceLeft()! because
-it returns the initial value, rather than throwing an exception, when
-the argument list is empty.
-
-With the \texttt{foldLeft} and \texttt{reduceLeft} functions, it is sometimes convenient to pass an
-anonymous function as the first argument, e.g.
-
-\begin{Verbatim}
-// calling foldLeft with anonymous functions
-#sum     = #^foldLeft(#^(#a, #b) {return #a + #b;}, #@list, 0) ;
-#product = #^foldLeft(#^(#a, #b) {return #a * #b;}, #@list, 1) ;
-\end{Verbatim}
-
-
-\subsection{Functions Returning the Map of a List}
-
-The \verb!$@^map($^mon, $@list)!
-applies the single-argument function \verb!$^mon! to each \fsm{} element of
-\verb!$@list! and returns a list of the returned \fsm{} values.  The arguments
-can be anonymous.  Note that the \verb!$@^map($^mon, $@list)! function has the sigil
-\verb!$@^!, indicating a function (function names are always immediately preceded by \verb!^!) that returns a list of \fsm{}s (\verb!$@!).
-
-\begin{Verbatim}
-$@inList = $@(a, b, c, d) ;
-
-// called with an anonymous function that concatenates
-//    the two arguments
-$@outList = $@^map($^($fst){ return $fst $fst ; }, $@inList) ;
-// $@outList will be $@(aa, bb, cc, dd)
-
-// called with an anonymous function and an anonymous list
-$@outList = $@^map($^($fst){ return $fst $fst ; }, 
-                   $@(a, b, c, d)) ;
-\end{Verbatim}
-
-Similarly, the 
-\verb!#@^map(#^mon, #@list)!  applies the single-argument 
-function \verb!#^mon! to each number
-element of \verb!#@list! and returns a list of the returned values.  The
-arguments can be anonymous.  Note that the \verb!#@^map(#^mon, #@list)! function has the sigil
-\verb!#@^!, indicating a function (function names are always immediately preceded by
-\verb!^!) that returns a list of numbers (\verb!#@!).
-
-\begin{Verbatim}
-#@inList = #@(0, 1, 2, 3) ;
-
-// called with an anonymous function
-#@outList = #@^map(#^(#n){ return #n + #n ; }, #@inList) ;
-// #@outList will be $@(0, 2, 4, 6)
-
-// called with an anonymous function and an anonymous list
-#@outList = #@^map(#^(#n) { return #n * #n ; }, #@(1, 2, 3, 4) ) ;
-// #@outlist will be $@(1, 4, 9, 16)
-\end{Verbatim}
-
-\subsection{Functions Returning the Sigma of an \fsm{}}
-
-The \verb+$@^getSigma!($fst)+ function returns the sigma of the argument
-\fsm{} as a list of \fsm{}s, each one consisting of a start state and a final
-state, linked by one arc labeled with a symbol from the sigma.  Special symbols
-used only internally in Kleene are excluded from the sigma.
-
-The parallel \verb+#@^getSigma!($fst)+ function returns the sigma of the argument
-\fsm{} as a list of integers.
-
-\begin{Verbatim}
-$fsm = abc ;
-
-$@list = $@^getSigma($fsm) ;
-#@list = #@^getSigma($fsm) ;
-\end{Verbatim}
-
-\subsection{Functions Returning the Size of a List}
-
-The \verb+#^size(+\textit{list}\verb!)! function takes a list argument,
-either an \fsm{}-list or a number-list, and returns the
-size as an integer.\footnote{Kleene does not, in general, support function
-overloading, wherein multiple functions of the same name are distinguished
-by the type and/or number of arguments they take.
-The \texttt{size} pseudo function is an exception,
-wired into the parser and specially interpreted to accept an argument of either list
-type.}
-
-\begin{Verbatim}
-#n = #^size(#@(1, 2, 3, 4)) ;
-
-#m = #^size($@(a, b, c, d, e, f)) ;
-\end{Verbatim}
-
-The \verb!#^isEmpty(!\emph{list}\verb!)! function takes a list argument and
-returns 1 (true) if the list is empty and 0 (false) otherwise.
-
-\section{Iteration through Members of a List}
-
-
-The \texttt{foreach} statement iterates through the elements of a list, allowing
-some operation or operations to be performed on each element.  The body of
-the \texttt{foreach} statement is a block or a single statement.
-
-\begin{Verbatim}
-foreach ($fsm in $@list) {
-    info $fsm ;
+	return $a & $b ;
 }
-
-foreach ($fsm in $@list) info $fsm ;
-
-foreach (#num in #@list) {
-    info #num ;
-}
-
-foreach (#num in #@list) info #num ;
 \end{Verbatim}
-
-\noindent
-As a more concrete example, consider
-
-\begin{Verbatim}
-$fsm = abc ;
-
-foreach (#cpv in #@^getSigma($fsm)) info #cpv ;
-// output:
-// Long value: 98
-// Long value: 99
-// Long value: 97
-\end{Verbatim}
-
-For each iteration of the block or statement, the iteration identifier,
-\verb!$fsm!, \verb!$num! and \verb!#cpv! in these examples, is bound, in
-the current frame, to the next item of the list, and after the
-\texttt{foreach} statement, the iteration identifier is left bound to the
-last value in the list.\footnote{The \texttt{foreach} statement does not,
-like a function call, trigger the allocation of a new frame.}  In the
-following example, the value of \verb!#num! at Point B is 3.
-
-\begin{Verbatim}
-#num = 0 ;      // Point A
-foreach (#num in #@(1, 2, 3)) {
-	print #num ;
-}
-info #num ;    // Point B
-\end{Verbatim}
-
-(KRB:  consider the wisdom of treating the iteration identifier this
-way.  Perhaps it should be (at least conceptually, a new identifier that
-is bound for each value, and perhaps it should disappear after the
-foreach loop is finished.)
-
-\section{User-Defined Functions and Lists}
-
-
-Users can define their own functions that take lists as arguments, and functions
-that return lists, e.g.\@
-
-\begin{Verbatim}
-$@^reverse($@list) {
-    $@result = $@() ;  // an empty list
-    foreach ($fsm in $@list) {
-        $@result = $@^push!($fsm, $@result) ;
-    }
-    return $@result ;
-}
-
-$@reversedList = $@^reverse($@(a, b, c)) ;
-\end{Verbatim}
-
-
-\section{Traditional Array-indexing Syntax}
-
-
-[KRB:  This section is work-in-progress.]
-
-Although the current implementation of lists provides access functions like
-\verb!$^get($@list, #n)!, to retrieve a value at a specified index, 
-some users might prefer to use postfixed indices in
-square brackets or parentheses, as in most implementations of arrays.
-
-\begin{Verbatim}
-// NOT implemented in Kleene
-$@arr[0]   // array indexing as in C/C++, Java
-$@arr(0)   // array indexing as in Scala
-\end{Verbatim}
-
-\noindent
-Assuming for a second that such post-fixed indexing is desired, it is not yet
-clear that it could be implemented easily in Kleene.
-Because square brackets normally denote symbol unions in Kleene regular
-expressions, tokenizing and
-parsing them differently when they are intended to indicate an index would be a
-challenge; the notation with parentheses, as used in Scala, might be easier to
-implement and
-less likely to cause confusion.  As is often the case, tokenization is a bigger
-challenge than the parsing.
-
-If the expression denoting a list is just an
-identifier like \verb!$@list!, as in the examples above, the challenge is trivial.  But if the
-expression denoting a list is more complex, such as a function call returning a list,
-and having arbitrary arguments to tokenize and parse, then correctly tokenizing a
-post-fixed index expression that uses square brackets would be rather involved.
-Again, using parentheses might avoid most of the problem.
-
-Traditional arrays also allow setting of elements of the array, e.g.
-
-\begin{Verbatim}
-$@arr[2] = a*b+[c-g]? ;
-\end{Verbatim}
-
-\noindent
-and this would also present challenges for Kleene tokenization and parsing.
-
-At this point, we should continue to think about post-fixed indexing
-syntax.  As Kleene lists are not really arrays, and as \texttt{foreach}
-statements are provided for iterating easily through lists, I believe
-that we can dispense with postfix iteration altogether.
 
 

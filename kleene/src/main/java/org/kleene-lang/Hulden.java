@@ -773,6 +773,7 @@ public class Hulden {
 	//					& Tape2of2(Y "@0@"*) 
 	//  			    & ~[?* "@0@" "@0@" ?*] ;
 
+	// Align2(X, Y) is called from CP(), see below
 	private Fst Align2(Fst X, Fst Y) {
 		return lib.Intersect3Fsts(
 						Tape1of2(lib.Concat(

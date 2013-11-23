@@ -562,19 +562,35 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_right_arrow_max_l2r node, Object data) {
+  public Object visit(ASTrule_right_arrow_max_l2r_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }  
-  public Object visit(ASTrule_right_arrow_max_r2l node, Object data) {
+  public Object visit(ASTrule_right_arrow_max_l2r_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }  
-  public Object visit(ASTrule_right_arrow_min_l2r node, Object data) {
+  public Object visit(ASTrule_right_arrow_max_r2l_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
+  public Object visit(ASTrule_right_arrow_max_r2l_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
+  public Object visit(ASTrule_right_arrow_min_l2r_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_right_arrow_min_r2l node, Object data) {
+  public Object visit(ASTrule_right_arrow_min_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_right_arrow_min_r2l_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_right_arrow_min_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -586,19 +602,35 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_left_arrow_max_l2r node, Object data) {
+  public Object visit(ASTrule_left_arrow_max_l2r_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_left_arrow_max_r2l node, Object data) {
+  public Object visit(ASTrule_left_arrow_max_l2r_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_left_arrow_min_l2r node, Object data) {
+  public Object visit(ASTrule_left_arrow_max_r2l_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
-  public Object visit(ASTrule_left_arrow_min_r2l node, Object data) {
+  public Object visit(ASTrule_left_arrow_max_r2l_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_l2r_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_r2l_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_left_arrow_min_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -806,7 +838,6 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-
   public Object visit(ASTnet_invert_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
@@ -815,7 +846,22 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-
+  public Object visit(ASTnet_flatten_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_flatten_dest_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_flatten4rule_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_flatten4rule_dest_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
   public Object visit(ASTnet_optimize_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
@@ -908,13 +954,19 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnet_subst_symbol_dest_func_call node, Object
-  data) {
+  public Object visit(ASTnet_subst_symbol_dest_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-  public Object visit(ASTnet_subst_symbol_func_call node, Object
-  data) {
+  public Object visit(ASTnet_subst_symbol_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_eq_dest_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_eq_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -947,6 +999,10 @@ public class RrKleeneVisitor implements KleeneVisitor
   public Object visit(ASTlng_arccount_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
+  }  
+  public Object visit(ASTlng_get_int_cpv_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
   }
   public Object visit(ASTlng_arity_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
@@ -976,6 +1032,10 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   public Object visit(ASTlng_is_transducer_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTlng_output_labels_include_cpv_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
@@ -1212,6 +1272,10 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  return data ;
   }
   public Object visit(ASTdbl_rint_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTdbl_log_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }

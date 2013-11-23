@@ -1,446 +1,215 @@
+\chapter{\acro{rtn} Support}
 
-\chapter{Unicode Support}
+\label{sec:openfstrtn}
 
-\section{Kleene, Java and Unicode}
+%\section{Two Distinct Flavors of \acro{rtn} Support}
 
-The Kleene parser is a Java program, and Kleene supports Unicode to the extent (and
-in the same way) that any Java program supports Unicode, which is pretty well---but
-not perfectly.\footnote{The Unicode Standard (\url{http://www.unicode.org})
-is mature and very comprehensive, but
-the \emph{implementation} of Unicode in programming languages, 
-text editors, \acro{gui} libraries,
-typesetting packages, and other text-handling software varies considerably in completeness
-and reliability.}  The
-Kleene \acro{gui} is written using the Java Swing library, and Swing text
-widgets---including JTextField and JTextArea---are automatically Unicode-friendly.  
+% See saprtn.tex.notrack
+%Kleene is currently being expanded to provide support for two distinct
+%flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
+%progress.
 
-\section{Kleene Scripts and Unicode}
+%This section describes the Kleene support for \acro{rtn}s
+%compatible with the off-the-shelf functions from the OpenFst library.
+%\acro{sap} linguists creating pattern networks for the \acro{sap}
+%\acro{rtn} pattern-matching runtime code should ignore this section and
+%proceed immediately to section~\ref{sec:saprtn} starting on
+%page~\pageref{sec:saprtn}.
 
-\subsection{The Default Encoding of the Operating System}
+\section{OpenFst Recursive Transition Networks (\acro{rtn}s)}
 
-Pre-edited Kleene scripts can be run from the command line, or from the \acro{gui}.
-It is \emph{not} required that Kleene scripts be stored as Unicode---Kleene can
-read and execute scripts written in a huge number of standard encodings, converting the text to Unicode for
-internal processing.  If Kleene is told to run a script, and if the encoding of that script is not
-explicitly specified, then by default it will assume that the script is in the
-default encoding of the operating system, whatever that might be.
+\subsection{Status}
 
-\begin{Verbatim}
-$ java -jar Kleene.jar myscript
+[KRB 2013-04]  WORK IN PROGRESS:  There is currently no runtime-code support for
+\init{rtn}s.  This chapter has not be reviewed recently.
+
+Kleene supports the building of Recursive Transition Networks
+(\acro{rtn}s) that are compatible with the OpenFst \texttt{Replace()} and
+\texttt{ReplaceFst()} operations.  An \acro{rtn} contains arc labels that
+are to be interpreted as ``references'' to subnetworks; and compatible
+\acro{rtn}-savvy runtime code, when applying a network to data, will
+recognize such a reference and ``push'' to the referenced subnetwork to
+continue the matching, and then ``pop'' back to the calling network when
+the subnetwork has successfully matched.  The references to subnetworks
+can also be thought of as non-terminal labels.
+
+\acro{rtn}s, containing references to subnetworks, are often smaller than
+full-sized networks that must contain a full copy of each subnetwork
+wherever it is needed.  However, \acro{rtn}s can denote context-free
+languages, and so can go beyond regular power; a special subclass of
+\acro{rtn}s remain regular.  The recognition/parsing of context-free
+languages requires memory, in particular a push-down stack, and so any
+runtime code to apply \acro{rtn}s must include such a stack.
+
+At the time of writing (13 October 2010) there are hints that the
+\acro{rtn} conventions currently required in OpenFst might change, and
+there is new library support for mathematically equivalent Pushdown
+Automata (\acro{pda}s) that we have not yet tested.  Kleene support for
+OpenFst \acro{rtn}s and \acro{pda}s will necessarily evolve along with
+the library.
+
+\subsection{Syntax for Creating an OpenFst \acro{rtn}}
+
+For the programmer, there needs to be a Kleene syntax to denote a
+reference to a subnetwork, and it needs to be distinct from the syntax
+that causes a copy of a network to be inserted.  For example, in this
+example
+
+\begin{Verbatim}[fontsize=\small]
+$vowel = [aeiou] ;
+$net = k $vowel t $vowel b $vowel ;
 \end{Verbatim}
 
 \noindent
-In this example, \texttt{myscript} would be assumed to be stored in the default encoding
-of the operating system and would be opened and read as such, with Java performing
-an automatic conversion of the text from that default encoding to Java's internal
-Unicode encoding, which happens to be \acro{utf}-16.
+the \verb!$vowel! network will be copied three times into \verb!$net!.
+In real-life applications, a subnetwork might encode something much
+larger, such as nouns or even noun phrases in a natural language, and
+multiple copies could easily cause the final network to become very
+large, or even too large to compute.
 
-Note that Kleene does not attempt to analyze the input file and detect what its encoding
-might be from internal evidence.  Rather it interrogates the operating system to
-find the default encoding, and it attempts to open and read the file accordingly.  If, for some reason,
-the input file is not in the default encoding of the operating system, the input
-may result in a warning message or garbling.
+Kleene currently supports a wired-in function \verb!$^sub($s)! that
+programmers can use to denote a reference to a subnetwork \verb!$s!.\footnote{I'm
+not tied to \verb!$^sub($s)! and would be comfortable with alternatives such
+as \verb!$^ref($s)! or \verb!$^push($s)!, or even some special syntax like
+\verb!>$s<! or \verb!>>$s!.} 
 
-In a Unix-like system, the default encoding of the operating system can be seen by
-entering \texttt{locale} at the command line:
+To continue with our trivial example, 
 
-\begin{Verbatim}
-$ locale
+\begin{Verbatim}[fontsize=\small]
+$vowel = [aeiou] ;
+$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
 \end{Verbatim}
 
 \noindent
-On any system, the default encoding, as seen by a Java program, can also be revealed by compiling
-and running the following trivial Java script, which should be in a file named
-\texttt{FindDefaultEncoding.java}.
+would result in an \verb!$rtn! network that contains three compact
+one-label references to \verb!$vowel! rather than three full copies of
+it.  In real-life applications, the savings in memory can be very
+significant.
 
-\begin{Verbatim}
-public class FindDefaultEncoding {
-    public static void main(String[] args) {
-        String s = System.getProperty("file.encoding") ;
-        System.out.println(s) ;
-    }
-}
+\subsection{What does a Reference Look Like in an OpenFst \acro{rtn}?}
+
+OpenFst networks consist of states and arcs, and each arc has two labels,
+an input label, and an output label.\footnote{The terminology of
+\emph{input} and \emph{output} labels is that of the OpenFst tradition.
+In the Xerox tradition, they are called \emph{upper} and \emph{lower}, or
+sometimes \emph{lexical} and \emph{surface}.}  In the actual network, the
+labels are really integers, and all Unicode characters, such as \emph{a},
+\emph{b}, \emph{c}, etc.\@ are represented using their standard Unicode
+code point values.  Multichar symbols are stored using code point values
+selected at random from a Unicode Private Use Area.
+
+To maximize compatibility with the off-the-shelf OpenFst
+\texttt{Replace()} and \texttt{ReplaceFst()} operations, the integer
+representing a reference to a subnetwork must currently appear on the
+\emph{output} side of an arc.  In Kleene, multichar symbol names
+representing a call to a subnetwork \verb!$s! are spelled \verb!__$s!,
+with two initial underscores, and the syntax \verb!$^sub($s)!  currently
+yields the following network.
+
+% see images/README for converting .ps files to .pdf and cropping them
+\begin{center}
+\includegraphics{images/reference.pdf}
+\end{center}
+
+\noindent
+Currently in OpenFst, the symbol \verb!__$s! could in fact appear also on
+the input side.  Of course, in the real network, the labels are really
+just integers, 0 for epsilon, and some arbitrary value from the Private
+Use Area for the multichar symbol.
+
+Kleene programmers should use the wired-in \verb!$^sub()! function to
+denote references to subnetworks and should not try to specify special
+symbols like \verb!__$s! directly.  For example, the following statement
+is illegal and will cause an exception to be thrown.
+
+\begin{Verbatim}[fontsize=\small]
+$rtn = "":'__$foo' ;    // raises an exception
 \end{Verbatim}
 
 \noindent
-To compile and run this script, do the following:
+The use of \verb!$^sub()! at the programming level will also make it easy
+for Kleene to adapt to any changes to \acro{rtn} representations that
+might be made in the underlying OpenFst library.
 
-\begin{Verbatim}
-$ javac FindDefaultEncoding.java
-$ java FindDefaultEncoding
-\end{Verbatim}
+\subsection{Embedding Subnetworks in an OpenFst \acro{rtn}}
 
-On \acro{os x} even if the locale has been set to some specified
-encoding, such as \acro{utf-8}, the call to
-\verb!System.getProperty("file.encoding")! will still, unfortunately,
-return MacRoman.\footnote{Curiously, in the Groovy and Scala
-languages, which are, like Java, based on the Java Virtual Machine
-(\acro{jvm}), this problem appears to have been fixed.  On a
-system where the locale is set to \acro{utf-8}, executing
-\texttt{println (System.getProperty("file.encoding"))} in Scala
-2.8.1 or Groovy 1.7.5 returns \verb!"UTF-8"!.}  This can be overcome by calling any Java program with a
-\verb!-D! option specifying the desired default
-encoding.
+The \verb!$^embedRtnSubnets($rtn)! function takes an OpenFst \acro{rtn}
+argument, i.e.\@ a network that contains OpenFst-format references to
+subnetworks, and returns a network that consists of the original network
+unioned with a prefixed copy of each referred-to subnetwork.  For each
+referred-to network \verb!$s!, the prefix consists of the special symbol
+\verb!__SUBNETWORKS! followed by the special symbol \verb!__$s!.  Thus
+from the following code
 
-\begin{Verbatim}
-$ javac FindDefaultEncoding.java
-$ java -Dfile.encoding=UTF-8 FindDefaultEncoding
-\end{Verbatim}
-
-\subsection{Running Scripts in Any Standard Encoding}
-
-Regardless of the default encoding of the operating system, Kleene can
-run scripts in any standard encoding as long as that encoding is
-explicitly specified using the \texttt{-encoding} flag.\footnote{This
-\texttt{-encoding} flag, and its semantics, are copied from the same flag
-used for the \texttt{javac} compiler; see
-\url{http://java.sun.com/j2se/1.5.0/docs/tooldocs/windows/javac.html}.}
-So if the script is, for some reason, stored in an encoding that is not
-the default encoding of the operating system, it is necessary to specify
-that encoding as in the following examples: 
-
-\begin{Verbatim}
-$ java -jar Kleene.jar -encoding UTF-8      myscript
-$ java -jar Kleene.jar -encoding UTF-16     myscript
-$ java -jar Kleene.jar -encoding Latin-1    myscript
-$ java -jar Kleene.jar -encoding ISO-8859-1 myscript
-$ java -jar Kleene.jar -encoding ISO-8859-6 myscript
-$ java -jar Kleene.jar -encoding EUC-JP     myscript
-\end{Verbatim}
-
-\subsection{A Plug for Unicode}
-
-All things being equal, users working on languages with orthographies
-that cannot be represented in \acro{ascii} are highly encouraged to use
-Unicode rather than resorting to obsolete 8-bit encodings or, especially,
-to Roman transliterations that may have been required in pre-Unicode
-software.\footnote{The \acro{e-meld} School of Best Practices recommends
-the use of Unicode for all textual archiving:
-\url{http://emeld.org/school/bpnutshell.html};
-\url{http://emeld.org/school/classroom/unicode/index.html}.}
-
-\section{Typing Unicode Characters into Kleene \acro{gui} Text Widgets}
-
-\subsection{Unicode-capable Text Widgets}
-
-Because the Kleene \acro{gui} is written in Java/Swing, the text widgets
-are automatically Unicode-capable and sensitive to standard Java Input
-Methods.  At any time when typing text into a Swing text widget, you can
-select (or ``activate'') a particular Java Input Method of your choice
-(as long as it's installed in your Java environment) to facilitate typing
-in Unicode characters for 1) European scripts with various accents, 2)
-\acro{ipa}, 2) Greek, 3) Russian, 4) Arabic, 5) Chinese or whatever.  You
-can switch from one input method to another at any time.  In their
-simplest form, Java Input Methods define a straightforward remapping of
-the keyboard; they can also support code-point (hex) input of characters,
-dead-key sequences, transliteration-based input methods, and more
-challenging dialog-based input methods for the Chinese/Japanese/Korean
-scripts.
-
-\subsection{Java Input Methods}
-
-Java Input Methods are standard, well-documented, cross-platform, and
-often freely available; some useful Java Input Methods will be
-distributed with Kleene.  You can install and use your own favorite Java
-Input Methods in your own Java installation.  The key documentation on
-installing and selecting Java Input Methods, for users, is ``Using Input
-Methods on the Java Platform'', by Naoto
-Sato.\footnote{\url{http://javadesktop.org/articles/InputMethod/index.html}}
-
-
-
-\subsection{Installing Java Input Methods}
-
-To run any Java program, including Kleene, you need to have a Java
-installation on your system.  If you can run Kleene at all, you have such
-a Java installation.  To see which version of Java you have installed,
-enter
-
-\begin{Verbatim}
-$ java -version
+\begin{Verbatim}[fontsize=\small]
+$p = p ;
+$q = q ;
+$rtn = a $^sub($p) b $^sub($q) ;
 \end{Verbatim}
 
 \noindent
-You should be running Java 1.5 or higher.
+the result \verb!$rtn! is this network containing two references to subnetworks
 
-The root of your Java installation should (on most platforms) be pointed
-at by the environment variable \acro{java\_home}.  
+\begin{center}
+\includegraphics[width=\textwidth]{images/twoReferences.pdf}
+\end{center}
 
-\begin{Verbatim}
-$ echo $JAVA_HOME
+\noindent
+but the three referred-to networks remain separate.  After the following
+call to \verb!$^embedRtnSubnets($rtn)!, 
+
+\begin{Verbatim}[fontsize=\small]
+$embedded = $^embedRtnSubnets($rtn) ;
+\end{Verbatim}
+
+
+\noindent
+the resulting \verb!$embedded! network looks like this
+
+\begin{center}
+\includegraphics[width=\textwidth]{images/embedded.pdf}
+\end{center}
+
+\noindent
+The embedded network can be saved to file as a single network and could be
+applied by \acro{rtn}-savvy runtime code (not yet written) that knows the prefix convention.
+
+The unioning of the base network with the subnetworks also guarantees that
+the meaning of OTHER, if present, is standardized throughout all the
+networks.
+
+\subsection{Expanding an OpenFst \acro{rtn} into a Full Normal Network}
+
+In some cases, it may also be useful to take an OpenFst \acro{rtn} and replace
+each reference to a subnetwork with an actual copy of that subnetwork,
+expanding the \acro{rtn} into a full normal network.  This is mathematically and
+computationally possible only if the \acro{rtn} is regular.  Using the same
+\verb!$rtn! example, a call to \verb!$^expandRtn()!
+
+\begin{Verbatim}[fontsize=\small]
+$expanded = $^expandRtn($rtn) ;
 \end{Verbatim}
 
 \noindent
-On \acro{os~x}, \texttt{/Library/Java/Home} should be a link to the root
-of the Java installation, within the rather complicated hierarchy of
-\acro{os~x} frameworks.  So on \acro{os~x} if you need to define
-\acro{java\_home}, set it to \texttt{/Library/Java/Home}.
+produces the following \verb!$expanded! network
 
-Your Java installation has an Extension Directory where you can install
-Extensions, including Java Input Methods.\footnote{If you work on a
-network, with a shared Java installation, you might not have permission
-to copy extensions to the extension directory, and then you would need to
-contact your administrator for help.}  On \acro{os~x}, user-installed
-Java extensions are most safely put in
-\texttt{/Library/Java/Extensions/}; this directory stays stable when you
-upgrade to new versions of Java.  On any system, compile and run the
-following Java program to find the extension directory or
-directories.
-
-\begin{Verbatim}
-public class FindExtensionDirectory {
-   public static void main(String[] args) {
-       System.out.println(System.getProperty("java.ext.dirs")) ;
-   }
-}
-\end{Verbatim}
- 
-\noindent
-To compile and run this script, which should be stored in a file
-named \texttt{FindExtensionDirectory.java}:
-
-\begin{Verbatim}
-$ javac FindExtensionDirectory.java
-$ java FindExtensionDirectory
-\end{Verbatim}
+\begin{center}
+\includegraphics[width=\textwidth]{images/expanded.pdf}
+\end{center}
 
 \noindent
-The output shows the directory, or set of directories, where you can
-install new extensions.\footnote{Running this program on my Linux system
-produced the output 
-\texttt{/usr/java/jdk1.6.0\_16/jre/lib/ext/usr/java/packages/lib/ext}, 
-showing two extension directories.  In this
-case, putting Java Input Methods in \texttt{/usr/java/packages/lib/ext}
-is safer because they will be unaffected by future Java updates.} Once an
-input method is installed in the extension directory of the \acro{jvm},
-it is automatically visible to all Java programs running that \acro{jvm},
-without recompilation, without resetting your \acro{classpath}, and
-without use of the \verb!-D! command-line flag.  
+In real-life \acro{rtn}s, with multiple references to the same
+subnetwork, the expanded network will be significantly bigger than the
+original.  
 
-Java usually comes complete with some built-in input methods, such as
-\texttt{CodePointIM.jar}, which is found in
-\url{\$JAVA_HOME/demo/plugin/jfc/CodePointIM/} or
-\url{\$JAVA_HOME/demo/jfc/CodePointIM/}.  This should make \texttt{CodePointIM.jar}
-available without you having to install anything. 
-
-Some pure Java Input Methods are readily downloadable:
-
-\vspace{.5cm}
-
-\renewcommand\tabcolsep{1.25mm}
-
-\noindent
-\begin{tabular}{|l|l|}
-\hline
-CodePointIM.jar     & enter Unicode characters by Unicode code-point value\footnotemark \\
-\hline
-zh\_pinyin.jar      & Chinese\footnotemark \\
-\hline
-vietIM.jar          & Vietnamese\footnotemark \\
-\hline
-BrahmaKannadaIM.jar & Brahmi\footnotemark \\
-\hline
-BibleIM.jar         & Hebrew and Greek\footnotemark \\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\addtocounter{footnote}{-4}
-\footnotetext{\url{http://www.grogy.com/local_doc/www/apache22/data/local_doc/jdk1.6.0/demo/jfc/CodePointIM/},
-\url{http://courses.cs.tau.ac.il/databases/workshop/jdk1.6.0_01/jdk1.6.0_01/demo/jfc/CodePointIM/}}
-
-\stepcounter{footnote}
-\footnotetext{\url{http://www.chinesecomputing.com/programming/java.html}}
-
-\stepcounter{footnote}
-\footnotetext{\url{http://vietunicode.sourceforge.net/howto/unicodevietime.html},
-\url{http://sourceforge.net/projects/vietime/}, \url{http://vietime.sourceforge.net/usage.html}}
-
-\stepcounter{footnote}
-\footnotetext{\url{http://sourceforge.net/projects/brahmi}}
-
-\stepcounter{footnote}
-\footnotetext{\url{http://code.google.com/p/bibleunicodepad/}}
+If the \acro{rtn} contains cyclic references to subnetworks, it is
+context-free in power (i.e.\@ no longer regular in power), and its
+expansion would result in an infinite network.  The
+\verb!$^expandRtn($rtn)! function checks for cyclic references and throws
+an exception if the \verb!$rtn! is not regular.\footnote{In the OpenFst
+library, the \verb!ReplaceFst()! operation provides a convenient method
+that checks for cyclic references, and \verb!$^expandRtn()! invokes this
+method.}
 
 
-Reasonably skilled Java programmers can even write their own custom Java
-Input Methods, but it's not painless.\footnote{A Java Input Method is a
-Java class that implements the InputMethod interface.  For information on
-writing new input methods, and packaging them properly as extensions, see
-the book \emph{Java Internationalization}
-\citep{deitsch+czarnecki:2001}.} Luckily, as an easy alternative, there is a very useful
-meta-Java Input Method, installable as \texttt{kmap\_ime.jar} and
-\texttt{kmap\_ime\_gui.jar}, that allows you to use simple Yudit
-\texttt{kmap} files\footnote{They also allow you to use Simredo
-\texttt{kmp} files, which I haven't used myself.} as if they were Java
-Input Methods.  Yudit \texttt{kmap} files are much easier to write than
-pure Java Input methods, and many are already included with
-\texttt{kmap\_ime}.  These kmap meta-Java Input Methods are treated in
-detail below.
-
-
-\subsection{The CodePointIM.jar}
-
-When you need to enter a single exotic character, or even just a word or
-two, it is often easiest to simply enter each character by its code point
-value.  When the \texttt{CodePointIM.jar} is selected, you can continue
-to type \acro{ascii}-range characters as normal, but the sequence 
-
-\begin{Verbatim}
-\uHHHH
-\end{Verbatim}
-
-\noindent
-where
-\texttt{HHHH} is exactly four hexadecimal digits, is intercepted,
-and the single Unicode character with the code point
-value \texttt{HHHH} is entered into the buffer.  Similarly, the sequence 
-
-\begin{Verbatim}
-\UHHHHHH
-\end{Verbatim}
-
-\noindent
-with an uppercase \texttt{U} followed by exactly six hexadecimal digits,
-is intercepted and the single supplementary Unicode character with the
-code point value \texttt{HHHHHH} is entered into the buffer.
-
-Note that Kleene, like Python, accepts the \verb!\UHHHHHHHH!, notation,
-which requires \emph{eight} hex digits rather than the \emph{six}
-required by the CodePointIM.  Kleene also accepts the
-\verb!\U{H!\ldots\verb!}! notation, which allows one or more hex digits
-between the curly braces.)
-
-\subsection{The \texttt{kmap} Meta-Java Input Method}
-
-There's a very useful meta-Java Input Method called \texttt{kmap\_ime},
-or \texttt{kmap} for short; the extension files \texttt{kmap\_ime.jar}
-and \texttt{kmap\_ime\_gui.jar} can be downloaded from
-\url{http://sourceforge.net/projects/jgim}.  Install these extensions in
-a Java extension directory as usual.  The \texttt{kmap} extension allows
-you to use Yudit kmap input methods as if they were pure Java Input
-Methods.  It is much easier to write a Yudit kmap file than it is to
-write a new Java Input Method.  Many kmap files are freely available, and
-instructions for writing new Yudit kmap files can be found at
-\url{http://www.yudit.org/en/howto/keymap/}.
-
-To be visible to this meta-Java Input Method, your Yudit kmap files
-should be placed in the directory \texttt{\~{}/kmap/}.  The
-\texttt{kmap} download
-comes complete with a \texttt{kmap/} directory containing over 200 kmap
-files, defining input methods for everything from Albanian to Yoruba.  Of
-course, any single user will probably need only a small subset of those
-input methods, and perhaps a different subset from time to time.  It also
-appears that the input-method-selection dialog does not allow scrolling
-through the 200 possibilities.  One reasonable approach is to keep the
-full set of input methods available in a repository directory, named
-something like \texttt{\~{}/kmap.all/}, and copy a desired subset of the
-kmap files  to \texttt{\~{}/kmap/}.  I.e., starting with the
-\texttt{kmap/} directory as downloaded:
-
-\begin{Verbatim}
-$ cp -r kmap ~/kmap.all
-$ cd ~
-$ mkdir kmap
-\end{Verbatim}
-
-\noindent
-and then copy some desired subset of the kmap files from
-\texttt{\~{}/kmap.all/} to \texttt{\~{}/kmap/}.  Put any new kmap
-files that you write or modify yourself into \texttt{\~{}/kmap/}.  
-Again, only the kmap
-files in \texttt{\~{}/kmap/} will be visible to the \texttt{kmap} meta-Java Input
-Method.
-
-The \texttt{kmap} download also includes a \texttt{simredo/} directory containing
-over 100 input methods in the Simredo kmp format.  \texttt{Kmap} can recognize and
-use these kmp files as well.  To make these Simredo files visible to
-\texttt{kmap}, create a \texttt{\~{}/simredo/} directory on the model of the
-\texttt{\~{}/kmap/} directory just described.
-
-\section{Selecting a Java Input Method}
-
-How you select a Java Input Method depends on your platform, and this
-subject is treated in detail in the Sato paper cited above.  When running
-Java on Solaris and Windows, the \texttt{System} pull-down menu
-automatically contains a menu item allowing you to select one of the
-installed Java Input Methods.
-
-On Linux and \acro{os~x} it's not quite so easy; 
-you need to define a ``hot key'' that triggers a
-pop-up menu that allows you to select one of the installed Java Input
-Methods.  The \acro{jar} file \texttt{InputMethodHotKey.jar}, used
-to set the hot key, can be
-downloaded from the Sato paper cited, and it is run as
-
-\begin{Verbatim}
-$ java -jar InputMethodHotKey.jar
-\end{Verbatim}
-
-\noindent
-You can re-run \texttt{InputMethodHotKey.jar} as often as desired
-or necessary to reset the hot key.
-Again, the setting of the hot key is necessary only on Linux and
-\acro{os~x}.\footnote{For example, I use Ctrl-i as my hot key on Linux
-and \acro{os x}.  When \texttt{InputMethodHotKey.jar} is launched, a
-little dialog box is displayed showing the current setting, if any.  To
-set or reset the hot key, wait for the box to be displayed and then press
-Ctrl-i, or whatever, directly on your keyboard. Then close the dialog box
-and restart Java.}
-
-When you select the \texttt{kmap} input method (via the \texttt{System}
-menu, or via a hot key), the menu lets you make a secondary selection of
-one of the Yudit kmap files installed in your \texttt{\~{}/kmap/}
-directory, or one of the Simredo kmp files installed in your
-\texttt{\~{}/simredo/} directory.
-
-\section{Rendering of Unicode Characters in the \acro{gui}}
-
-Entering Unicode characters into a Swing text widget is one
-thing---seeing them \emph{rendered} properly on the screen is another.
-Whether your Unicode characters render properly will depend on the fonts
-installed in your Java installation, and on the sophistication of the
-rendering engines in the Swing text widgets themselves.
-
-Font installation varies by platform and by Java version; see your
-documentation.  Rendering engines are an area where
-implementations, including the allegedly Unicode-savvy Swing text
-widgets, can be disappointing.  The more ``exotic'' the script,
-the less likely the text widgets will render them properly.  If
-rendering becomes an issue with your applications, edit 
-Kleene source files outside the \acro{gui} using your favorite Unicode-savvy text editor,
-and run them as scripts.
-
-\begin{quote}
-\textbf{KRB Note to myself}: Try to be more helpful here.  In my own
-experience with Swing Text Widgets, the rendering of letters with
-Combining Diacritical Marks is disappointing, sometimes unacceptable.  Of
-course, Swing Text Widgets \emph{should} render Combining Diacritical
-Marks acceptably, so it is up to me and others to lobby for improvements.
-\end{quote}
-
-\section{Java Input Method Conclusions}
-
-Preferences about input methods, as about text editors, are intensely
-personal and often almost religious.  My own needs for entering Unicode
-include the International Phonetic Alphabet (\acro{ipa}), Roman letters
-with unusual Combining Diacritical Marks, and very occasionally Greek,
-Cyrillic and Georgian letters.  Some non-\acro{ascii} mathematical
-symbols can be used in Kleene syntax itself.  And I insist on being able
-to write my own input methods to match my needs and taste.
-
-With this background, my favorite approach to entering exotic Unicode
-characters in Kleene, and in any Java \acro{gui}, is the use of the
-\texttt{kmap\_ime.jar} and \texttt{kmap\_ime\_gui.jar} meta-input
-methods, along with easily defined and edited Yudit kmap files.  I will
-eventually deliver with Kleene a kmap file that facilitates typing in
-some of the Unicode characters used in Kleene syntax, such as the epsilon
-$\epsilon$ and the $\circ$ symbol that can be used to indicate
-composition.  You can also type in the \acro{ascii} \verb!_e_! and the
-\verb!_o_! for these (and Kleene will parse the \acro{ascii} forms
-without trouble); but the Kleene kmap (when active) will simply intercept
-the typed sequences \verb!_e_! and \verb!_o_! and turn them into the real
-epsilon and composition-operator characters, respectively.
- 
 

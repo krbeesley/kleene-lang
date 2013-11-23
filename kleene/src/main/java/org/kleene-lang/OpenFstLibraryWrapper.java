@@ -27,6 +27,7 @@
 import java.util.ArrayList ;  
 import java.util.HashSet ;
 import java.util.Iterator ;
+import java.util.Arrays ;
 
 import com.ibm.icu.text.UCharacterIterator ;
 
@@ -99,6 +100,16 @@ public class OpenFstLibraryWrapper
 		int other_id, int other_nonid,
 		float arc_weight, float final_weight) ;
 
+	// three functions that create fsts used in eqRedup, reduplication
+	private static native long eqConstrainEqualityFstNative(
+			int other_id, int leftDelimCpv, int[] cpvArray) ;
+
+	private static native long eqConsumeSymbolFstNative(
+			int other_id, int leftDelimCpv, int[] cpvArray) ;
+
+	private static native long eqDeleteEmptyDelimitersFstNative(
+			int other_id, int leftDelimCpv, int rightDelimCpv) ;
+
 	// return a ptr to a native fst with one start state, one final state,
 	// and one labeled arc linking them.
 	// Pass in input symbol (int cpv), output symbol (int cpv), 
@@ -166,6 +177,8 @@ public class OpenFstLibraryWrapper
 	private static native long reverseNative(long fst) ;
 	private static native void invertInPlaceNative(long fst) ;
 	private static native long shortestPathNative(long fst, int nshortest) ;
+	private static native void flattenInPlaceNative(long fst, int hardEpsilonSymVal, int otherIdSymVal, int otherNonIdSymVal) ;
+	private static native void flatten4RuleInPlaceNative(long fst, int hardEpsilonSymVal) ;
 	private static native void inputProjectionInPlaceNative(long fst) ;
 	private static native void outputProjectionInPlaceNative(long fst) ;
 
@@ -332,6 +345,10 @@ public class OpenFstLibraryWrapper
 	// are used as strings
 	public String otherIdSym		= "OTHER_ID" ;
 	public String otherNonIdSym 	= "OTHER_NONID" ;
+
+	// see functions AddOtherId() and AddOtherNonId() below; they
+	// are called (once) from the constructor of InterpreterKleeneVisitor
+	// when the (unique) InterpreterKleeneVisitor object is created.
 	
 	// ****************************************************************
 	// 				Helper functions (mostly private)
@@ -804,7 +821,7 @@ public class OpenFstLibraryWrapper
 										OneArcFst(symmap.putsym(prefix + dep)),
 										subFst
 									) ;
-			FstDump(prefixedSub) ;
+			// FstDump(prefixedSub) ;
 
 			optimize = (i == last) ? true : false ;
 			resultFst = UnionIntoFirstInPlace(resultFst, prefixedSub, optimize) ;
@@ -876,6 +893,8 @@ public class OpenFstLibraryWrapper
 		OptimizeInPlace(a) ;
 	}
 
+	// for the only calls to AddOtherId and AddOtherNonId,
+	// see InterpreterKleeneVisitor.java constructor.  
 	public void AddOtherId(SymMap symmap) {
 		symmap.putsym(otherIdSym) ;
 	}
@@ -1368,6 +1387,7 @@ public class OpenFstLibraryWrapper
 		return resultFst ;
 	}
 
+	// used in debugging, prints to cout
 	public void FstDump(Fst a) {
 		fstDumpNative(a.getFstPtr()) ;
 	}
@@ -1496,6 +1516,13 @@ public class OpenFstLibraryWrapper
 		invertInPlaceNative(a.getFstPtr()) ;
 	}
 
+	public void FlattenInPlace(Fst a, int hardEpsilonSymVal, int otherIdSymVal, int otherNonIdSymVal) {
+		flattenInPlaceNative(a.getFstPtr(), hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
+	}
+
+	public void Flatten4RuleInPlace(Fst a, int hardEpsilonSymVal) {
+		flatten4RuleInPlaceNative(a.getFstPtr(), hardEpsilonSymVal) ;
+	}
 
 	public boolean IsAcceptor(Fst a) {
 		// isAcceptorNative is True iff the Fst looks
@@ -1508,6 +1535,17 @@ public class OpenFstLibraryWrapper
 	}
 	public boolean IsSemanticAcceptor(Fst a) {
 		return isSemanticAcceptorNative(a.getFstPtr(), symmap.getint(otherNonIdSym)) ;
+	}
+	public boolean OutputLabelsIncludeCpv(Fst a, int cpv) {
+		// get the set of output-side labels as an int[] array
+		int[] labels = getOutputLabelsNative(a.getFstPtr()) ;
+		// sort it, to allow subsequent binarySearch
+		Arrays.sort(labels) ;
+		if (Arrays.binarySearch(labels, cpv) >= 0) {
+			return true ;
+		} else {
+			return false ;
+		}
 	}
 	public boolean IsWeighted(Fst a) {
 		return isWeightedNative(a.getFstPtr()) ;
@@ -1789,6 +1827,135 @@ public class OpenFstLibraryWrapper
 			OptimizeInPlace(fst) ;
 		}
 		// else there's nothing to do
+	}
+
+	// reduplication using Mans Hulden's algorithm (_eq examples)
+	// the $^__eqRedup($fst, $left, $right) function in Kleene.jjt, 
+	// wrapped as simply $^eq($fst, $right, $left) in predefined.kl
+	public void EqRedupInPlace(Fst fst, int leftDelimCpv, int rightDelimCpv) {
+
+		// get all the output-side (lower side) labels of the fst, as an int[] array,
+		// sorted into ascending order;
+		// Note that other_id and other_nonid are labels but
+		// are not stored in the "sigma" of a Java Fst object
+		int[] outputCpvArray = GetOutputLabels(fst) ;
+		Arrays.sort(outputCpvArray) ;
+		int outputCpvArrayLength = outputCpvArray.length ;  // original full length
+
+		// For the native (C++) functions called below, create a new
+		// int[] array that contains all and only the output-side code-point values
+		// of the fst that might appear inside the reduplication delimiters (so exclude 
+		// other_id and other_nonid and epsilon and leftDelimCpv and rightDelimCpv)
+		int other_id = symmap.getint(otherIdSym) ;
+		int other_nonid = symmap.getint(otherNonIdSym) ;
+		int epsilon = 0 ;  // value wired into OpenFst
+
+		int newSize = outputCpvArrayLength ;
+		if (Arrays.binarySearch(outputCpvArray, other_id) >= 0)	// if found
+			newSize -= 1 ;
+		if (Arrays.binarySearch(outputCpvArray, other_nonid) >= 0)
+			newSize -= 1 ;
+		if (Arrays.binarySearch(outputCpvArray, epsilon) >= 0)
+			newSize -= 1 ;
+		if (Arrays.binarySearch(outputCpvArray, leftDelimCpv) >= 0)
+			newSize -= 1 ;
+		if (Arrays.binarySearch(outputCpvArray, rightDelimCpv) >= 0)
+			newSize -= 1 ;
+
+		// An int array always has to be of a fixed size
+		int[] cpvArray = new int[newSize] ;
+		int cpv ;
+		int n = 0 ;  // index into the new cpvArray
+		// loop through the original int array and build the new (potentially 
+		// 	smaller) cpvArray
+		for (int orig = 0; orig < outputCpvArrayLength; orig++) {
+			cpv = outputCpvArray[orig] ;
+			// if cpv is not one of the excluded values
+			if (cpv != epsilon && cpv != other_id && cpv != other_nonid &&
+					cpv != leftDelimCpv && cpv != rightDelimCpv)
+				// then add it to the new cpvArray to be passed to native functions below
+				cpvArray[n++] = cpv ;
+		}
+
+		// Calculate the constrain-and-consume Fst (what Hulden calls "Move").
+		// This constrain-and-consume Fst typically has to be applied to the input fst
+		// multiple times until all the delimiters are gone.
+		//
+		// Hulden's example, for the sigma {a, b, c}, in FOMA syntax, where
+		// literal [ is the left delimiter and literal ] is the right delimiter
+		//  regex ~$[ %[ a ?* %[ \a  |  %[ b ?* %[ \b  |  %[ c ?* %[ \c ]	! constrain equality
+		//  .o.
+		//  [ %[ a -> a %[ , %[ b -> b %[, %[ c -> c %[  ]				    ! move left bracket
+		//  																! i.e. consume a symbol
+		//  .o.
+		//  %[ %] -> 0				! delete empty delimiters
+		//
+		//  In Kleene syntax:
+		//
+		//  $constrainConsume = ~$^contains( \[ a .* \[ [^a]  |  \[ b .* \[ [^b]  |  \[ c .* \[ [^c] )
+		//  _o_
+		//  $^parallel( \[ a -> a \[,  \[ b -> b \[,  \[ c -> c \[  )
+		//  _o_
+		//  \[ \] -> "" ;
+
+		// Create the three constituent Fsts by calling native (C++) functions that build the
+		// required Fsts state-by-state and arc-by-arc
+		Fst constrain =    new Fst(eqConstrainEqualityFstNative(    other_id, leftDelimCpv, cpvArray)) ;
+		// now set the sigma for constrain (leftDelimCpv, and everything in cpvArray; not epsilon or rightDelimCpv)
+		// and contains other
+		// The sigma is maintained only in Java Fst objects
+		constrain.setContainsOther(true) ;
+		constrain.getSigma().add(leftDelimCpv) ;
+		for (int i = 0; i < cpvArray.length; i++)
+			constrain.getSigma().add(cpvArray[i]) ;
+		// KRB: debug
+		/*
+		FstDump(constrain) ;
+		HashSet<Integer> debugSigma = constrain.getSigma() ;
+		Iterator<Integer> debugIter = debugSigma.iterator() ;
+		System.out.println("\nSigma: " ) ;
+		while (debugIter.hasNext()) {
+			System.out.print(" " + debugIter.next().intValue()) ;
+		}
+		*/
+
+		Fst consume =      new Fst(eqConsumeSymbolFstNative(        other_id, leftDelimCpv, cpvArray)) ;
+		// now set the sigma for consume (leftDelimCpv, and everything in cpvArray; not epsilon or rightDelimCpv)
+		// and contains other
+		consume.setContainsOther(true) ;
+		consume.getSigma().add(leftDelimCpv) ;
+		for (int i = 0; i < cpvArray.length; i++)
+			consume.getSigma().add(cpvArray[i]) ;
+
+		Fst deleteDelims = new Fst(eqDeleteEmptyDelimitersFstNative(other_id, leftDelimCpv, rightDelimCpv)) ;
+		// now set the sigma for deleteDelims (leftDelimCpv, rightDelimCpv)
+		// and contains other
+		// The epsilon is not considered part of the sigma
+		deleteDelims.setContainsOther(true) ;
+		deleteDelims.getSigma().add(leftDelimCpv) ;
+		deleteDelims.getSigma().add(rightDelimCpv) ;
+
+		// Compose the three Fsts together to make constrainConsume fst (Hulden's "Move" Fst)
+		Fst constrainConsume = Compose3Fsts(constrain, consume, deleteDelims) ;
+
+		System.out.println("leftDelimCpv: " + Integer.toHexString(leftDelimCpv)) ;
+		System.out.println("rightDelimCpv: " + Integer.toHexString(rightDelimCpv)) ;
+
+		// Now repeatedly compose this constrainConsume under fst until the constraints are complete
+		// (no more redup-delimiter characters on the output/lower side of the fst)
+		while (Arrays.binarySearch(outputCpvArray, leftDelimCpv) >= 0) {
+			System.out.println("\nIn while loop. outputCpvArray.length is: " + outputCpvArray.length + " ") ;
+			fst = Compose(fst, constrainConsume) ;
+
+			outputCpvArray = GetOutputLabels(fst) ;
+			for (int j = 0; j < outputCpvArray.length; j++) {
+				System.out.print(" " + Integer.toHexString(outputCpvArray[j])) ;
+			}
+			Arrays.sort(outputCpvArray) ;
+		}
+
+		// this final optimization unnecessary?
+		OptimizeInPlace(fst) ;
 	}
 
 	public Fst SymbolComplement(Fst a) {
