@@ -44,19 +44,10 @@ generically to version W.X.Y.Z instead of 0.9.3.3, 0.9.3.4 or whatever.
 kleene-linux-W.X.Y.Z.tar.gz
 kleene-mac-W.X.Y.Z.tar.gz
 
-The "linux" package is currently compiled on Linux Mint 14.
-
-For Windows (see README.install_windows), the releases are zipped, e.g.
-
-kleene-win-W.X.Y.Z.zip
-
-Kleene on Windows is NOT currently available.
-
 In what follows, the gzipped tarball will be called the "release package."
 Unless you build Kleene yourself from the source files, you will need to
 obtain a copy of the gzipped tarball, either from the Kleene website
-(eventually www.kleene-lang.org), from Dropbox, or from some other mirror 
-or source.
+(www.kleene-lang.org), from Dropbox, or from some other mirror or source.
 
 2.  Pre-requisites:
 
@@ -108,13 +99,17 @@ or source.
 	If you're running OS X, it's best to install a "native" version of OS X
 	GraphViz, i.e. one specialized for OS X.  If you do not already have an
 	application called "Graphviz.app" (it displays just as "Graphviz")
-	in your /Applications/ directory, surf to
+	in your /Applications/ directory, open a web browser and surf to
 	http://www.graphviz.org/Download_macos.php and follow the installation
 	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard"
-	as appropriate for your version).  Then proceed to step d below.
-	(I am successfully runnning GraphViz 2.32.0 on Snow Leopard.  When
-	you download the .pkg file, e.g.  graphviz-2.32.0.pkg, double-click
-	it and follow the installer instructions.)
+	as appropriate for your version of OS X).  As of 2014-04-17, there was
+	not a version of GraphViz compiled especially for Mavericks, but the
+	"mountain lion" version is reputed to work on Mavericks.
+	When you download the .pkg file, e.g.  graphviz-2.32.0.pkg, double-click
+	it and follow the installer instructions.
+
+	If you are on OS X and managed to install a native version of OS X,
+	proceed to step 3 below.
 
 	If you are on Linux, or on OS X but for some reason cannot install a
 	"native" Graphviz for OS X, you will need to have a standard
@@ -205,7 +200,6 @@ or source.
 	and the full path of your home directory will be displayed.  Then,
 	assuming that you want to install Kleene in ~/kleene/, do
 
-	$ cd
 	$ mkdir kleene
 
 	(Remember that you can cd wherever you want and make the "kleene"
@@ -276,13 +270,23 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	Kleene is written in Java, and the shared JNI library
 	(libkleeneopenfst) must be loaded by Kleene at runtime, to give the
-	Java code access to the C++ functions in OpenFst). To allow Java to
+	Java code access to the C++ functions in OpenFst. To allow Java to
 	find it, you must set the environment variable LD_LIBRARY_PATH in
 	Linux, or DYLD_LIBRARY_PATH in OS X.  This library path must be set
 	to include the installation directory just created (shown as
 	~/kleene/current in the examples above).  If you have not installed
 	Kleene inside ~/kleene/current/, then modify the path in the examples 
 	below as appropriate.
+
+	There are two possible places to set LD_LIBRARY_PATH (or DYLD_LIBRARY_PATH):
+		1.  In your .bashrc, .cshrc or .tcshrc (or similar) file, OR
+		2.  In an alias that launches Kleene
+
+	We describe the first way here, and will describe the second way below when
+	we describe aliases for launching Kleene.
+
+		Setting the (DY)LD_LIBRARY_PATH inside your .bashrc (or .cshrc or tcshrc)
+		file
 
 	If you are running bash on Linux, then edit your ~/.bashrc file to include
 
@@ -301,6 +305,10 @@ or	libicuuc.Y.Z.so			(for Linux)
 	~/.tcshrc file to include
 
 	setenv DYLD_LIBRARY_PATH $DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
+
+		The alternative method of setting this (DY)LC_LIBRARY_PATH, in an
+		alias, will be described below in the section "Launching Kleene from
+		Anywhere."
 
 
 	e.  Setting your "preferences":
@@ -462,7 +470,7 @@ or	libicuuc.Y.Z.so			(for Linux)
 	you should see an icon named "$fsm" appear in the symbol-table window.
 
 	Right-click on the icon to see various options, including 'draw' and
-	'delete'.  Try 'draw'; you should see the network displayed on your
+	'delete'.  Try selecting 'draw'; you should see the network displayed on your
 	screen.  You can also double-click on the icon to cause the
 	finite-state machine to be displayed.  Alternatively, you can enter
 
@@ -472,10 +480,13 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	draw  a*b+[c-g]{2} ;
 
+	in the pseudo-terminal text-input field (at the bottom).
+
 5.  Launching Kleene from Anywhere
 
-	To facilitate launching Kleene, without having first to cd to the ~/kleene/current
-	directory, create a simple macro named 'kleene'.
+	To facilitate launching Kleene, without having first to cd to the 
+	~/kleene/current directory, create a simple macro (in your .bashrc,
+	.cshrc or .tcshrc file) named 'kleene'.
 
 	If you are using bash:
 
@@ -486,9 +497,45 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	alias kleene 'java -jar $HOME/kleene/current/Kleene.jar'
 
+
 	Then, from a normal terminal command-line, you need only enter
 
-	kleene
+	$ kleene
+
+	*****
+	
+	Setting (DY)LD_LIBRARY_PATH in your .bashrc (or .cshrc or .tcshrc) file
+	can be problematic--in particular, the OS X 'brew' program for updating
+	your various packages warns against setting it there.
+
+	So instead of setting the (DY)LD_LIBRARY_PATH environment variable
+	in your .bashrc (or .cshrc or .tcshrc) file, you can alternatively
+	set it in the alias that launches Kleene.  Effectively this sets 
+	(DY)LD_LIBRARY_PATH just before launching Kleene.
+
+	If you are using bash on Linux:
+
+	alias kleene='LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+	If you are using bash on OS X:
+
+	alias kleene='DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+
+
+	If you are using csh or tcsh on Linux:
+
+	alias kleene 'env LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+	If you are using csh or tcsh on OS X:
+
+	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+
+	Then, again, from a normal terminal command-line, you need only enter
+
+	$ kleene
+
 
 6.  Some things that might go wrong (especially with the current Linux port):
 

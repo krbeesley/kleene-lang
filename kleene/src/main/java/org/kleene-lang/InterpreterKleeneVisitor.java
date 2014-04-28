@@ -237,24 +237,23 @@ class RuleSyntacticParts {
 	private RuleMapType   mapType ;		// RuleMapType.MAP or .MARKUP
 
 	// A straightforward mapping rule always has LHS upper and lower ASTs, 
-	// usually set by the constructor.  Both set for a straightforward
-	// mapping rule.  Only one set for a markup rule.
+	// usually set by a constructor.  Both set for a straightforward
+	// mapping rule.  Only one set for a markup rule.  See constructors below.
 	private ASTrule_lhs_upper lhsUpper ;
 	private ASTrule_lhs_lower lhsLower ;
+	// a "transducer" rule has the upper and lower levels already, combined
+	// in a single regexp child that defines an FST
+	private ASTrule_lhs_transducer lhsTransducer ;
 
-	// a "transducer" rule has the upper and lower levels already
-	// combined in an FST    a:b -> /
-	//private ASTrule_lhs_transducer lhsTransducer ;
-
-	// A markup rule will have exactly one of the above set to null, 
-	// with these two ASTs set to non-null values
+	// A markup rule will have exactly one of lhsUpper and lhsLower set to null, 
+	// with the following two ASTs set to non-null values
 	private ASTleft_markup_insertion  	leftMarkupInsertion ;
 	private ASTright_markup_insertion	rightMarkupInsertion ;
 
-	// for the RHS contexts, if any (constructors set it to null)
+	// for the RHS contexts, if any (the constructors always set it to null)
 	private ArrayList<RuleContextSyntacticParts> contexts ;
 
-	// for the where_clauses, if any (constructors set it to null)
+	// for the where_clauses, if any (the constructors always set it to null)
 	private ArrayList<ArrayList<RuleLocalVarSetting>> localVarSettings ;
 
 	// constructors
@@ -266,7 +265,7 @@ class RuleSyntacticParts {
 		// a straightforward rule always has a LHS with upper and lower
 		this.lhsUpper = lhsUpper ;
 		this.lhsLower = lhsLower ;
-		// this.lhsTransducer = null ;
+		this.lhsTransducer = null ;
 
 		this.leftMarkupInsertion = null ;
 		this.rightMarkupInsertion = null ;
@@ -277,7 +276,7 @@ class RuleSyntacticParts {
 		localVarSettings = null ;
 	}
 	// constructor for transducer rules
-/*
+	// a:b -> / ...
 	public RuleSyntacticParts(	ASTrule_lhs_transducer lhsTransducer ) { 
 		this.lhsUpper = null ;
 		this.lhsLower = null ;
@@ -291,14 +290,14 @@ class RuleSyntacticParts {
 		contexts = null ;
 		localVarSettings = null ;
 	}
-*/
 	// constructor for right-arrow markup rules   X -> Y ... Z
+	// (transducer rules cannot be Markup rules)
 	public RuleSyntacticParts(	ASTrule_lhs_upper lhsUpper, 
 								ASTleft_markup_insertion leftMarkupInsertion,
 								ASTright_markup_insertion rightMarkupInsertion) {
 		this.lhsUpper = lhsUpper ;
 		this.lhsLower = null ;
-		// this.lhsTransducer = null ;
+		this.lhsTransducer = null ;
 
 		this.leftMarkupInsertion = leftMarkupInsertion ;
 		this.rightMarkupInsertion = rightMarkupInsertion ;
@@ -309,12 +308,13 @@ class RuleSyntacticParts {
 		localVarSettings = null ;
 	}
 	// constructor for left-arrow markup rules  Y ... Z <-  X
+	// (transducer rules cannot be Markup rules)
 	public RuleSyntacticParts(  ASTleft_markup_insertion	leftMarkupInsertion,
 								ASTright_markup_insertion	rightMarkupInsertion,
 								ASTrule_lhs_lower lhsLower) {
 		this.lhsUpper = null ;
 		this.lhsLower = lhsLower ;
-		// this.lhsTransducer = null ;
+		this.lhsTransducer = null ;
 
 		this.leftMarkupInsertion = leftMarkupInsertion ;
 		this.rightMarkupInsertion = rightMarkupInsertion ;
@@ -326,6 +326,8 @@ class RuleSyntacticParts {
 	}
 	
 	// end constructors
+	//
+	// Start setters
 
 	void setArrowType (RuleArrowType arrowType) {	//	.LEFT or .RIGHT
 		this.arrowType = arrowType ;
@@ -340,26 +342,24 @@ class RuleSyntacticParts {
 	void setMapType (RuleMapType mapType) {			// .MAP or .MARKUP
 		this.mapType = mapType ;
 	}
-
 	void setLhs_upper (ASTrule_lhs_upper lhsUpper) {
 		this.lhsUpper = lhsUpper ;
 	}
 	void setLhs_lower (ASTrule_lhs_lower lhsLower) {
 		this.lhsLower = lhsLower ;
 	}
-/*
-	void setLhs_transducder (ASTrule_lhs_transducer lhsTransducer) {
+	void setLhs_transducer (ASTrule_lhs_transducer lhsTransducer) {
 		this.lhsTransducer = lhsTransducer ;
 	}
-*/
 	void setContexts(ArrayList<RuleContextSyntacticParts> contexts) {
 		this.contexts = contexts ;
 	}
-
 	void setLocalVarSettings (ArrayList<ArrayList<RuleLocalVarSetting>> 
 								localVarSettings) {
 		this.localVarSettings = localVarSettings ;
 	}
+
+	// start getters
 
 	RuleArrowType getArrowType() {
 		return arrowType ;
@@ -373,29 +373,24 @@ class RuleSyntacticParts {
 	RuleMapType getMapType() {
 		return mapType ;
 	}
-
 	ASTrule_lhs_upper getLhsUpper() {
 		return lhsUpper ;
 	}
 	ASTrule_lhs_lower getLhsLower() {
 		return lhsLower ;
 	}
-/*
 	ASTrule_lhs_transducer getLhsTransducer() {
 		return lhsTransducer ;
 	}
-*/
 	ASTleft_markup_insertion getLeftMarkupInsertion() {
 		return leftMarkupInsertion ;
 	}
 	ASTright_markup_insertion getRightMarkupInsertion() {
 		return rightMarkupInsertion ;
 	}
-
 	ArrayList<RuleContextSyntacticParts> getContexts() {
 		return contexts ;
 	}
-
 	ArrayList<ArrayList<RuleLocalVarSetting>> getLocalVarSettings() {
 		return localVarSettings ;
 	}
@@ -3018,10 +3013,13 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		return data ;
     }
     public Object visit(ASTrule_lhs node, Object data) {
-		// alternation rules always have a LHS, an ASTrule_lhs
-		// and always have exactly two children: 
+		// alternation rules always have a LHS, 
+		// and usually an ASTrule_lhs
+		// with exactly two children: 
 		// 		0.  ASTrule_lhs_upper or ASTrule_lhs_markup
 		// 		1.  ASTrule_lhs_lower or ASTrule_lhs_markup
+		// 	(The exception is a "transducer" rule, which has
+		// 	ASTrule_lhs_transducer (parallel to ASTrule_lhs))
 
 		// create a new RuleSyntacticParts to hold the LHS ASTs
 		// (not to be interpreted yet)  DON'T eval them here.
@@ -3072,6 +3070,18 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 
 		stack.push(rsp) ;
+		return data ;
+	}
+    public Object visit(ASTrule_lhs_transducer node, Object data) {
+		// rule LHS written as a transducer, e.g. the a:b in
+		// a:b -> / left _ right
+		// these transducer rules cannot be Markup rules
+		
+		// create a new RuleSyntacticParts to hold the LHS AST
+		// (not to be interpreted yet)  DON'T eval it here.
+
+		// just one child, some kind of regexp AST
+		stack.push(new RuleSyntacticParts(node)) ;
 		return data ;
 	}
 	public Object visit(ASTrule_lhs_upper node, Object data) {
@@ -3176,12 +3186,18 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 			RuleSemanticParts rsempt = iter.next() ;
 
+			// temp debug
+			System.out.println("\nHandling a RuleSemanticParts, in compileRuleSemanticParts\n") ;
+
 			// Uppercase letters A and B used here for variables to facilitate 
 			// comparison with Hulden's rule-compilation examples.
 			
 			// Symbols A and B are used herein for straightforward rewrite rules
+			// (also needed for constraints)
 			Fst A = null ;	// upper LHS
 			Fst B = null ;	// lower LHS
+
+			Fst ABTransducer = null ;  // for transducer rules only
 
 			// Symbols X, Y and Z are used for markup rules (X is the "input" 
 			// expression, which could be upper or lower
@@ -3204,7 +3220,25 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			//							RuleMapType.MAP or .MARKUP
 			boolean epenthesis = rsempt.getEpenthesis() ;
 
-			if (mapType == RuleMapType.MARKUP) {
+			if (rsempt.getTransducerLhs() != null) {
+				// then this is a transducer rule, e.g.  a:b -> / ...
+				// transducer rules cannot be markup rules
+				ABTransducer = rsempt.getTransducerLhs() ;
+
+				// debug
+				System.out.println("\nThis is a transducer rule\n") ; 
+				System.out.println("\nABTransducer, from compileRuleSemanticParts\n") ;
+				lib.FstDump(ABTransducer) ;
+
+				// need one of these (A or B, depending on the arrow direction) for computing Constraints
+				A = hulden.CleanupSpecialSymbolsAction(lib.InputProjection(ABTransducer)) ;
+				A.setFromSymtab(true) ;
+				B = hulden.CleanupSpecialSymbolsAction(lib.OutputProjection(ABTransducer)) ;
+				B.setFromSymtab(true) ;
+
+			} else if (mapType == RuleMapType.MARKUP) {
+				// markup rules like a -> IL ... IR  / ...
+				// (transducer rules cannot be markup rules)
 
 				// set X (input, upper or lower), Y (left insertion) and Z (right insertion)
 				// Note that CleanupSpecialSymbolsAction was called on all these parts when
@@ -3226,6 +3260,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				Z = rsempt.getRightMarkupInsertion() ;
 				Z.setFromSymtab(true) ;
 			} else {
+				// straightforward mapping rule like  A -> B
 				// Note that CleanupSpecialSymbolsAction was called on both these
 				// parts when the RuleSemanticParts was created
 
@@ -3237,9 +3272,16 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				B.setFromSymtab(true) ;
 			}
 
-			Fst cp = null ;		// the "cross-product" of the left-hand-side expressions
+			// cp for the Hulden "cross-product" of the LHS expressions
+			Fst cp = null ;	
 			
-			if (mapType == RuleMapType.MAP) {
+			if (ABTransducer != null) {
+				// then it's a transducer rule;
+				// just "flatten" the transducer provided in the syntax
+				cp = hulden.CPflatten(ABTransducer) ;
+
+
+			} else if (mapType == RuleMapType.MAP) {
 				// It's a straightforward mapping rule, compute hulden.CP()
 				cp = hulden.CP(A, B) ;
 			} else {
@@ -3254,30 +3296,51 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 					cp = hulden.CPMarkupLeftArrow(X,Y,Z) ;
 				}
 			}
+
+			// temp debug
+			System.out.println("cp, from compileRuleSemanticParts") ;
+			lib.FstDump(cp) ;
+
 			cp.setFromSymtab(true) ;
 
-			// union this cp into the BaseUnionOfCPs
+			// union this cp (one for each semantic rule) into the BaseUnionOfCPs
 			// UnionIntoFirstInPlace() is destructive of the first argument, as desired here.
 			BaseUnionOfCPs = lib.UnionIntoFirstInPlace(BaseUnionOfCPs, cp) ;
 
 			// Now get the contexts of the current rule
 			ArrayList<RuleContextSemanticParts> contexts = rsempt.getContexts() ;
+			// a rule written without a context will have the universal context
+			//    .*  _  .*
+			// assigned
+
+			// temp debug
+			System.out.println("\nNumber of contexts: " + contexts.size()) ;
 
 			// iterate through the contexts for the current SemanticRuleParts
-			for (Iterator<RuleContextSemanticParts> rciter = contexts.iterator(); rciter.hasNext(); ) {
+			for (Iterator<RuleContextSemanticParts> rciter = contexts.iterator(); 
+				 rciter.hasNext(); 
+				) {
+
 				RuleContextSemanticParts rcsp = rciter.next() ;
+
+				// temp debug
+				System.out.println("\nHandling one context\n") ;
+
 				// CleanupSpecialSymbolsContext was called on the context
 				// parts when the RuleContextSemanticParts was created
 				
 				Fst leftUpperContext = rcsp.getLeftUpperContext() ;
 				if (leftUpperContext != null)
 					leftUpperContext.setFromSymtab(true) ;
+
 				Fst leftLowerContext = rcsp.getLeftLowerContext() ;
 				if (leftLowerContext != null)
 					leftLowerContext.setFromSymtab(true) ;
+
 				Fst rightUpperContext = rcsp.getRightUpperContext() ;
 				if (rightUpperContext != null)
 					rightUpperContext.setFromSymtab(true) ;
+
 				Fst rightLowerContext = rcsp.getRightLowerContext() ;
 				if (rightLowerContext != null)
 					rightLowerContext.setFromSymtab(true) ;
@@ -3290,7 +3353,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				if (leftUpperContext != null) {
 					if (leftLowerContext != null) {
 						// an overt left context in a two-level context
-						finalLeftContext = lib.Intersect(hulden.Upper(leftUpperContext), hulden.Lower(leftLowerContext)) ;
+						finalLeftContext = lib.Intersect(hulden.Upper(leftUpperContext), 
+														hulden.Lower(leftLowerContext)) ;
 					} else {
 						// an overt upper left context in a one-level context
 						finalLeftContext = hulden.Upper(leftUpperContext) ;
@@ -3302,7 +3366,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				if (rightUpperContext != null) {
 					if (rightLowerContext != null) {
 						// an overt right context in a two-level context
-						finalRightContext = lib.Intersect(hulden.Upper(rightUpperContext), hulden.Lower(rightLowerContext)) ;
+						finalRightContext = lib.Intersect(hulden.Upper(rightUpperContext), 
+														hulden.Lower(rightLowerContext)) ;
 					} else {
 						// an overt upper right context in a one-level context
 						finalRightContext = hulden.Upper(rightUpperContext) ;
@@ -3359,6 +3424,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				                                       		restContextFst) ;
 
 				// Now see if a constraint need to be calculated for the current context
+				// A constraint, needed for non-optional rules, makes sure that if an
+				// input string is found, the rule will fire.
 
 				if (	   obligType == RuleObligType.OBLIG 
 						|| matchType == RuleMatchType.MAX_L2R
@@ -3382,14 +3449,16 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						// not an epenthesis rule
 
 						// First need to compute the "difference", which
-						// is A-0 or B-0 in Hulden's examples
+						// is A-0 or B-0 in Hulden's examples, e.g.
+						// A -> B
 						
-						Fst inputFst = null ;	
+						Fst inputFst = null ;
+
 						if (arrowType == RuleArrowType.RIGHT) {
-							// in a right-arrow rule, the A (or X) is the input
+							// in a right-arrow rule, the A (or X for a markup rule) is the input
 							inputFst = (mapType == RuleMapType.MAP) ? A : X ;
 						} else {
-							// for a left-arrow rule, the B (or X) is the input
+							// for a left-arrow rule, the B (or X for a markup rule) is the input
 							inputFst = (mapType == RuleMapType.MAP) ? B : X ;
 						}
 						Fst difference = lib.Difference(inputFst,
@@ -3400,7 +3469,10 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 							// Then need to compute the "Unrewritten" constraint,
 							// which makes sure that the rule applies wherever
 							// the context is right.
-							// Unrewritten(A-0) or Unrewritten(B-0) in Hulden's examples
+							// Unrewritten(A-0) or Unrewritten(B-0) in Hulden's examples,
+							// should work for both right-arrow and left-arrow rules because
+							// when tape 1 has @O@ ("outside"), and symbol x is on tape 2,
+							// then tape 3 has @ID@
 							constraintsForOneContext = hulden.Unrewritten(difference) ;
 							// suitable for matchType == RuleMatchType.ALL  KRB???
 							constraintsForOneContext.setFromSymtab(true) ;
@@ -3408,29 +3480,63 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 						// the following possibilities are mutually exclusive
 						if (matchType == RuleMatchType.MAX_L2R) {
+
+							// temp debug
+							// System.out.println("Handling MAX_L2R") ;
+
 							// need to add (union in) more constraints
-							constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-															hulden.Longest(difference),
-															hulden.Leftmost(difference)
-														) ;
+							if (arrowType == RuleArrowType.RIGHT) {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.LongestRightArrow(difference),
+																		hulden.LeftmostRightArrow(difference)
+																		) ;
+							} else {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.LongestLeftArrow(difference),
+																		hulden.LeftmostLeftArrow(difference)
+																		) ;
+							}
 						} else if (matchType == RuleMatchType.MIN_L2R) {
 							// need to add (union in) more constraints
-							constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-															hulden.Shortest(difference),
-															hulden.Leftmost(difference)
-														) ;
+							if (arrowType == RuleArrowType.RIGHT) {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.ShortestRightArrow(difference),
+																		hulden.LeftmostRightArrow(difference)
+																	) ;
+							} else {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.ShortestLeftArrow(difference),
+																		hulden.LeftmostLeftArrow(difference)
+																	) ;
+							}
 						} else if (matchType == RuleMatchType.MAX_R2L) {
 							// need to add (union in) more constraints
-							constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-															hulden.Longest(difference),
-						 									hulden.Rightmost(difference)
-						 								) ;
+							if (arrowType == RuleArrowType.RIGHT) {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.LongestRightArrow(difference),
+						 												hulden.RightmostRightArrow(difference)
+						 											) ;
+							} else {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+																		hulden.LongestLeftArrow(difference),
+						 												hulden.RightmostLeftArrow(difference)
+						 											) ;
+							}
+
 						} else if (matchType == RuleMatchType.MIN_R2L) {
 							// need to add (union in) more constraints
-							constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-							 								hulden.Shortest(difference),
-															hulden.Rightmost(difference)
-														) ;
+							if (arrowType == RuleArrowType.RIGHT) {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+							 											hulden.ShortestRightArrow(difference),
+																		hulden.RightmostRightArrow(difference)
+																	) ;
+							} else {
+								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
+							 											hulden.ShortestLeftArrow(difference),
+																		hulden.RightmostLeftArrow(difference)
+																	) ;
+							}
+
 						}
 					}
 
@@ -3535,6 +3641,8 @@ class RuleSemanticParts {
 	// for a straightforward mapping rule, both of these will be non-null
 	private Fst upperLhs = null ;
 	private Fst lowerLhs = null ;
+	// for a transducer rule, the following will be non-null
+	private Fst transducerLhs = null ;
 
 	// a Markup rule will have both of the following non-null, 
 	// and one of the above null;  when these are set (by 
@@ -3556,6 +3664,7 @@ class RuleSemanticParts {
 
 		upperLhs = null ;
 		lowerLhs = null ;
+		transducerLhs = null ;
 
 		leftMarkupInsertion = null ;
 		rightMarkupInsertion = null ;
@@ -3573,6 +3682,7 @@ class RuleSemanticParts {
 
 		this.setUpperLhs(old.getUpperLhs()) ;
 		this.setLowerLhs(old.getLowerLhs()) ;
+		this.setTransducerLhs(old.getTransducerLhs()) ;
 
 		this.setLeftMarkupInsertion(old.getLeftMarkupInsertion()) ;
 		this.setRightMarkupInsertion(old.getRightMarkupInsertion()) ;
@@ -3606,6 +3716,9 @@ class RuleSemanticParts {
 	void setLowerLhs(Fst lowerLhs) {
 		this.lowerLhs = lowerLhs ;
 	}
+	void setTransducerLhs(Fst transducerLhs) {
+		this.transducerLhs = transducerLhs ;
+	}
 	void setLeftMarkupInsertion(Fst leftMarkupInsertion) {
 		this.leftMarkupInsertion = leftMarkupInsertion ;
 	}
@@ -3638,6 +3751,9 @@ class RuleSemanticParts {
 	}
 	Fst getLowerLhs() {
 		return lowerLhs ;
+	}
+	Fst getTransducerLhs() {
+		return transducerLhs ;
 	}
 	Fst getLeftMarkupInsertion() {
 		return leftMarkupInsertion ;
@@ -3857,15 +3973,15 @@ class RuleSemanticParts {
 		// (one set of them at a time)
 		
 		// Usually return one RuleSemanticParts object.
-		// But if the input expression (upper in a right-arrow rule, lower in a
+		// But if the input expression (upper side in a right-arrow rule, lower side in a
 		// left-arrow rule) can match the empty string, and is not just the empty
 		// string; split the original rule into two rules, one of them an epenthesis
 		// rule, then return two RuleSemanticParts.
 		
-		RuleArrowType arrowType = rsynp.getArrowType() ;
-		RuleObligType obligType = rsynp.getObligType() ;
-		RuleMatchType matchType = rsynp.getMatchType() ;
-		RuleMapType   mapType   = rsynp.getMapType() ;
+		RuleArrowType arrowType = rsynp.getArrowType() ;	// RIGHT or LEFT 
+		RuleObligType obligType = rsynp.getObligType() ;	// OBLIG or OPT
+		RuleMatchType matchType = rsynp.getMatchType() ;	// ALL, MAX_L2R, MIN_L2R, MAX_R2L, MIN_R2L
+		RuleMapType   mapType   = rsynp.getMapType() ;		// MAP or MARKUP
 		
 		// the return value, start with an empty List
 		ArrayList<RuleSemanticParts> oneOrTwoRuleSemanticParts = 
@@ -3873,7 +3989,7 @@ class RuleSemanticParts {
 
 		// There's always one RuleSemanticParts returned, here called the 
 		// "basicRuleSemanticParts." If the input expression matches the
-		// empty string, and is not just the empty string, 
+		// empty string, and does not denote _just_ the empty string, 
 		// then a second RuleSemanticParts is returned as well
 		RuleSemanticParts basicRuleSemanticParts = new RuleSemanticParts() ;
 
@@ -3916,47 +4032,100 @@ class RuleSemanticParts {
 		}
 
 
+		// initialize
 		Fst upperLhs = null ;
-		if (rsynp.getLhsUpper() != null) {
-			rsynp.getLhsUpper().jjtAccept(this, data) ;
-			upperLhs = (Fst) stack.pop() ;
-			if (!lib.IsSemanticAcceptor(upperLhs)) {
-				throw new RuleSemanticException("The upper left-hand-side expression in an alternation rule compiled into a Transducer.  An Acceptor is required.") ;
-			}
-			basicRuleSemanticParts.setUpperLhs(hulden.CleanupSpecialSymbolsAction(upperLhs)) ;
-		}
-
 		Fst lowerLhs = null ;
-		if (rsynp.getLhsLower() != null) {
-			rsynp.getLhsLower().jjtAccept(this, data) ;
-			lowerLhs = (Fst)stack.pop() ;
-			if (!lib.IsSemanticAcceptor(lowerLhs)) {
-				throw new RuleSemanticException("The lower left-hand-side expression in an alternation rule compiled into a Transducer.  An Acceptor is required.") ;
+		Fst transducerLhs = null ;
+
+		if (rsynp.getLhsTransducer() != null) {
+			// this is a transducer rule, e.g. a:b -> / ...
+			// where the mapping is expressed in the syntax as a transducer.
+			// .getLhsTransducer() returns an ASTrule_lhs_transducer, which
+			// has one child, some kind of regexp denoting a transducer
+			rsynp.getLhsTransducer().jjtGetChild(0).jjtAccept(this, data) ;
+			// leaves an Fst on the stack
+			transducerLhs = (Fst) stack.pop() ;
+
+			transducerLhs = hulden.CleanupSpecialSymbolsAction(transducerLhs) ;
+			// .setFromSymtab because, for an oblig rule, the upper or lower language
+			// will need to be extracted
+			transducerLhs.setFromSymtab(true) ;
+
+			// temp debug
+			System.out.println("transducerLhs (clean) in compileRuleInCurrentFrame()") ;
+			lib.FstDump(transducerLhs) ;
+			basicRuleSemanticParts.setTransducerLhs(transducerLhs) ;
+
+			//basicRuleSemanticParts.setTransducerLhs(
+			//		hulden.CleanupSpecialSymbolsAction(transducerLhs)) ;
+
+		} else {
+			// this is a mapping rule (with separately specified upperLhs and LowerLhs),
+			// or a markup rule, in which case one of the following still needs to be set
+			if (rsynp.getLhsUpper() != null) {
+				rsynp.getLhsUpper().jjtAccept(this, data) ;
+				// leaves an Fst on the stack
+				upperLhs = (Fst) stack.pop() ;
+				if (!lib.IsSemanticAcceptor(upperLhs)) {
+					throw new RuleSemanticException("The upper left-hand-side expression in an alternation rule compiled into a Transducer.  An Acceptor is required.") ;
+				}
+				basicRuleSemanticParts.setUpperLhs(hulden.CleanupSpecialSymbolsAction(upperLhs)) ;
 			}
-			basicRuleSemanticParts.setLowerLhs(hulden.CleanupSpecialSymbolsAction(lowerLhs)) ;
+
+			if (rsynp.getLhsLower() != null) {
+				rsynp.getLhsLower().jjtAccept(this, data) ;
+				lowerLhs = (Fst)stack.pop() ;
+				if (!lib.IsSemanticAcceptor(lowerLhs)) {
+					throw new RuleSemanticException("The lower left-hand-side expression in an alternation rule compiled into a Transducer.  An Acceptor is required.") ;
+				}
+				basicRuleSemanticParts.setLowerLhs(hulden.CleanupSpecialSymbolsAction(lowerLhs)) ;
+			}
 		}
 
 		// compile the RHS (contexts)
 
 		basicRuleSemanticParts.setContexts(compileRuleSyntacticContexts(rsynp, data)) ;
 
+		// check for epenthesis in the rule
+
 		Fst inputFst ;
 
 		if (arrowType == RuleArrowType.RIGHT) {
-			inputFst = upperLhs ;
+			// the input side is the upper side for a right-arrow rule
+			if (transducerLhs != null) {
+				// this is a transducer rule
+				inputFst = lib.InputProjection(transducerLhs) ;
+			} else {
+				inputFst = upperLhs ;
+			}
 		} else {
-			inputFst = lowerLhs ;
+			// the input side is the lower side for a left-arrow rule
+			if (transducerLhs != null) {
+				// this is a transducer rule
+				inputFst = lib.OutputProjection(transducerLhs) ;
+			} else {
+				inputFst = lowerLhs ;
+			}
 		}
 
 		if (lib.ContainsEmptyString(inputFst)) {  // if the input expression can match the empty string
 
+			// for now, at least, disallow epsilon in the input for transducer rules
+			//if ( transducerLhs != null) {
+			//	throw new RuleSemanticException("The input expression in the transducer rule can match the empty string") ;
+			//}
+
+			// for now, at least, disallow epsilon in the input for {max} and {min} rules
 			if (	(matchType == RuleMatchType.MAX_L2R)
 				||	(matchType == RuleMatchType.MIN_L2R)
 				||  (matchType == RuleMatchType.MAX_R2L)
 				||  (matchType == RuleMatchType.MIN_R2L)
 				) {
-				throw new RuleSemanticException("The input expression to a {max} or {min} rule can match the empty string.") ;
+				throw new RuleSemanticException("The input expression to the {max} or {min} rule can match the empty string.") ;
 			}
+
+			// either compile the rule as an epenthesis rule, OR
+			// extract out the epenthesis as a separate rule to be compiled in parallel
 
 			if (lib.IsEmptyStringLanguage(inputFst)) {
 				// then this rule is a straightforward epenthesis rule
@@ -3964,35 +4133,63 @@ class RuleSemanticParts {
 			} else {
 				// this is a rule like  a* -> b, where the input side
 				// 		can match the empty string, and more
+				// or it's a transducer rule like  (a*:b) | c:d | e:f -> /
+				//
+				// For non-transducer rule
 				// Modify the rule to be (a* - "") -> b
 				// and
 				// create a new parallel RuleSemanticParts for the epenthesis
 				// rule  "" -> b
+				//
+				// For transducer rules, 
+				
 
-				// In basicRuleSemanticParts, subtract the empty string from the
-				// LHS input expression
+				// create a new "parallel" epenthesis rule that has only the empty string language on the input side
+				// start with a copy of the basic rule;  mark it explicitly as an epenthesis rule
 
-				Fst newInputFst = hulden.CleanupSpecialSymbolsAction(lib.Difference(inputFst, lib.EmptyStringLanguageFst())) ;
-
-				// modify the basic rule
-				if (arrowType == RuleArrowType.RIGHT) {
-					basicRuleSemanticParts.setUpperLhs(newInputFst) ;
-				} else {
-					basicRuleSemanticParts.setLowerLhs(newInputFst) ;
-				}
-
-				// create a new "parallel" rule that has the empty string language
-				// as the LHS input expression
 				RuleSemanticParts epenthesisRuleSemanticParts = new RuleSemanticParts(basicRuleSemanticParts) ;
-				// mark it explicitly as an epenthesis rule
 				epenthesisRuleSemanticParts.setEpenthesis(true) ;
-				// reset the input LHS expression to the empty string language
-				if (arrowType == RuleArrowType.RIGHT) {
-					epenthesisRuleSemanticParts.setUpperLhs(lib.EmptyStringLanguageFst()) ;
+
+				if (transducerLhs != null) {
+					Fst newTransducerLhs ;		// new (modified) LHS for the basic transducer rule
+					// remove the epsilon from the basic transducer LHS, using _composition_
+					if (arrowType == RuleArrowType.RIGHT) {
+						// the epsilon is on the upper side; compose the complement of the empty-string language on the upper side
+						newTransducerLhs = hulden.CleanupSpecialSymbolsAction(lib.Compose(lib.Complement(lib.EmptyStringLanguageFst()), transducerLhs)) ;
+					} else {
+						// the epsilon is on the lower side
+						newTransducerLhs = hulden.CleanupSpecialSymbolsAction(lib.Compose(transducerLhs, lib.Complement(lib.EmptyStringLanguageFst()))) ;
+					}
+					basicRuleSemanticParts.setTransducerLhs(newTransducerLhs) ;	// the epenthesis is removed from the basic rule
+
+					if (arrowType == RuleArrowType.RIGHT) {
+						epenthesisRuleSemanticParts.setTransducerLhs(hulden.CleanupSpecialSymbolsAction(lib.Compose(lib.EmptyStringLanguageFst(), transducerLhs))) ;
+					} else {
+						epenthesisRuleSemanticParts.setTransducerLhs(hulden.CleanupSpecialSymbolsAction(lib.Compose(transducerLhs, lib.EmptyStringLanguageFst()))) ;
+					}
+
 				} else {
-					epenthesisRuleSemanticParts.setLowerLhs(lib.EmptyStringLanguageFst()) ;
+					// In basicRuleSemanticParts, _subtract_ the empty string from the
+					// LHS input expression (modify the inputFst for the basic rule)
+
+					Fst newInputFst = hulden.CleanupSpecialSymbolsAction(lib.Difference(inputFst, lib.EmptyStringLanguageFst())) ;
+
+					// modify the basic rule
+					if (arrowType == RuleArrowType.RIGHT) {
+						basicRuleSemanticParts.setUpperLhs(newInputFst) ;
+					} else {
+						basicRuleSemanticParts.setLowerLhs(newInputFst) ;
+					}
+
+					// reset the input LHS expression to the empty string language
+					if (arrowType == RuleArrowType.RIGHT) {
+						epenthesisRuleSemanticParts.setUpperLhs(lib.EmptyStringLanguageFst()) ;
+					} else {
+						epenthesisRuleSemanticParts.setLowerLhs(lib.EmptyStringLanguageFst()) ;
+					}
 				}
 
+				// add 
 				oneOrTwoRuleSemanticParts.add(epenthesisRuleSemanticParts) ;
 			}
 		}
@@ -4144,6 +4341,154 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+    public Object visit(ASTrule_transducer_right_arrow_oblig node, Object data) {
+		// a:b -> / left_right
+		// a:b -> / l _ r { where ...}        (there can be multiple where clauses)
+		// cannot be a Markup rule
+		
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs_transducer only
+		// if 2, then either
+		// 				rule_lhs_transducer and rule_rhs
+		// 			or  rule_lhs_transducer and where_clauses
+		// if 3, then rule_lhs_transducer, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts ruleSyntacticParts = (RuleSyntacticParts)stack.pop() ;
+		// each rule AST (each syntactic rule) has its "parts" stored in one
+		// RuleSyntacticParts object
+
+		// set what we know from the rule arrow
+		ruleSyntacticParts.setArrowType(RuleArrowType.RIGHT) ; 	// right-arrow, 
+																//    not left-arrow
+		ruleSyntacticParts.setObligType(RuleObligType.OBLIG) ;	// oblig not optional
+		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;	// not max or min
+
+		// Collect the rule parts from the rest of the AST, if any, starting
+		// at Child(1).  (Child(0), the rule_lhs, was just handled above)
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				ruleSyntacticParts.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				ruleSyntacticParts.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the 
+		// local var settings for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a _list_ of 
+		// RuleSemanticParts objects.  Can be one to many because of where-clauses 
+		// and/or epenthesis effectively translate into multiple rules that need
+		// to be compiled in parallel.
+
+		ArrayList<RuleSemanticParts> listOfRuleSemanticParts = 
+						compileRuleSyntacticParts(ruleSyntacticParts, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call (i.e. the rule was written
+		// inside $^parallel(...), just push the listOfRuleSemanticParts.
+		// But if not, then convert the listOfRuleSemanticParts into an Fst
+		// 	and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			// then just push the listOfRuleSemanticParts on the stack,
+			// to be popped off and used by net_parallel_func_call, which
+			// will call compileRuleSemanticParts
+			stack.push(listOfRuleSemanticParts) ;
+		} else {
+			// call compileRuleSemanticParts directly, and push the resulting
+			// single Fst on the stack
+			stack.push(compileRuleSemanticParts(listOfRuleSemanticParts)) ;
+		}
+
+		return data ;
+	}
+    public Object visit(ASTrule_transducer_left_arrow_oblig node, Object data) {
+		// a:b <- / left_right
+		// a:b <- / l _ r { where ...}        (there can be multiple where clauses)
+		// cannot be a Markup rule
+		
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs_transducer only
+		// if 2, then either
+		// 				rule_lhs_transducer and rule_rhs
+		// 			or  rule_lhs_transducer and where_clauses
+		// if 3, then rule_lhs_transducer, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts ruleSyntacticParts = (RuleSyntacticParts)stack.pop() ;
+		// each rule AST (each syntactic rule) has its "parts" stored in one
+		// RuleSyntacticParts object
+
+		// set what we know from the rule arrow
+		ruleSyntacticParts.setArrowType(RuleArrowType.LEFT) ; 	// left-arrow, 
+																//    not right-arrow
+		ruleSyntacticParts.setObligType(RuleObligType.OBLIG) ;	// oblig not optional
+		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;	// not max or min
+
+		// Collect the rule parts from the rest of the AST, if any, starting
+		// at Child(1).  (Child(0), the rule_lhs, was just handled above)
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				ruleSyntacticParts.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				ruleSyntacticParts.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the 
+		// local var settings for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a _list_ of 
+		// RuleSemanticParts objects.  Can be one to many because of where-clauses 
+		// and/or epenthesis effectively translate into multiple rules that need
+		// to be compiled in parallel.
+
+		ArrayList<RuleSemanticParts> listOfRuleSemanticParts = 
+						compileRuleSyntacticParts(ruleSyntacticParts, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call (i.e. the rule was written
+		// inside $^parallel(...), just push the listOfRuleSemanticParts.
+		// But if not, then convert the listOfRuleSemanticParts into an Fst
+		// 	and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			// then just push the listOfRuleSemanticParts on the stack,
+			// to be popped off and used by net_parallel_func_call, which
+			// will call compileRuleSemanticParts
+			stack.push(listOfRuleSemanticParts) ;
+		} else {
+			// call compileRuleSemanticParts directly, and push the resulting
+			// single Fst on the stack
+			stack.push(compileRuleSemanticParts(listOfRuleSemanticParts)) ;
+		}
+
+		return data ;
+	}
 
     public Object visit(ASTrule_right_arrow_opt node, Object data) {
 		// The most commonly used kind of OPTIONAL alternation rule
@@ -4213,6 +4558,154 @@ class RuleSemanticParts {
 
 		return data ;		
     }
+    public Object visit(ASTrule_transducer_right_arrow_opt node, Object data) {
+		// a:b ->? / left_right
+		// a:b ->? / l _ r { where ...}        (there can be multiple where clauses)
+		// cannot be a Markup rule
+		
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs_transducer only
+		// if 2, then either
+		// 				rule_lhs_transducer and rule_rhs
+		// 			or  rule_lhs_transducer and where_clauses
+		// if 3, then rule_lhs_transducer, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts ruleSyntacticParts = (RuleSyntacticParts)stack.pop() ;
+		// each rule AST (each syntactic rule) has its "parts" stored in one
+		// RuleSyntacticParts object
+
+		// set what we know from the rule arrow
+		ruleSyntacticParts.setArrowType(RuleArrowType.RIGHT) ; 	// right-arrow, 
+																//    not left-arrow
+		ruleSyntacticParts.setObligType(RuleObligType.OPT) ;	// opt not oblig
+		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;	// not max or min
+
+		// Collect the rule parts from the rest of the AST, if any, starting
+		// at Child(1).  (Child(0), the rule_lhs, was just handled above)
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				ruleSyntacticParts.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				ruleSyntacticParts.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the 
+		// local var settings for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a _list_ of 
+		// RuleSemanticParts objects.  Can be one to many because of where-clauses 
+		// and/or epenthesis effectively translate into multiple rules that need
+		// to be compiled in parallel.
+
+		ArrayList<RuleSemanticParts> listOfRuleSemanticParts = 
+						compileRuleSyntacticParts(ruleSyntacticParts, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call (i.e. the rule was written
+		// inside $^parallel(...), just push the listOfRuleSemanticParts.
+		// But if not, then convert the listOfRuleSemanticParts into an Fst
+		// 	and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			// then just push the listOfRuleSemanticParts on the stack,
+			// to be popped off and used by net_parallel_func_call, which
+			// will call compileRuleSemanticParts
+			stack.push(listOfRuleSemanticParts) ;
+		} else {
+			// call compileRuleSemanticParts directly, and push the resulting
+			// single Fst on the stack
+			stack.push(compileRuleSemanticParts(listOfRuleSemanticParts)) ;
+		}
+
+		return data ;
+	}
+    public Object visit(ASTrule_transducer_left_arrow_opt node, Object data) {
+		// a:b <-? / left_right
+		// a:b <-? / l _ r { where ...}        (there can be multiple where clauses)
+		// cannot be a Markup rule
+		
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs_transducer only
+		// if 2, then either
+		// 				rule_lhs_transducer and rule_rhs
+		// 			or  rule_lhs_transducer and where_clauses
+		// if 3, then rule_lhs_transducer, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts ruleSyntacticParts = (RuleSyntacticParts)stack.pop() ;
+		// each rule AST (each syntactic rule) has its "parts" stored in one
+		// RuleSyntacticParts object
+
+		// set what we know from the rule arrow
+		ruleSyntacticParts.setArrowType(RuleArrowType.LEFT) ; 	// left-arrow, 
+																//    not right-arrow
+		ruleSyntacticParts.setObligType(RuleObligType.OPT) ;	// opt not oblig
+		ruleSyntacticParts.setMatchType(RuleMatchType.ALL) ;	// not max or min
+
+		// Collect the rule parts from the rest of the AST, if any, starting
+		// at Child(1).  (Child(0), the rule_lhs, was just handled above)
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				ruleSyntacticParts.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				ruleSyntacticParts.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the 
+		// local var settings for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a _list_ of 
+		// RuleSemanticParts objects.  Can be one to many because of where-clauses 
+		// and/or epenthesis effectively translate into multiple rules that need
+		// to be compiled in parallel.
+
+		ArrayList<RuleSemanticParts> listOfRuleSemanticParts = 
+						compileRuleSyntacticParts(ruleSyntacticParts, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call (i.e. the rule was written
+		// inside $^parallel(...), just push the listOfRuleSemanticParts.
+		// But if not, then convert the listOfRuleSemanticParts into an Fst
+		// 	and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			// then just push the listOfRuleSemanticParts on the stack,
+			// to be popped off and used by net_parallel_func_call, which
+			// will call compileRuleSemanticParts
+			stack.push(listOfRuleSemanticParts) ;
+		} else {
+			// call compileRuleSemanticParts directly, and push the resulting
+			// single Fst on the stack
+			stack.push(compileRuleSemanticParts(listOfRuleSemanticParts)) ;
+		}
+
+		return data ;
+	}
 	public Object visit(ASTrule_right_arrow_max_l2r_oblig node, Object data) {
 		// a {max}-> b   or     a {maxl2r}-> b  (equivalent)
 		// 		With optional context(s)
@@ -4240,6 +4733,186 @@ class RuleSemanticParts {
 		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
 		rsynpt.setObligType(RuleObligType.OBLIG) ;
 		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_transducer_right_arrow_max_l2r_oblig node, Object data) {
+		// <transducer> {max} -> / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_transducer_right_arrow_min_l2r_oblig node, Object data) {
+		// <transducer> {max} -> / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_transducer_right_arrow_min_l2r_opt node, Object data) {
+		// <transducer> {max} -> / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OPT) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_L2R) ;
 
 		// Collect the parts from the rest of the AST, if any, starting
 		// at Child(1).
@@ -4347,6 +5020,67 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+	public Object visit(ASTrule_transducer_right_arrow_max_l2r_opt node, Object data) {
+		// <transducer> {max} ->? / ...
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.RIGHT) ;
+		rsynpt.setObligType(RuleObligType.OPT) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+/*
 	public Object visit(ASTrule_right_arrow_max_r2l_oblig node, Object data) {
 		// a {maxr2l}-> b
 		// 		With optional context(s)
@@ -4414,7 +5148,8 @@ class RuleSemanticParts {
 
 		return data ;
 	}
-
+	*/
+/*
 	public Object visit(ASTrule_right_arrow_max_r2l_opt node, Object data) {
 		// a {maxr2l}->? b
 		// 		With optional context(s)
@@ -4482,7 +5217,7 @@ class RuleSemanticParts {
 
 		return data ;
 	}
-
+*/
 	public Object visit(ASTrule_right_arrow_min_l2r_oblig node, Object data) {
 		// a {min}-> b   or    a {minl2r}-> b   (equivalent)
 		// 		With optional context(s)
@@ -4617,6 +5352,7 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+/*
 	public Object visit(ASTrule_right_arrow_min_r2l_oblig node, Object data) {
 		// a {minr2l}-> b
 		// 		With optional context(s)
@@ -4684,6 +5420,8 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+*/
+/*
 	public Object visit(ASTrule_right_arrow_min_r2l_opt node, Object data) {
 		// a {minr2l}->? b
 		// 		With optional context(s)
@@ -4751,6 +5489,7 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+	*/
 
     public Object visit(ASTrule_left_arrow_oblig node, Object data) {
 		// a <- b
@@ -4953,6 +5692,132 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+	public Object visit(ASTrule_transducer_left_arrow_max_l2r_oblig node, Object data) {
+		// <transducer> {max} <- /
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+		
+		// temp debug
+		System.out.println("\nInterpreter: rule_transducer_left_arrow_max\n") ; 
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_transducer_left_arrow_min_l2r_oblig node, Object data) {
+		// <transducer> {max} <- /
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+		
+		// temp debug
+		System.out.println("\nInterpreter: rule_transducer_left_arrow_max\n") ; 
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OBLIG) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
 	public Object visit(ASTrule_left_arrow_max_l2r_opt node, Object data) {
 		// a <-? {max} b   or   a <-{maxl2r}    (equivalent)
 		// 		With optional context(s)
@@ -5020,7 +5885,128 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+	public Object visit(ASTrule_transducer_left_arrow_max_l2r_opt node, Object data) {
+		// <transducer> {max} <-? /
 
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OPT) ;
+		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+	public Object visit(ASTrule_transducer_left_arrow_min_l2r_opt node, Object data) {
+		// <transducer> {max} <-? /
+
+		int daughterCount = node.jjtGetNumChildren() ;
+		// if 1, then rule_lhs only
+		// if 2, then either
+		// 				rule_lhs and rule_rhs
+		// 			or  rule_lhs and where_clauses
+		// if 3, then rule_lhs, rule_rhs, where_clauses
+	
+		// There will always be an ASTrule_lhs_transducer as the 0th child, 
+		// evaluate it	
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a new RuleSyntacticParts object on the stack
+		RuleSyntacticParts rsynpt = (RuleSyntacticParts)stack.pop() ;
+
+		// set what we know from the rule arrow
+		rsynpt.setArrowType(RuleArrowType.LEFT) ;
+		rsynpt.setObligType(RuleObligType.OPT) ;
+		rsynpt.setMatchType(RuleMatchType.MIN_L2R) ;
+
+		// Collect the parts from the rest of the AST, if any, starting
+		// at Child(1).
+		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
+		for (int i = 1; i < daughterCount; i++) {
+			Object obj = node.jjtGetChild(i) ;
+			node.jjtGetChild(i).jjtAccept(this, data) ;
+
+			if (obj instanceof ASTrule_rhs) {
+				// then there's an ArrayList<RuleContextSyntacticParts> on the stack
+				rsynpt.setContexts((ArrayList<RuleContextSyntacticParts>)stack.pop()) ;
+			} else {
+				// it must be an ASTwhere_clauses
+				// then there's an ArrayList<ArrayList<RuleLocalVarSetting>> on
+				// the stack
+				rsynpt.setLocalVarSettings((ArrayList<ArrayList<RuleLocalVarSetting>>)stack.pop()) ;
+			}
+		}
+
+		// the big advantage of the RuleSyntacticParts is that it organizes the settings
+		// for the where-clauses
+
+		// now convert the one RuleSemanticParts object into a list of RuleSemanticParts
+		// objects.  Can be one to many because of where-clauses and/or epenthesis.
+
+		ArrayList<RuleSemanticParts> semanticParts = compileRuleSyntacticParts(rsynpt, (InterpData) data) ;
+
+		// If the mother node is ASTnet_parallel_func_call, 
+		// just push the semanticParts.
+		// but if not, then convert the semanticParts into an Fst and push the Fst
+
+		Object mother = node.jjtGetParent() ;
+		if (mother instanceof ASTnet_parallel_func_call) {
+			stack.push(semanticParts) ;
+		} else {
+			stack.push(compileRuleSemanticParts(semanticParts)) ;
+		}
+
+		return data ;
+	}
+
+/*
 	public Object visit(ASTrule_left_arrow_max_r2l_oblig node, Object data) {
 		// a <-{maxr2l}  
 		// 		With optional context(s)
@@ -5088,6 +6074,9 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+*/
+
+/*
 	public Object visit(ASTrule_left_arrow_max_r2l_opt node, Object data) {
 		// a <-? {maxr2l}  
 		// 		With optional context(s)
@@ -5155,6 +6144,7 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+*/
 	public Object visit(ASTrule_left_arrow_min_l2r_oblig node, Object data) {
 		// a <-{min} b   or    a <-{minl2r}  b    (equivalent)
 		// 		With optional context(s)
@@ -5290,6 +6280,7 @@ class RuleSemanticParts {
 		return data ;
 	}
 
+/*
 	public Object visit(ASTrule_left_arrow_min_r2l_oblig node, Object data) {
 		// a <-{minr2l}  b 
 		// 		With optional context(s)
@@ -5357,6 +6348,9 @@ class RuleSemanticParts {
 
 		return data ;
 	}
+*/
+
+/*
 	public Object visit(ASTrule_left_arrow_min_r2l_opt node, Object data) {
 		// a <-? {minr2l}  b 
 		// 		With optional context(s)
@@ -5424,7 +6418,7 @@ class RuleSemanticParts {
 
 		return data ;
 	}
-
+*/
 
     public Object visit(ASTrestriction_exp node, Object data) {
 		// 2 daughters:  restriction_lhs
@@ -7877,33 +8871,93 @@ class RuleSemanticParts {
 	}
 */
 
-
-/*
+	// equivalent is used for acceptors, epsilon-free and deterministic
 	public Object visit(ASTlng_equivalent_func_call node, Object data) {
-		// just #^__equivalent($a, $b, #num)  built-in, wrapped as #^equivalent()
+		// just #^__equivalent($a, $b, #delta)  built-in, wrapped as #^equivalent()
 		// should be just three daughters, syntactically constrained
 		node.childrenAccept(this, data) ;
 
-		double d ;
+		double delta ;	// OpenFst Equivalent calls for double delta
+						// while the RandEquivalent calls for float delta
 
-		Object num = stack.pop() ;
+		Object delta_obj = stack.pop() ;
 		// third arg could be Long or Double
-		if (num instanceof Long) {
-			d = ((Long)num).doubleValue() ;
+		if (delta_obj instanceof Long) {
+			delta = ((Long)delta_obj).doubleValue() ;
 		} else {
-			d = ((Double)num).doubleValue() ;
+			delta = ((Double)delta_obj).doubleValue() ;
 		}
 
 		Fst b = (Fst) stack.pop() ;
 		Fst a = (Fst) stack.pop() ;
 
-		if (lib.Equivalent(a, b, d))
+		if (lib.Equivalent(a, b, delta))
 			stack.push(new Long(1)) ;	// true
 		else 
 			stack.push(new Long(0)) ;	// false
 		return data ;
 	}
-*/
+
+	// rand_equivalent is used for transducers
+	public Object visit(ASTlng_rand_equivalent_func_call node, Object data) {
+		// just #^__randEquivalent($a, $b, #npath, #delta, #seed, #path_length)  
+		// built-in, wrapped as #^randEquivalent()
+		// should be 6 daughters, syntactically constrained
+		node.childrenAccept(this, data) ;
+
+		int path_length ;
+
+		Object path_length_obj = stack.pop() ;
+		// 6th arg could be Long or Double
+		if (path_length_obj instanceof Long) {
+			path_length = ((Long)path_length_obj).intValue() ;
+		} else {
+			path_length = ((Double)path_length_obj).intValue() ;
+		}
+
+		int seed ;
+
+		Object seed_obj = stack.pop() ;
+		// 5th arg could be Long or Double
+		if (seed_obj instanceof Long) {
+			seed = ((Long)seed_obj).intValue() ;
+		} else {
+			seed = ((Double)seed_obj).intValue() ;
+		}
+
+		float delta ;	// the OpenFst RandEquivalent calls for float delta
+						// while the OpenFst Equivalent calls for double delta
+						// keep an eye on this
+
+		Object delta_obj = stack.pop() ;
+		// 4th arg could be Long or Double
+		if (delta_obj instanceof Long) {
+			delta = ((Long)delta_obj).floatValue() ;
+		} else {
+			delta = ((Double)delta_obj).floatValue() ;
+		}
+				
+		long npath ;	// the OpenFst RandEquivalent calls for float
+
+		Object npath_obj = stack.pop() ;
+		// 3th arg could be Long or Double
+		if (npath_obj instanceof Long) {
+			npath = ((Long)npath_obj).longValue() ;
+		} else {
+			npath = ((Double)npath_obj).longValue() ;
+		}
+
+
+		Fst b = (Fst) stack.pop() ;
+		Fst a = (Fst) stack.pop() ;
+
+		if (lib.RandEquivalent(a, b, npath, delta, seed, path_length))
+			stack.push(new Long(1)) ;	// true
+		else 
+			stack.push(new Long(0)) ;	// false
+		return data ;
+	}
+
 
 	public Object visit(ASTnum_abs_func_call node, Object data) {
 		// just #^__abs(numexp) built-in
@@ -7951,6 +9005,28 @@ class RuleSemanticParts {
 		Fst resultFst = lib.FstFromCpvArray(cpvArray) ;
 		stack.push(resultFst) ;
 
+		return data;
+	}
+	public Object visit(ASTnet_char_for_cpv_func_call node, Object data) {
+		// convert a number (Long or Float) to a character
+		// just $^__charForCPV(numexp) built-in, wrapped as $^charForCPV(numexp)
+		// should be just one daughter: arg_list with one numexp
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		// leaves a Long or Double object on the stack
+		Object obj = stack.pop() ;
+
+		int cpv ;	
+
+		// produce a Long, representing a code point value
+		if (obj instanceof Long) {
+			cpv = ((Long) obj).intValue() ;
+		} else {
+			cpv = ((Double) obj).intValue() ;
+		}
+
+		symmap.putsym(String.valueOf((char) cpv)) ;
+
+		stack.push(lib.OneArcFst(cpv)) ;
 		return data;
 	}
 	public Object visit(ASTnet_implode_func_call node, Object data) {
@@ -11145,6 +12221,73 @@ class RuleSemanticParts {
 			} else {
 				FstSystemStringLister sysLister = new FstSystemStringLister(symmap, sepString) ;
 				lib.ListAllStrings(fst, 0, sysLister) ;
+			}
+		} else {
+			String msg = "(language exceeds displayLimit: " + displayLimit + ")" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		}
+
+		return data ;
+	}
+
+	// pr_statement doesn't print out the weights
+	public Object visit(ASTpr_statement node, Object data) {
+		// the first required daughter, an ASTregexp; this is the 
+		//		net to list
+		// second optional daughter is the separator to print after 
+		//		each string
+
+		node.jjtGetChild(0).jjtAccept(this, data) ;
+		Fst fst = (Fst)(stack.pop()) ;
+
+		if (!lib.IsAcceptor(fst)) {
+			throw new KleeneArgException("First arg to print must denote a language, not a relation.") ;
+		}
+
+		String sepString = "\n" ;  // default newline separator
+		if (node.jjtGetNumChildren() == 2) {
+			node.jjtGetChild(1).jjtAccept(this, data) ;
+			Fst sepFst = (Fst)(stack.pop()) ;
+
+			sepString = lib.GetSingleString(sepFst, "Second arg to print must denote a language of exactly one string.") ;
+		} 
+
+		int displayLimit = 100 ;
+
+		long stringCount = lib.NumPaths(fst) ;
+		PseudoTerminalInternalFrame terminal = null ;
+		if (((InterpData)data).getInGUI()) {
+			terminal = ((InterpData)data).getGUI().getTerminal() ;
+		}
+
+		if (stringCount == 0) {
+			String msg = "(language is empty)" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		} else if (stringCount == -1) {
+			// then has loops, infinite language
+			String msg = "(language is infinite)" ;
+			if (terminal != null) {
+				terminal.appendToHistory(msg) ;
+			} else {
+				System.out.println(msg) ;
+			}
+		} else if (stringCount <= displayLimit) {
+			// then just list them (parameterize this figure later)
+			if (terminal != null) {
+				FstStringLister lister = new FstStringLister(terminal, symmap) ;
+				// native function;  second arg 0 is for input side, 1 for output side
+				lib.ListAllStringsNoWeight(fst, 0, lister) ; 
+			} else {
+				FstSystemStringLister sysLister = new FstSystemStringLister(symmap, sepString) ;
+				lib.ListAllStringsNoWeight(fst, 0, sysLister) ;
 			}
 		} else {
 			String msg = "(language exceeds displayLimit: " + displayLimit + ")" ;

@@ -1,11 +1,15 @@
 2013-05-05
+2014-04-19 latest edit
 
-Relax:
+	Most of you should Just Relax:
+
 You do NOT need to "build" Kleene from source if you are installing
 a pre-compiled binary.  If a pre-compiled binary will work for you
-(see README.install), all is relatively simple.
+(see README.install), all is relatively simple.  You do not need to
+read this file.
 
-Beware:
+	Beware:
+
 Building Kleene from source is currently a game for Experts Only.
 And for now it's a game only for Linux.  (Kleene-on-Windows is
 a project for the distant future.)
@@ -28,7 +32,7 @@ and read the README file carefully; follow its instructions.  The easy
 way, described in detail in this README file, is to download
 kleene-lang-dependencies.tar.gz from www.kleene-lang.org, unpack it, and
 move the resulting kleene-lang-dependencies directory into the same
-directory as the kleene-lang directory.  Then in in kleene-lang/tools/
+directory as the kleene-lang directory.  Then in kleene-lang/tools/
 enter the command
 
 $ make links

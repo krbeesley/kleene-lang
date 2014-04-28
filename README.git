@@ -8,7 +8,7 @@ then the compiled binary is probably sufficient.
 
 If you want to compile Kleene from source, for some other
 distribution of Linux, the process is currently a bit difficult 
-(too difficult).  See README.build
+(too difficult for anyone but an expert).  See README.build
 
 Kleene-on-Windows is a project for the future.
 

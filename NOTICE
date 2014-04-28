@@ -12,7 +12,7 @@ NOTICE file
    (http://www.sap.com/corporate-en/our-company/innovation/saplabs/index.epx).
    The SAP approval to make Kleene open-source, under the Apache
    License, Version 2.0, is dated 4 May 2012, finalized by Stefan Sigg.
-   The Kleene website (not yet operational) is www.kleene-lang.org.  
+   The Kleene website is www.kleene-lang.org.  
    See the file LICENSE for a copy of the Apache License, Version 2.0.
 
    2.  This product includes the OpenFst library (www.openfst.org)
@@ -153,4 +153,6 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 	GraphViz from
 	http://www.graphviz.org/Download_macos.php.  General Graphviz downloads are available 
 	from http://www.graphviz.org/Download.php.
+
+	9.  This product uses plugin icons from http://www.famfamfam.com/lab/icons/silk/
 

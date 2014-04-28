@@ -440,6 +440,10 @@ run: jar
 run8: jar
 	java -Dfile.encoding=UTF-8 -jar $(NAME).jar
 
+runmac: jar
+	java -Dfile.encoding=UTF-8 -jar $(NAME).jar
+
+
 # Generate documentation for the BNF grammar of Kleene.
 bnf: $(NAME).html
 doc: $(NAME).html

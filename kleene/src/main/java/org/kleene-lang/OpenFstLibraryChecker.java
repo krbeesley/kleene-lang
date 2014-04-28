@@ -106,27 +106,29 @@ public class OpenFstLibraryChecker {
 		} 
 	}
 
-/*
+
 	public void Equivalent(Fst a, Fst b) {
 		// the two arguments must be acceptors, epsilon-free
 		// they can be weighted
-		if ((!lib.IsAcceptor(a)) || (!lib.IsAcceptor(b))) {
-			throw new KleeneArgException("Arguments to #^equivalent() must denote languages, not relations.") ;
+		if (!lib.IsAcceptor(a)) {
+			throw new KleeneArgException("The first argument (and the second argument) to #^equivalent() must denote a language, not a relation.") ;
 		}
-		// They are acceptors, so if they're not epsilon-free, they can be
-		// made epsilon-free.
+		if (!lib.IsAcceptor(b)) {
+			throw new KleeneArgException("The second argument (and the first argument) to #^equivalent() must denote a language, not a relation.") ;
+		}
+		// They are acceptors
+		// Now make sure that they are epsilon-free
 		if (!lib.IsEpsilonFree(a)) {
-			// epsilon removal done in place on the network
-			// (work on a copy?)
-			lib.RmEpsilonInPlace(a) ;
-		}
+			throw new KleeneArgException("The first argument (and the second argument) to #^equivalent() must be epsilon-free.") ;		}
 		if (!lib.IsEpsilonFree(b)) {
-			// epsilon removal done in place on the network
-			// (work on a copy?)
-			lib.RmEpsilonInPlace(b) ;
+			throw new KleeneArgException("The second argument (and the first argument) to #^equivalent() must be epsilon-free.") ;	
 		}
 	}
-*/
+
+	public void RandEquivalent(Fst a, Fst b) {
+		// no obvious semantic restrictions
+	}
+
 	public void GetSingleArcLabel(Fst a) {
 		// the argument must denote a one-string language (non-empty),
 		// two states, one arc

@@ -289,11 +289,27 @@ $^randGen($fst, #npath = 15, #max_length = 50) {
 	return #^__arity($fst) ;      // built-in
 }
 
-/*
-#^equivalent($one, $two, #delta=0.0) {
+#kDeltaFromOpenFst = 1.0/1024.0 ; // close to .001
+// interpret it as a _float_ value for randEquivalent
+// but as a double for equivalent?  see response from
+// Cyril when it comes
+// from OpenFst src/include/fst/weight.h line 92
+
+#^equivalent($one, $two, 
+			#delta=#kDeltaFromOpenFst) {
 	return #^__equivalent($one, $two, #delta) ;      // built-in
 }
-*/
+
+// the caller must supply at least the 3 initial args
+#^randEquivalent($one, $two, #npath, 
+				#delta = #kDeltaFromOpenFst,
+				#seed = 60, 		// 60 seconds (C++ def.  value is time(0))
+				#path_length = 60 ) {  	// C++ def value is MAX_INT;
+										// Java Integer.MAX_VALUE
+										// is 2147483647
+	return #^__randEquivalent($one, $two, #npath, 
+							#delta, #seed, #path_length) ;      // built-in
+}
 
 #^abs(#num) {
 	return #^__abs(#num) ;       // built-in
@@ -795,6 +811,10 @@ $@^map($^func, $@list) {
 
 #^getIntCpv($fst) {
 	return #^__getIntCpv($fst) ;
+}
+
+$^charForCpv(#num) {
+	return $^__charForCpv(#num) ;
 }
 
 #^outputLabelsIncludeCpv($fst, #cpv) {

@@ -79,6 +79,8 @@
 \usepackage{natbib}
 \usepackage{alltt}
 \usepackage{fancyvrb}  	% \begin{Verbatim}[fontsize=\small]
+						% allows \verb! ! in footnotes if \VerbatimNotes
+						% is in the preamble
 \usepackage{upquote}	% to get straight quotes in \verb and verbatim
 
 \usepackage{cprotect}	% allows the use of \verb and the verbatim
@@ -165,6 +167,8 @@
 \newcommand{\gui}{\acro{gui}}
 \newcommand{\xslt}{\init{xslt}}
 
+\newcommand{\xfst}{xfst}
+
 \newcommand{\key}{\textsc}			% name of a keyboard key
 \newcommand{\unicode}{\textsc}		% name of a Unicode character
 \newcommand{\charname}{\textsc}		% character name, e.g. line feed, LF
@@ -235,7 +239,7 @@ Released under the Apache License, Version 2.\\
 
 Kleene is a programming language that can be used to create many useful and
 efficient linguistic applications based on finite-state machines
-(\fsm{}s), including tokenizers, spelling checkers, spelling correctors,
+(\fsm{}s).  These applications include tokenizers, spelling checkers, spelling correctors,
 morphological analyzer/generators and shallow parsers.  
 \fsm{}s are also widely used
 in speech synthesis and speech recognition.
@@ -247,6 +251,7 @@ rule-like expressions, user-defined
 functions and familiar programming-language control
 syntax.  The \fsm{}s can include acceptors and two-projection
 transducers, either weighted under the Tropical Semiring or unweighted.
+If this makes no sense, the purpose of the book is to explain it.
 
 Pre-edited \Kleene{} scripts can be run from the command line, and a
 graphical user interface is provided for interactive learning, programming
@@ -262,7 +267,7 @@ This book assumes only superficial familiarity with regular languages,
 regular relations and finite-state machines.
 
 While readers need not have any experience with finite-state
-programming, those who have no programming experience at all, in a language
+programming, those who have no programming experience at all, e.g.\@ in a language
 like Java, \CPP{}, Perl, Python, Ruby, etc., will find it difficult.
 
 \subsection*{Implementation}
@@ -331,15 +336,21 @@ under the same license.
 \include{chapt2}	% A Quick Dive into Kleene
 \include{chapt3}	% Regular Expressions
 \include{chapt4}	% Alternation Rules
-\include{chapt5}	% Arithmetic Expressions
-\include{chapt6}	% Lists
-\include{chapt7}	% Other Syntax
-\include{chapt8}	% Code Generation and Runtime Code
-\include{chapt9}	% RTN Support
-%include{chapt9b}	% SAP-style (Phil Sours) RTN support  saprtn.tex.notrack
 
-\include{chapt10}	% Unicode Support
-\include{chapt11}	% Conclusion
+\include{chapt5}	% Examples without Weights
+\include{chapt6}	% Examples with Weights
+
+\include{chapt7}	% Challenges in Morphology
+
+\include{chapt8}	% Arithmetic Expressions
+\include{chapt9}	% Lists
+\include{chapt10}	% Other Syntax
+\include{chapt11}	% Code Generation and Runtime Code
+\include{chapt12}	% RTN Support
+%include{chapt12b}	% SAP-style (Phil Sours) RTN support  saprtn.tex.notrack
+\include{chapt13}	% Unicode Support
+
+%\include{chapt14}	% Conclusion
 
 \appendix
 

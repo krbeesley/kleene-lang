@@ -344,6 +344,10 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // not possible
 	  return data ;
   }  
+  public Object visit(ASTpr_statement node, Object data) {
+	  // not possible
+	  return data ;
+  }  
   public Object visit(ASTexception_statement node, Object data) {
 	  // not possible
 	  return data ;
@@ -533,6 +537,10 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
+  public Object visit(ASTrule_lhs_transducer node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
   public Object visit(ASTrule_lhs_upper node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
@@ -553,12 +561,27 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-
   public Object visit(ASTrule_right_arrow_oblig node, Object data) {
 	  // this is a leaf node
 	  return data ;
   }
   public Object visit(ASTrule_right_arrow_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_right_arrow_oblig node, Object data) {
+	  // this is a leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_right_arrow_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+ public Object visit(ASTrule_transducer_left_arrow_oblig node, Object data) {
+	  // this is a leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_left_arrow_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
@@ -570,14 +593,34 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }  
+  public Object visit(ASTrule_transducer_right_arrow_max_l2r_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }    
+  public Object visit(ASTrule_transducer_right_arrow_min_l2r_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
+  public Object visit(ASTrule_transducer_right_arrow_min_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }  
+  public Object visit(ASTrule_transducer_right_arrow_max_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  } 
+  /*
   public Object visit(ASTrule_right_arrow_max_r2l_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }  
+  */
+  /*
   public Object visit(ASTrule_right_arrow_max_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
-  }  
+  } 
+  */
   public Object visit(ASTrule_right_arrow_min_l2r_oblig node, Object data) {
 	  // leaf node
 	  return data ;
@@ -586,14 +629,18 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
+  /*
   public Object visit(ASTrule_right_arrow_min_r2l_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
+  /*
   public Object visit(ASTrule_right_arrow_min_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
   public Object visit(ASTrule_left_arrow_oblig node, Object data) {
 	  // leaf node
 	  return data ;
@@ -610,14 +657,34 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
+  public Object visit(ASTrule_transducer_left_arrow_max_l2r_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_left_arrow_min_l2r_oblig node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_left_arrow_max_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  public Object visit(ASTrule_transducer_left_arrow_min_l2r_opt node, Object data) {
+	  // leaf node
+	  return data ;
+  }
+  /*
   public Object visit(ASTrule_left_arrow_max_r2l_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
+  /*
   public Object visit(ASTrule_left_arrow_max_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
   public Object visit(ASTrule_left_arrow_min_l2r_oblig node, Object data) {
 	  // leaf node
 	  return data ;
@@ -626,14 +693,18 @@ public class RrKleeneVisitor implements KleeneVisitor
 	  // leaf node
 	  return data ;
   }
+  /*
   public Object visit(ASTrule_left_arrow_min_r2l_oblig node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
+  /*
   public Object visit(ASTrule_left_arrow_min_r2l_opt node, Object data) {
 	  // leaf node
 	  return data ;
   }
+  */
 
 
   public Object visit(ASTrestriction_exp node, Object data) {
@@ -1093,17 +1164,26 @@ public class RrKleeneVisitor implements KleeneVisitor
   }
 */
 
-/*
+
   public Object visit(ASTlng_equivalent_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
-*/
+
+  public Object visit(ASTlng_rand_equivalent_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+
   public Object visit(ASTnum_abs_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }
   public Object visit(ASTnet_to_string_func_call node, Object data) {
+	  node.childrenAccept(this, new Boolean(false)) ;
+	  return data ;
+  }
+  public Object visit(ASTnet_char_for_cpv_func_call node, Object data) {
 	  node.childrenAccept(this, new Boolean(false)) ;
 	  return data ;
   }

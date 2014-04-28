@@ -1,559 +1,433 @@
-\chapter{Lists}
+\chapter{Challenges in Morphology}
+
+\section{Overview}
+
+As we have seen, building \fsm{}s for
+natural language morphology requires modeling both
+the morphotactics and the phonological and/or orthographical alternations.
+In morphotactics, the most common word-building processes are prefixation and suffixation,
+which translate straightforwardly into the finite-state operation of concatenation and seldom
+cause much trouble in Kleene and similar finite-state frameworks.  
+
+Of course, as soon as concatenative morphotactics was shown to be tractable, even for
+richly agglutinative languages such as Finnish, Basque, Turkish and Aymara, academic attention
+quickly turned to a range of more challenging phenomena, including \emph{infixation}, \emph{reduplication} and Semitic
+\emph{interdigitation}.  Another general morphotactic challenge, even in concatenative languages, is the 
+constraint of separated (``long-distance'') dependencies within a word, e.g.\@ when a particular prefix
+requires a particular suffix, or when a particular prefix is incompatible with a particular suffix.  This
+chapter, which is definitely work in progress, will address such challenges in modeling
+natural-language morphology in Kleene.
+
+\section{Infixation}
+
+This section is currently empty.
+
+\section{Reduplication}
+
+\subsection{Range of Reduplicative Phenomena}
+
+Whereas prefixation, suffixation and infixation involve concatenating or inserting 
+some relatively static morpheme onto/into
+a root or stem, reduplication is a morphotactic process in which the root or stem, or part of it,
+is \emph{copied} into another part of the resulting word.  The reduplicated parts, sometimes called
+\emph{reduplicants}, may be prosodic feet, syllables,
+fairly arbitrary sequences of consonants and vowels, or single consonants or vowels, depending on
+the language.
+It is even possible to have \emph{triplication}, where two copies are made in the same word.
+
+It is beyond the scope of this book to go into all the semantics of reduplication.  Very commonly, a
+reduplicated noun marks it as plural or genuine/authentic; a reduplicated verb can be emphatic or convey
+some aspectual meaning labeled imperfective, repetitive, frequentative or habitual.
+
+Kleene currently 
+offers two predefined functions, 
+both based on algorithms kindly 
+provided by Dr.\@ M\r{a}ns Huldén,\footnote{Personal communications and 
+\citet{Hulden:2009:SFC:1564035.1564059}.} for modeling reduplication:  \verb!$^redup($lang, $sep="")!, which
+serves to model the majority of reduplicative phenomena, and \verb!$^eq($fst, $left, $right)!, which
+can be used to model more difficult cases.  \verb!$^redup()! in fact
+calls \verb!$^eq()!, and other convenience functions could easily be defined on top of \verb!$^eq()!
+as necessary.
+
+These functions, and the syntactic idioms that use them, are best understood in concrete examples.
 
 
-\section{Lists of \fsm{}s and Numbers}
+\subsection{Contiguous Reduplication}
 
-In addition to individual \fsm{}s, and individual numbers,
-Kleene also supports collections of \fsm{}s and collections of numbers.
-These collections are implemented as linked lists,\footnote{In the
-underlying Java code, they are implemented as LinkedList objects.} and
-functions are provided to manipulate them as lists, stacks, queues and
-double-ended queues (also known as deques, pronounced \emph{decks}).
-They will be referred to collectively herein as lists.
+\cprotect\subsubsection{The \verb!$^redup()! Function}
 
-Kleene lists must be homogeneous; that is, a single list must contain
-only \fsm{}s, or only numbers, though the numbers may be a mix of
-integers\footnote{Kleene integers are always stored internally as Java
-Long objects.} and floats.\footnote{Kleene floats are always stored
-internally as Java Double objects.}  Kleene lists are sometimes referred
-to informally as arrays, but they are technically lists and are better
-thought of as such.\footnote{Readers familiar with Lisp and Scheme are
-warned that Kleene lists cannot contain lists.}
+In the majority of languages that exhibit reduplication, there is a single
+reduplicant that appears contiguous with (next to) the substring being
+copied, sometimes 
+separated in the orthography by a special symbol, which is often the hyphen.
 
-Kleene provides syntax to represent, assign, access and manipulate lists.
-Lists can be passed as arguments to functions, and functions can
-return a list as a result.  A \texttt{foreach} statement supports
-iteration through the members of a list.
+To model such contiguous-reduplication phenomena Kleene offers the \verb!$^redup($lang, $sep="")! function,
+in which \verb!$lang! is a finite language of substrings to be reduplicated, and \verb!$sep!
+denotes the separator symbol, which by default is the empty string.  Both \verb!$lang! and \verb!$sep! must
+denote acceptors.
 
-The sigil \verb!$@! marks lists of \fsm{}s, and \verb!#@! marks lists of
-numbers. 
-
-\section{List Literals, Identifiers, and Assignment}
-
-List literals, also known as anonymous lists, are denoted by the
-appropriate sigil, \verb!$@! for \fsm{}s and \verb!#@! for numbers, followed
-by a parenthesized list of elements.
+Before we look at the full idioms needed to model reduplication, let's see
+what \verb!$^redup()! itself does:
 
 \begin{Verbatim}
-$@(dog, cat, a, a*b+[c-g])  // a literal list of 4 FSMs 
-
-#@(12, -45, 2.47, 0.326, 0) // a literal list of 5 numbers
+$lang = foo | bar | bas ;
+$r = $^redup($lang, \-) ;
+print $r ;
 \end{Verbatim}
 
 \noindent
-An identifier of the form \verb!$@!\emph{name} can be bound to an
-\fsm{}-list value; and, in parallel, an identifier of the form
-\verb!#@!\emph{name} can be bound to a number-list value.
+The output of this little script is
 
 \begin{Verbatim}
-$@foo = $@(a, b, $fsm1, $fsm2, (dog|cat|elephant)s?) ;
+foo-foo
+bar-bar
+bas-bas
+\end{Verbatim}
 
-#@bar = #@(1, 2, 12.23, 9, -234) ;
+Similary, the output of the following script
+
+\begin{Verbatim}
+$lang = foo | bar | bas ;
+$r = $^redup($lang, "") ;  // or just $^redup($lang)
+print $r ;
 \end{Verbatim}
 
 \noindent
-When such assignment statements are executed in the \acro{gui}, the lists are
-represented by named icons that appear automatically in the symbol-table window.
-
-The \texttt{info} and \texttt{delete} commands work with list identifiers
-just as they do with individual \fsm{} and number identifiers.
+is
 
 \begin{Verbatim}
-info $@foo ;
-info #@bar ;
+foofoo
+barbar
+basbas
+\end{Verbatim}
 
-delete $@foo ;
-delete #@bar ;
+
+\subsubsection{Full (Contiguous) Reduplication}
+
+Indonesian illustrates productive full-root and full-stem reduplication, and the standard
+orthography now dictates that a hyphen be used as the separator.  For example, where \emph{buku} is the
+word for book, the overt plural is written \emph{buku-buku};\footnote{Reduplication is not used if
+the word appears in a context that makes the plurality obvious, e.g. when \emph{buku} is preceded by
+the words for the plural cardinal numbers two, three, four, etc.} and where \emph{rumah} is the word for house,
+the overt plural is \emph{rumah-rumah}.  Though this was once a very difficult
+form of reduplication to handle in finite-state systems, it is quite easy using \verb!$^redup()!.
+
+
+Let's assume that we want to create a transducer \verb!$indonesianNouns! that relates ``buku'' on the lower
+side to ``buku[NOUN]'' on the upper side, and ``buku-buku'' on the lower side to ``buku[NOUN][REDUP]'' on
+the upper side.  This requires surrounding the call to \verb!$^redup()!
+with some idiomatic code, as in this example:
+
+\begin{Verbatim}
+$nouns = buku | rumah | anjing ;  // book, house, dog
+
+$reduplicatedNouns = 
+        "":.* $nouns 
+        _o_
+        $^redup($nouns, \-) & [^-]* $^ignore($nouns, \-) ;
+
+$indonesianNouns = $nouns '[NOUN]':"" |
+                   $reduplicatedNouns ('[NOUN]' '[REDUP]'):"" ;
 \end{Verbatim}
 
 \noindent
-In the \acro{gui}, these commands can be accessed by right-clicking on a list
-icon.
+Let's take this line by line.  The definition of \verb!$nouns!
 
-\section{Pre-Defined Functions Operating on Lists}
-
-\subsubsection{Functions Accessing the Elements of a List} 
-Individual list
-elements can be accessed non-destructively from a list using the
-following pre-defined functions.  Note that index counting starts at 0
-(zero).
-
-\vspace{.5cm}
+\begin{Verbatim}
+$nouns = buku | rumah | anjing ;  // book, house, dog
+\end{Verbatim}
 
 \noindent
-\begin{tabular}{|l|l|}
+is a language consisting of strings that, when overtly plural, need to be reduplicated.
+These words will be considered the baseforms.
+The following line
+
+\begin{Verbatim}
+$reduplicatedNouns = 
+        "":.* $nouns 
+        _o_
+        $^redup($nouns, \-) & [^-]* $^ignore($nouns, \-) ;
+\end{Verbatim}
+
+\noindent
+is a composition of two \fsm{}s, the first being the \fst{} 
+
+\begin{Verbatim}
+"":.* $nouns
+\end{Verbatim}
+
+\noindent
+which has the un-reduplicated nouns on the upper side (the baseforms), related to lower-side
+strings that start with any number of any symbols, ending with the un-reduplicated nouns.
+The second line 
+
+\begin{Verbatim}
+$^redup($nouns, \-) & [^-]* $^ignore($nouns, \-)
+\end{Verbatim}
+
+\noindent
+denotes
+an acceptor that is the intersection of \verb!$^redup($nouns, \-)!, which is the language
+consisting of ``buku-buku,'' ``rumah-rumah'' and ``anjing-anging,'' with 
+\verb![^-]* $^ignore($nouns, \-)!, the language of strings starting with any number of
+non-hyphen symbols, and ending with our baseform-noun strings, but ignoring any hyphens.
+In this case, the second line could be simplified a bit to
+
+\begin{Verbatim}
+$reduplicatedNouns = "":.* $nouns 
+                     _o_
+                     $^redup($nouns, \-) & [^-]* \- $nouns ;
+\end{Verbatim}
+
+\noindent
+but the call to \verb!$^ignore()! is part of the more general idiom, as will be seen in subsequent
+examples.
+
+If you test the resulting \fst{} in the usual way
+
+
+\begin{Verbatim}
+test $indonesianNouns ;
+\end{Verbatim}
+
+\noindent
+and enter, in the lower-side entry field, ``buku,'' the output will be ``buku[NOUN].''  And if you enter
+``buku-buku,'' the output will be ``buku[NOUN][REDUP].''
+
+
+\subsubsection{Partial Contiguous Prefixal Reduplication}
+
+The following example, from M\r{a}ns Huldén, models a reduplication
+phenomenon found in Warlpiri,
+where the first prosodic foot of a word, defined by the pattern C V C? C? V (a consonant, a vowel,
+one or two optional consonants, and a second vowel) is reduplicated.  No separating
+hyphen is used in the orthography.  Thus if the
+baseform is \emph{pangurnu}, the reduplicated form is \emph{pangupangurnu}.  Because the
+reduplication is attached to the front of the word, this is known as \verb!prefixal!
+reduplication.
+
+\begin{Verbatim}
+// Hulden's example of partial prefixal reduplication 
+// in Warlpiri.  Reduplication of the initial prosodic foot 
+// of the form C V C? C? V
+
+$lexicon = pangurnu | tiirlparnkaja | wantimi | pakarni ;
+$C = p | ng | rn | rl | k | j | w | n | t | m ;
+$V = [aeiou] ;
+
+// the pattern of the prosodic foot
+$prosodicFoot = $C $V $C? $C? $V ;
+
+// extract out the prosodic stems (the substrings that need to
+// be reduplicated)
+$prosodicStem = $^lowerside($lexicon _o_ $prosodicFoot .:""*) ;
+
+// calculate/construct the reduplicated strings
+$rmorphology = 
+    "":.* $lexicon '[REDUP]':""
+    _o_
+    $^redup($prosodicStem, \-) .* & [^-]* $^ignore($lexicon, \-)
+    _o_
+    \- -> "" ;
+
+// union the normal lexicon with the reduplicated strings
+$warlpiri = $lexicon '[UNMARKED]':"" | 
+            $rmorphology '[REDUP]':"" ;
+\end{Verbatim}
+
+If you test the result, you will find that lower-side ``wantimi'' is related to upper-side ``wantimi[UNMARKED],'' and
+lower-side ``wantiwantimi'' is related to upper-side ``wantimi[REDUP].''  Draw the network, test the
+strings in both directions, and walk through the example until you are comfortable with it.  This
+illustrates the general idiom for computing prefixal reduplication, and the main change for other languages
+with this phenomenon will be to redefine the prosodic foot (or syllable) that is appropriate.
+
+
+\subsubsection{Partial Contiguous Suffixal Reduplication}
+
+(KRB:  research the actual facts of Dakota reduplication.  This is a pseudo example for now.)
+The Dakota language is reputed to have a reduplication where the final C C V of an
+adjective root is reduplicated to mark the plural.  Because the copy attaches to the end of
+the word, this is known as \emph{suffixal} reduplication.   The idiom for suffixal
+reduplication is very similar to that for prefixal reduplication.  If you have trouble
+typing the ʃ used in the example, simply replace it with S or \verb!'[S]'! for now.
+
+\begin{Verbatim}
+$C = [ptkbdghfsʃzwz] ;
+$V = [aeiou] ;
+
+$adj = haska | waʃte | mazdi | tuftu ;
+
+$pattern = $C $C $V ;
+
+$syl = $^outputProj($adj _o_ .:""* $pattern) ;
+
+$redupMorphology = 
+        $adj "":.*
+        _o_
+        $^ignore($adj, \-) [^-]* & .* $^redup($syl, \-)
+        _o_
+        \- -> "" ;
+
+$dakota = $adj ('[ADJ]''[SG]'):"" |
+          $redupMorphology('[ADJ]''[REDUP]'):"" ;
+\end{Verbatim}
+
+If you test the resulting \fst{} in the usual way, the lower-side ``haska'' is related to the
+upper-side ``haska[ADJ][SG],'' and lower-side ``haskaska'' is related to the upper-side
+``haska[ADJ][REDUP].''  Other languages with suffixal reduplication can be handled similarly,
+modifying the \verb!$pattern! as appropriate for the language.  In another language, for example,
+the pattern might be \verb!$C $V $C!.
+
+\subsubsection{Partial Contiguous Infixal Reduplication}
+
+[KRB:  examples taken from Wikipedia article on reduplication.  Check
+them when possible.]
+
+Samoan displays a kind of infixal reduplication in which a penultimate
+syllable of the form C V is reduplicated.  Thus the reduplicated form of
+\emph{savali} is \emph{savavali}, and the reduplicated form of
+\emph{alofa} is \emph{alolofa}.  The final syllable can be just V, so
+the reduplicated form of \emph{tamaloa} is \emph{tamaloloa}.
+
+\begin{Verbatim}
+$C = [fglmnpstvhkr\'] ;
+$V = [aeiou] ;
+
+$lang = savali | alofa | tamaloa ;
+
+// pattern of penultimate syllable that is reduplicated
+$pat = $C $V ;
+
+// extract the syllables to be reduplicated
+$sylls = $^outputProj($lang
+                      _o_
+                      .:""* $pat $C:""? $V:"") ;
+
+$rmorph = $lang
+          _o_
+          [^-]* "":(\- [^-]* \-)  $C? $V 
+          _o_
+          [^-]* $^redup($sylls, \-) \- $C? $V
+          _o_
+          \- -> "" ;
+
+$samoan = $lang '[UNMARKED]':"" | $rmorph '[REDUP]':"" ;
+\end{Verbatim}
+
+\subsubsection{Full Reduplication with Alternations}
+
+\citet[p. 57]{sproat:1992} lists the following examples of full-stem
+reduplication in Javanese that also involve some vowel
+alternations.\footnote{Sproat in turn
+cites an unpublished manuscript by Paul
+Kiparsky, ``The Phonology of Reduplication,'' Stanford University, that
+I have not yet examined.}
+
+\vspace{0.5cm}
+
+\begin{tabular}{|l|l|l|}
 \hline
-\verb!$^head($@list)! & Returns the zeroth FSM element of the argument list\\
+     \textbf{Base}   & \textbf{Habitual-Repetitive} & \textbf{Gloss}\\
 \hline
-\verb!$^getLast($@list)! & Returns the last FSM element of the argument list\\
+     adʊs   & odas+adʊs         &  `take a bath'\\
+     bali   &bola+bali          & `return'\\
+     bosən  &bosan+bosən        & `tired of'\\
+     ɛlɛq   &elaq+ɛlɛq          & `bad'\\
+     ibu    &iba+ibu            & `mother'\\
 \hline
-\verb!$^get($@list, #n)! & Returns the nth FSM element of the argument list\\
+     dolan  &dolan+dolɛn       &  `engage in recreation'\\
+     udan   &udan+udɛn         &  `rain'\\
+\hline
+     djaran &djoran-djaran     &  `horse'\\
+     djaran &djoran-djɛrɛn     & `horse'\\
+     djaran &djaran-djɛrɛn     &  `horse'\\
 \hline
 \end{tabular}
 
-\vspace{.5cm}
+\vspace{0.5cm}
 
 \noindent
-Such functions return \fsm{}s and can be called in the usual ways, 
-e.g.
+Here is Sproat's description of the alternations:
+
+\begin{quote}
+As Kiparsky describes it, if the second vowel of the stem is not /a/---
+ as in the first five examples above---the algorithm is as follows: 
+ copy the stem, make the first vowel of the left copy nonlow, with the 
+ result that /a/ is changed to /o/ and /ɛ/ is changed to /e/, and change 
+ the second vowel to /a/. If the second vowel of the stem is /a/, then the 
+ left copy remains unchanged but the /a/ in the right copy changes to /ɛ/. 
+ If both vowels are /a/, as in djaran 'horse', there are three different 
+ possibilities, as shown [above].
+\end{quote}
+
+M\r{a}ns Huldén wrote a \acro{foma} script to handle the Javanese examples, as
+just described, and here, with his permission, is his script translated into Kleene syntax:
 
 \begin{Verbatim}
-$@mylist = $@(a, b, c, d) ;
-$fsm = $^head($@mylist) ;
-\end{Verbatim}
+$Base = adʊs | bali | bosən | ɛlɛq | ibu | 
+        dolan | udan | djaran ;
+$V = [aeiouɛʊə] ;
+$C = [bdfgjklmnpqrstvwx] ;
+$Lexicon =  "" <- \- .* ||  _ '[HabRep]'
+            _o_
+            $redup(Base, \-) '[HabRep]':"" | 
+			$Base '[Unmarked]':"" ;
 
-\noindent
-would set \verb!$fsm! to the \fsm{} denoted by \texttt{a}.
+// The Lexicon transducer now contains input-output
+// pairs such as:
 
-Parallel functions are defined for number-lists:
+// b o l a           [HabRep]    (input)     
+// b o l a - b o l a             (output)         
+// or
+// b o l a [Unmarked]   (input)
+// b o l a              (output)
 
-\vspace{.5cm}
 
-\noindent
-\begin{tabular}{|l|l|}
-\hline
-\verb!#^head(#@list)! & Returns the zeroth number element of the argument list\\
-\hline
-\verb!#^getLast(#@list)! & Returns the last number element of the argument list\\
-\hline
-\verb!#^get(#@list, #n)! & Returns the nth number element of the argument list\\
-\hline
-\end{tabular}
+// This we can now compose with the rules that change
+// vowels in the two copies yielding, e.g., 
+// bola-bola -> bola-bali, etc.
 
-\vspace{.5cm}
+// The main rule
+$Rule1 =  
+    $parallel( $a -> $b / # $C* _ $C* ($V - a) .* \-
+               { where $a _E_ $@(a, ɛ), 
+                       $b _E_ $@(o, e) },
+               $V -> a / # $C* $V $C* _ .* \- ,
+               a -> ɛ / \- $C* ($V - a) $C* _ .*
+             ) ;
 
-The following functions return a new list containing all or part of the
-elements of the argument list.  These operations are non-destructive.
+// To handle the "three different possibilities" 
+// seen in "djaran"
+// KRB:  Is -> || a two-level restriction expression?
+// KRB:  Need fixed here for FOMA-to-Kleene
+$Rule2 =  
+  $parallel(
+    a:[o|a] [C|V]*   %- C*  a:ɛ C*  a:ɛ -> || .#. C*  _ ?* ,
+    a:(o|a) ($C|$V)* \- $C* a:ɛ $C* a:ɛ -> /  #   $C* _ .* ,
 
-\vspace{.5cm}
+    a (->) o || .#. C*  _ ?* %- 
+    a ->?  o /  #   $C* _ .* \-
+  ) ;
 
-\noindent
-\begin{tabular}{|l|p{4.5cm}|}
-\hline
-\verb!$@^copy($@list)! & Returns a shallow copy of the argument FSM-list\\
-\hline
-\verb!$@^tail($@list)! & Returns a new list containing all but the first element of the
-argument FSM-list\\
-\hline
-\verb!$@^getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
-indicated elements of the argument FSM-list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{4.5cm}|}
-\hline
-\verb!#@^copy(#@list)! & Returns a shallow copy of the argument number-list\\
-\hline
-\verb!#@^tail(#@list)! & Returns a new list containing all but the first element of the
-argument number-list\\
-\hline
-\verb!#@^getSlice(#@list, #n, #r:#s, ...)! & Returns a new list containing the
-indicated elements of the argument number-list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-The statement
-
-\begin{Verbatim}
-$@tailList = $@^tail($@(a, b, c)) ;
+$javanese = $Lexicon _o_ $Rule1 _o_ $Rule2 ;
 \end{Verbatim}
 
 \noindent
-sets \verb!$@tailList! to the value \verb!$@(b, c)!.  As in Scheme,
-Haskell and Scala, the \texttt{head} and \texttt{tail} functions throw an
-exception if the argument is an empty list.  The call
+The resulting \verb!$javanese! \fst{} can be tested in the usual way.
 
-\begin{Verbatim}
-$@newList = $@^getSlice($@list, 2, 4, 7:10) ;
-\end{Verbatim}
+\subsection{Discontiguous Reduplication}
 
-\noindent
-sets \verb!$@newList! to a list containing items 2, 4, 7, 8 and 9 of
-\verb!$@list!.  Note that index counting starts at 0, and the notation
-\emph{n}:\emph{m} is inclusive of \emph{n} but exclusive of \emph{m}, so
-\texttt{7:10} includes 7, 8 and 9.
+\cprotect\subsubsection{The \verb!$^eq()! Function}
 
-The following functions destructively return an individual element from
-the argument list, removing that element from the list.  As elsewhere in
-Kleene, destructive function names are marked with a final \verb+!+.
+The \verb!$redup($lang, $sep="")! function demonstrated above calls a lower-level
+function \verb!$^eq()! that is harder to use but permits the modeling of
+discontiguous reduplication.
 
-\vspace{.5cm}
 
-\noindent
-\begin{tabular}{|l|p{6cm}|}
-\hline
-\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a FSM-list\\
-\hline
-\verb+$^removeLast!($@list)+ & Removes and returns the last element of a
-FSM-list\\
-\hline
-\verb+$^remove!($@list, #n)+ & Removes and returns the nth element of a
-FSM-list\\
-\hline
-\end{tabular}
+\section{Semitic Interdigitation}
 
-\vspace{.5cm}
+This section is currently empty.
 
-\noindent
-\begin{tabular}{|l|p{6cm}|}
-\hline
-\verb+#^pop!(#@list)+ & Removes and returns the zeroth element of a number-list\\
-\hline
-\verb+#^removeLast!(#@list)+ & Removes and returns the last element of a number-list\\
-\hline
-\verb+#^remove!(#@list, #n)+ & Removes and returns the nth element of a number-list\\
-\hline
-\end{tabular}
+\section{Constraining Long-distance Dependencies}
 
-\vspace{.5cm}
-
-The alias \verb+$^pop_back!($@list)+ is pre-defined for
-\verb+$^removeLast!($@list)+, and  \verb+#^pop_back!(#@list)+ is
-pre-defined as an alias for \verb+#^removeLast!(#@list)+.
-
-The following functions add elements destructively to a list, changing
-the list, and returning the changed list.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6.5cm}|}
-\hline
-\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the FSM-list, and return the
-modified list\\
-\hline
-\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the FSM-list, and return the modified
-list\\
-\hline
-\verb+$@^addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
-the FSM-list, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{6.5cm}|}
-\hline
-\verb+#@^push!(#num, #@list)+ & Push \verb!#num! on the front of the number-list, and return the
-modified list\\
-\hline
-\verb+#@^add!(#@list, #num)+ & Add \verb!#num! on the end of the number-list, and return the modified
-list\\
-\hline
-\verb+#@^addAt!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index of
-the number-list, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-The alias \verb+$@^push_back!($@list, $fst)+ is pre-defined for the function
-\verb+$@^add!($@list, $fst)+, and \verb+#@^push_back!(#@list, #num)+ is pre-defined as an
-alias for \verb+#@^add!(#@list, #num)+.
-
-The \verb+$@^set!($@list, #n, $fst)+ function and the parallel function for
-number-lists
-\verb+#@^set!(#@list, #n, #num)+ reset the list value at index
-\verb!#n! to \verb!$fst! and \verb!$num!, respectively, and return the modified list.
-
-\vspace{.5cm}
-
-\noindent
-\begin{tabular}{|l|p{5.5cm}|}
-\hline
-\verb+$@^set!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index, and return the
-modified list\\
-\hline
-\verb+#@^set!(#@list, #n, #num)+ & Add/insert \verb!#num! at the indicated index, and return the
-modified list\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\subsection{Functions Joining the Elements of a List}
-
-The function 
-\verb!$^reduceLeft($^bin, $@list)! takes as arguments a binary function
-\verb!$^bin! that takes two \fsm{} arguments and a list of \fsm{}s
-\verb!$@list!; and it returns an \fsm{} value.
-\verb!$^reduceLeft($^bin, $@list)!  
-applies the passed-in binary function to combine the members of
-the list from left to right and returns the result.  The behavior is best
-seen in the following example, where a list of \fsm{}s is reduced first
-by concatenation and then by composition.
-
-\begin{samepage}
-\begin{Verbatim}
-$^concat($x, $y)  { return $x $y; }
-$^compose($x, $y) { return $x _o_ $y ; }
-
-$@list = $@(a:b, b:c, c:d) ;
-
-$catfsm = $^reduceLeft($^concat, $@list) ;
-// $catfsm encodes the relation  a:b b:c c:d
-
-$compfsm = $^reduceLeft($^compose, $@list) ;
-// $compfsm encodes the relation a:d
-\end{Verbatim}
-\end{samepage}
-
-\verb!$^foldLeft($^bin, $@list, $init)! is like \verb!$^reduceLeft()! except that it has
-three arguments: a binary function, an \fsm{} list and an initial \fsm{} value.
-\verb!$^foldLeft()! is often preferable to \verb!$^reduceLeft()! because
-it returns the initial value, rather than throwing an exception, when
-the argument list is empty.
-
-\begin{Verbatim}
-$result = $^foldLeft($^concat, $@list, "") ;
-\end{Verbatim}
-
-Similarly, the numerical function 
-\verb!#^reduceLeft(#^bin, #@list)! 
-takes as arguments 
-a binary function \verb!#^bin! and
-a list of numbers \verb!#@list!,
-and it returns a number value.  In
-the following example, a list of numbers is reduced first by addition and then by
-multiplication.
-
-\begin{Verbatim}
-// define some binary functions
-#^add(#x, #y)  { return #x + #y ; }
-#^mult(#x, #y) { return #x * #y ; }
-
-#@list = #@(1, 2, 3, 4) ;
-
-#sum = #^reduceLeft(#^add, #@list) ;
-// #sum has the value 10
-
-#product = #^reduceLeft(#^mult, #@list) ;
-// #product has the value 24
-\end{Verbatim}
-
-\verb!#^foldLeft(#^bin, #@list, #init)! is like \verb!#^reduceLeft()! except that it
-has three arguments: a binary function, a number list and an initial number value.
-\verb!#^foldLeft()! is often preferable to \verb!#^reduceLeft()! because
-it returns the initial value, rather than throwing an exception, when
-the argument list is empty.
-
-With the \texttt{foldLeft} and \texttt{reduceLeft} functions, it is sometimes convenient to pass an
-anonymous function as the first argument, e.g.
-
-\begin{Verbatim}
-// calling foldLeft with anonymous functions
-#sum     = #^foldLeft(#^(#a, #b) {return #a + #b;}, #@list, 0) ;
-#product = #^foldLeft(#^(#a, #b) {return #a * #b;}, #@list, 1) ;
-\end{Verbatim}
-
-
-\subsection{Functions Returning the Map of a List}
-
-The \verb!$@^map($^mon, $@list)!
-applies the single-argument function \verb!$^mon! to each \fsm{} element of
-\verb!$@list! and returns a list of the returned \fsm{} values.  The arguments
-can be anonymous.  Note that the \verb!$@^map($^mon, $@list)! function has the sigil
-\verb!$@^!, indicating a function (function names are always immediately preceded by \verb!^!) that returns a list of \fsm{}s (\verb!$@!).
-
-\begin{Verbatim}
-$@inList = $@(a, b, c, d) ;
-
-// called with an anonymous function that concatenates
-//    the two arguments
-$@outList = $@^map($^($fst){ return $fst $fst ; }, $@inList) ;
-// $@outList will be $@(aa, bb, cc, dd)
-
-// called with an anonymous function and an anonymous list
-$@outList = $@^map($^($fst){ return $fst $fst ; }, 
-                   $@(a, b, c, d)) ;
-\end{Verbatim}
-
-Similarly, the 
-\verb!#@^map(#^mon, #@list)!  applies the single-argument 
-function \verb!#^mon! to each number
-element of \verb!#@list! and returns a list of the returned values.  The
-arguments can be anonymous.  Note that the \verb!#@^map(#^mon, #@list)! function has the sigil
-\verb!#@^!, indicating a function (function names are always immediately preceded by
-\verb!^!) that returns a list of numbers (\verb!#@!).
-
-\begin{Verbatim}
-#@inList = #@(0, 1, 2, 3) ;
-
-// called with an anonymous function
-#@outList = #@^map(#^(#n){ return #n + #n ; }, #@inList) ;
-// #@outList will be $@(0, 2, 4, 6)
-
-// called with an anonymous function and an anonymous list
-#@outList = #@^map(#^(#n) { return #n * #n ; }, #@(1, 2, 3, 4) ) ;
-// #@outlist will be $@(1, 4, 9, 16)
-\end{Verbatim}
-
-\subsection{Functions Returning the Sigma of an \fsm{}}
-
-The \verb+$@^getSigma($fst)+ function returns the sigma of the argument
-\fsm{} as a list of \fsm{}s, each one consisting of a start state and a final
-state, linked by one arc labeled with a symbol from the sigma.  Special symbols
-used only internally in Kleene are excluded from the sigma.
-
-The parallel \verb+#@^getSigma($fst)+ function returns the sigma of the argument
-\fsm{} as a list of integers.
-
-\begin{Verbatim}
-$fsm = abc ;
-
-$@list = $@^getSigma($fsm) ;
-#@list = #@^getSigma($fsm) ;
-\end{Verbatim}
-
-\subsection{Functions Returning the Size of a List}
-
-The \verb+#^size(+\textit{list}\verb!)! function takes a list argument,
-either an \fsm{}-list or a number-list, and returns the
-size as an integer.\footnote{Kleene does not, in general, support function
-overloading, wherein multiple functions of the same name are distinguished
-by the type and/or number of arguments they take.
-The \texttt{size} pseudo function is an exception,
-wired into the parser and specially interpreted to accept an argument of either list
-type.}
-
-\begin{Verbatim}
-#n = #^size(#@(1, 2, 3, 4)) ;
-
-#m = #^size($@(a, b, c, d, e, f)) ;
-\end{Verbatim}
-
-The \verb!#^isEmpty(!\emph{list}\verb!)! function takes a list argument and
-returns 1 (true) if the list is empty and 0 (false) otherwise.
-
-\section{Iteration through Members of a List}
-
-
-The \texttt{foreach} statement iterates through the elements of a list, allowing
-some operation or operations to be performed on each element.  The body of
-the \texttt{foreach} statement is a block or a single statement.
-
-\begin{Verbatim}
-foreach ($fsm in $@list) {
-    info $fsm ;
-}
-
-foreach ($fsm in $@list) info $fsm ;
-
-foreach (#num in #@list) {
-    info #num ;
-}
-
-foreach (#num in #@list) info #num ;
-\end{Verbatim}
-
-\noindent
-As a more concrete example, consider
-
-\begin{Verbatim}
-$fsm = abc ;
-
-foreach (#cpv in #@^getSigma($fsm)) info #cpv ;
-// output:
-// Long value: 98
-// Long value: 99
-// Long value: 97
-\end{Verbatim}
-
-For each iteration of the block or statement, the iteration identifier,
-\verb!$fsm!, \verb!$num! and \verb!#cpv! in these examples, is bound, in
-the current frame, to the next item of the list, and after the
-\texttt{foreach} statement, the iteration identifier is left bound to the
-last value in the list.\footnote{The \texttt{foreach} statement does not,
-like a function call, trigger the allocation of a new frame.}  In the
-following example, the value of \verb!#num! at Point B is 3.
-
-\begin{Verbatim}
-#num = 0 ;      // Point A
-foreach (#num in #@(1, 2, 3)) {
-	print #num ;
-}
-info #num ;    // Point B
-\end{Verbatim}
-
-(KRB:  consider the wisdom of treating the iteration identifier this
-way.  Perhaps it should be (at least conceptually, a new identifier that
-is bound for each value, and perhaps it should disappear after the
-foreach loop is finished.)
-
-\section{User-Defined Functions and Lists}
-
-
-Users can define their own functions that take lists as arguments, and functions
-that return lists, e.g.\@
-
-\begin{Verbatim}
-$@^reverse($@list) {
-    $@result = $@() ;  // an empty list
-    foreach ($fsm in $@list) {
-        $@result = $@^push!($fsm, $@result) ;
-    }
-    return $@result ;
-}
-
-$@reversedList = $@^reverse($@(a, b, c)) ;
-\end{Verbatim}
-
-
-\section{Traditional Array-indexing Syntax}
-
-
-[KRB:  This section is work-in-progress.]
-
-Although the current implementation of lists provides access functions like
-\verb!$^get($@list, #n)!, to retrieve a value at a specified index, 
-some users might prefer to use postfixed indices in
-square brackets or parentheses, as in most implementations of arrays.
-
-\begin{Verbatim}
-// NOT implemented in Kleene
-$@arr[0]   // array indexing as in C/C++, Java
-$@arr(0)   // array indexing as in Scala
-\end{Verbatim}
-
-\noindent
-Assuming for a second that such post-fixed indexing is desired, it is not yet
-clear that it could be implemented easily in Kleene.
-Because square brackets normally denote symbol unions in Kleene regular
-expressions, tokenizing and
-parsing them differently when they are intended to indicate an index would be a
-challenge; the notation with parentheses, as used in Scala, might be easier to
-implement and
-less likely to cause confusion.  As is often the case, tokenization is a bigger
-challenge than the parsing.
-
-If the expression denoting a list is just an
-identifier like \verb!$@list!, as in the examples above, the challenge is trivial.  But if the
-expression denoting a list is more complex, such as a function call returning a list,
-and having arbitrary arguments to tokenize and parse, then correctly tokenizing a
-post-fixed index expression that uses square brackets would be rather involved.
-Again, using parentheses might avoid most of the problem.
-
-Traditional arrays also allow setting of elements of the array, e.g.
-
-\begin{Verbatim}
-$@arr[2] = a*b+[c-g]? ;
-\end{Verbatim}
-
-\noindent
-and this would also present challenges for Kleene tokenization and parsing.
-
-At this point, we should continue to think about post-fixed indexing
-syntax.  As Kleene lists are not really arrays, and as \texttt{foreach}
-statements are provided for iterating easily through lists, I believe
-that we can dispense with postfix iteration altogether.
-
-
+This section is currently empty.

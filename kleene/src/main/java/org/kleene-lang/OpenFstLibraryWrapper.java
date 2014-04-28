@@ -131,7 +131,8 @@ public class OpenFstLibraryWrapper
 	private static native long charRangeUnionFstNative(int firstCpv, int lastCpv) ;
 
 	private static native long differenceNative(long first, long second) ;
-//	private static native boolean isEquivalentNative(long first, long second, double delta) ;
+	private static native boolean isEquivalentNative(long first, long second, double delta) ;
+	private static native boolean isRandEquivalentNative(long first, long second, long npath, float delta, int seed, int path_length) ;
 	private static native long intersectNative(long first, long second) ;
 	private static native long composeNative(long first, long second) ;
 
@@ -214,6 +215,8 @@ public class OpenFstLibraryWrapper
 	// number of paths handled as long (can be astronomical)
 	private static native long numPathsNative(long fst) ;
 	private static native void listAllStringsNative(long fst, int projection, 
+												StringLister stringLister) ;
+	private static native void listAllStringsNoWeightNative(long fst, int projection, 
 												StringLister stringLister) ;
 
 	private static native void fstDumpNative(long fst) ;
@@ -1315,13 +1318,19 @@ public class OpenFstLibraryWrapper
 		return resultFst ;  
 	}
 
-/*
-	public boolean Equivalent(Fst a, Fst b, Double delta) {
+	// OpenFst Equivalent calls for double delta
+	public boolean Equivalent(Fst a, Fst b, double delta) {
 		checker.Equivalent(a, b) ;  // must be acceptors
 
 		return isEquivalentNative(a.getFstPtr(), b.getFstPtr(), delta) ;
 	}
-*/
+
+	// OpenFst RandEquivalent calls for float delta
+	public boolean RandEquivalent(Fst a, Fst b, long npath, float delta, int seed, int path_length) {
+		checker.RandEquivalent(a, b) ;
+
+		return isRandEquivalentNative(a.getFstPtr(), b.getFstPtr(), npath, delta, seed, path_length) ;
+	}
 
 	public int Epsilon = 0 ;// in OpenFst, 0 wired in as epsilon
 
@@ -1519,9 +1528,29 @@ public class OpenFstLibraryWrapper
 	public void FlattenInPlace(Fst a, int hardEpsilonSymVal, int otherIdSymVal, int otherNonIdSymVal) {
 		flattenInPlaceNative(a.getFstPtr(), hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
 	}
-
+	
 	public void Flatten4RuleInPlace(Fst a, int hardEpsilonSymVal) {
-		flatten4RuleInPlaceNative(a.getFstPtr(), hardEpsilonSymVal) ;
+		Fst result = a ;
+		flatten4RuleInPlaceNative(result.getFstPtr(), hardEpsilonSymVal) ;
+		// Flatten4Rule is used for transducer rules, instead of Hulden's
+		// Align2, which uses Intersect.  And Intersect calls the following
+		// two clean-up functions.
+		CorrectSigmaOtherInPlace(result) ;
+		ConnectInPlace(result) ;
+	}
+
+	public Fst Flatten4Rule(Fst a, int hardEpsilonSymVal) {
+		Fst result = a ;
+		if (a.getFromSymtab()) {
+			result = CopyFst(a) ;
+		}
+		flatten4RuleInPlaceNative(result.getFstPtr(), hardEpsilonSymVal) ;
+		// Flatten4Rule is used for transducer rules, instead of Hulden's
+		// Align2, which uses Intersect.  And Intersect calls the following
+		// two clean-up functions.
+		CorrectSigmaOtherInPlace(result) ;
+		ConnectInPlace(result) ;
+		return result ;
 	}
 
 	public boolean IsAcceptor(Fst a) {
@@ -1625,6 +1654,9 @@ public class OpenFstLibraryWrapper
 
 	public void ListAllStrings(Fst a, int proj, StringLister lister) {
 		listAllStringsNative(a.getFstPtr(), proj, lister) ;
+	}
+	public void ListAllStringsNoWeight(Fst a, int proj, StringLister lister) {
+		listAllStringsNoWeightNative(a.getFstPtr(), proj, lister) ;
 	}
 
 	public void MinimizeInPlace(Fst a) {

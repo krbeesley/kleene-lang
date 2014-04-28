@@ -1,131 +1,215 @@
-\chapter{Conclusion}
+\chapter{\acro{rtn} Support}
 
-\section{Current Development Status}
+\label{sec:openfstrtn}
 
-At the time of writing, the following \Kleene{} features are working:
+%\section{Two Distinct Flavors of \acro{rtn} Support}
 
-\begin{itemize}
-\item
-Interpretation of regular expressions and setting of variables
-\item
-Maintenance of identifier-value mappings in an environment of linked frames
-\item
-Automatic assignment of internal arc-label integers to syntactic
-symbols\footnote{OpenFst automata in the standard tropical
-semiring
-store all arc labels as 32-bit integers.  In \Kleene{}, single symbols are always stored using their
-official Unicode code point values, including supplementary characters; and
-multi-character symbols are assigned an arbitrary code point value from
-a Unicode Private Use Area, starting with Plane 15.  If necessary, for
-automata using unusually
-large alphabets of multi-character symbols, code values beyond the Unicode
-21-bit range will be used, providing over 4 billion symbol distinctions.}
-\item
-Automatic maintenance of a private alphabet (sigma) for each network, and support
-for \acro{other} (also called \acro{unknown}) characters
-\item
-Automatic optimization of networks using RmEpsilon(), Determinize() and Minimize(), as much
-as is automatically possible and safe, based on network characteristics
-\item
-Interpretation of language-restriction expressions
-\item
-Interpretation of alternation-rule expressions
-\item
-Interpretation of right-linear phrase-structure grammars
-\item
-Initial support for Recursive Transition Networks (\acro{rtn}s)
-\item
-Interpretation of arithmetic expressions and setting of variables
-\item
-Definition and calling of functions that return network and arithmetic values
-\item
-Definition and calling of meta-functions that return functions
-\item
-Definition and calling of void functions, which return no value
-\item
-Implementation of a Unicode-friendly \acro{xml} language for textual representation of
-networks\footnote{OpenFst still uses an \acro{ascii}-limited textual format inherited from
-\acro{at\&t} (\url{http://www.research.att.com/~fsmtools/fsm/man4/fsm.5.html}).}
-\item
-Support of network lists and number lists, and iteration over lists.
-\end{itemize}
+% See saprtn.tex.notrack
+%Kleene is currently being expanded to provide support for two distinct
+%flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
+%progress.
 
-\noindent
-Unicode is supported in \Kleene{} to the extent that it is supported in
-Java and the Java Swing library---which is pretty well---and users can
-install and use their own Unicode fonts and Java Input
-Methods\footnote{\url{http://javadesktop.org/articles/InputMethod/index.html}}
-in their own Java platforms.  Some issues, including Unicode
-normalization and the expansion of the \Kleene{} tokenizer to allow any
-Unicode letter character to appear in identifiers, still require some
-thought and work.
+%This section describes the Kleene support for \acro{rtn}s
+%compatible with the off-the-shelf functions from the OpenFst library.
+%\acro{sap} linguists creating pattern networks for the \acro{sap}
+%\acro{rtn} pattern-matching runtime code should ignore this section and
+%proceed immediately to section~\ref{sec:saprtn} starting on
+%page~\pageref{sec:saprtn}.
 
-The Java wrapping of OpenFst functions and the \acro{gui} are well
-advanced, but not complete.  \Kleene{} runs on Linux and \init{os~x}.
-Windows support may be offered in the future.
+\section{OpenFst Recursive Transition Networks (\acro{rtn}s)}
 
-\section{Work to be Done}
+\subsection{Status}
 
-Major planned features remaining to be implemented include:
+[KRB 2013-04]  WORK IN PROGRESS:  There is currently no runtime-code support for
+\init{rtn}s.  This chapter has not be reviewed recently.
 
-\begin{itemize}
-\item
-Implementation of a platform-neutral binary file format for
-input/output of networks
-\item
-Harmonization of symbol-integer mappings between networks built
-during different \Kleene{} sessions\footnote{All
-networks built during a single \Kleene{} session share the same symbol-to-integer mappings.  As
-\Kleene{} automatically maps all single characters to their official Unicode code point values,
-assigning arbitrary Private Use Area (\acro{pua}) code point values only to multi-character symbols, only the
-multi-character-symbol mappings need to be harmonized when combining networks built
-during different sessions.  This harmonization is not a problem for the Kleene-native \acro{xml}
-format, but will be a challenge if Kleene networks are stored in the OpenFst binary format.}
-\item
-Writing practical runtime code and \init{api}s to allow \Kleene{}-built \fst{}s to be integrated easily into
-applications
-\item
-Conversion of Kleene finite-state machines into stand-alone Java and C++ runtime code
-\item
-Generalization of the interpreter, which currently handles only the default
-Tropical Semiring, to handle multiple semirings
-\end{itemize}
+Kleene supports the building of Recursive Transition Networks
+(\acro{rtn}s) that are compatible with the OpenFst \texttt{Replace()} and
+\texttt{ReplaceFst()} operations.  An \acro{rtn} contains arc labels that
+are to be interpreted as ``references'' to subnetworks; and compatible
+\acro{rtn}-savvy runtime code, when applying a network to data, will
+recognize such a reference and ``push'' to the referenced subnetwork to
+continue the matching, and then ``pop'' back to the calling network when
+the subnetwork has successfully matched.  The references to subnetworks
+can also be thought of as non-terminal labels.
+
+\acro{rtn}s, containing references to subnetworks, are often smaller than
+full-sized networks that must contain a full copy of each subnetwork
+wherever it is needed.  However, \acro{rtn}s can denote context-free
+languages, and so can go beyond regular power; a special subclass of
+\acro{rtn}s remain regular.  The recognition/parsing of context-free
+languages requires memory, in particular a push-down stack, and so any
+runtime code to apply \acro{rtn}s must include such a stack.
+
+At the time of writing (13 October 2010) there are hints that the
+\acro{rtn} conventions currently required in OpenFst might change, and
+there is new library support for mathematically equivalent Pushdown
+Automata (\acro{pda}s) that we have not yet tested.  Kleene support for
+OpenFst \acro{rtn}s and \acro{pda}s will necessarily evolve along with
+the library.
+
+\subsection{Syntax for Creating an OpenFst \acro{rtn}}
+
+For the programmer, there needs to be a Kleene syntax to denote a
+reference to a subnetwork, and it needs to be distinct from the syntax
+that causes a copy of a network to be inserted.  For example, in this
+example
+
+\begin{Verbatim}[fontsize=\small]
+$vowel = [aeiou] ;
+$net = k $vowel t $vowel b $vowel ;
+\end{Verbatim}
 
 \noindent
-Eventually, it is hoped to support graphical
-drag-and-drop programming of networks within the \acro{gui}.
+the \verb!$vowel! network will be copied three times into \verb!$net!.
+In real-life applications, a subnetwork might encode something much
+larger, such as nouns or even noun phrases in a natural language, and
+multiple copies could easily cause the final network to become very
+large, or even too large to compute.
+
+Kleene currently supports a wired-in function \verb!$^sub($s)! that
+programmers can use to denote a reference to a subnetwork \verb!$s!.\footnote{I'm
+not tied to \verb!$^sub($s)! and would be comfortable with alternatives such
+as \verb!$^ref($s)! or \verb!$^push($s)!, or even some special syntax like
+\verb!>$s<! or \verb!>>$s!.} 
+
+To continue with our trivial example, 
+
+\begin{Verbatim}[fontsize=\small]
+$vowel = [aeiou] ;
+$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
+\end{Verbatim}
+
+\noindent
+would result in an \verb!$rtn! network that contains three compact
+one-label references to \verb!$vowel! rather than three full copies of
+it.  In real-life applications, the savings in memory can be very
+significant.
+
+\subsection{What does a Reference Look Like in an OpenFst \acro{rtn}?}
+
+OpenFst networks consist of states and arcs, and each arc has two labels,
+an input label, and an output label.\footnote{The terminology of
+\emph{input} and \emph{output} labels is that of the OpenFst tradition.
+In the Xerox tradition, they are called \emph{upper} and \emph{lower}, or
+sometimes \emph{lexical} and \emph{surface}.}  In the actual network, the
+labels are really integers, and all Unicode characters, such as \emph{a},
+\emph{b}, \emph{c}, etc.\@ are represented using their standard Unicode
+code point values.  Multichar symbols are stored using code point values
+selected at random from a Unicode Private Use Area.
+
+To maximize compatibility with the off-the-shelf OpenFst
+\texttt{Replace()} and \texttt{ReplaceFst()} operations, the integer
+representing a reference to a subnetwork must currently appear on the
+\emph{output} side of an arc.  In Kleene, multichar symbol names
+representing a call to a subnetwork \verb!$s! are spelled \verb!__$s!,
+with two initial underscores, and the syntax \verb!$^sub($s)!  currently
+yields the following network.
+
+% see images/README for converting .ps files to .pdf and cropping them
+\begin{center}
+\includegraphics{images/reference.pdf}
+\end{center}
+
+\noindent
+Currently in OpenFst, the symbol \verb!__$s! could in fact appear also on
+the input side.  Of course, in the real network, the labels are really
+just integers, 0 for epsilon, and some arbitrary value from the Private
+Use Area for the multichar symbol.
+
+Kleene programmers should use the wired-in \verb!$^sub()! function to
+denote references to subnetworks and should not try to specify special
+symbols like \verb!__$s! directly.  For example, the following statement
+is illegal and will cause an exception to be thrown.
+
+\begin{Verbatim}[fontsize=\small]
+$rtn = "":'__$foo' ;    // raises an exception
+\end{Verbatim}
+
+\noindent
+The use of \verb!$^sub()! at the programming level will also make it easy
+for Kleene to adapt to any changes to \acro{rtn} representations that
+might be made in the underlying OpenFst library.
+
+\subsection{Embedding Subnetworks in an OpenFst \acro{rtn}}
+
+The \verb!$^embedRtnSubnets($rtn)! function takes an OpenFst \acro{rtn}
+argument, i.e.\@ a network that contains OpenFst-format references to
+subnetworks, and returns a network that consists of the original network
+unioned with a prefixed copy of each referred-to subnetwork.  For each
+referred-to network \verb!$s!, the prefix consists of the special symbol
+\verb!__SUBNETWORKS! followed by the special symbol \verb!__$s!.  Thus
+from the following code
+
+\begin{Verbatim}[fontsize=\small]
+$p = p ;
+$q = q ;
+$rtn = a $^sub($p) b $^sub($q) ;
+\end{Verbatim}
+
+\noindent
+the result \verb!$rtn! is this network containing two references to subnetworks
+
+\begin{center}
+\includegraphics[width=\textwidth]{images/twoReferences.pdf}
+\end{center}
+
+\noindent
+but the three referred-to networks remain separate.  After the following
+call to \verb!$^embedRtnSubnets($rtn)!, 
+
+\begin{Verbatim}[fontsize=\small]
+$embedded = $^embedRtnSubnets($rtn) ;
+\end{Verbatim}
 
 
-\section{Acknowledgements}
+\noindent
+the resulting \verb!$embedded! network looks like this
 
-I am indebted to a number of people, primarily the whole OpenFst team,
-and especially Cyril Allauzen, for making the OpenFst library
-\citep{allauzen+riley+schalkwyk+skut+mohri:2007} available and for
-providing patient explanations and advice.
+\begin{center}
+\includegraphics[width=\textwidth]{images/embedded.pdf}
+\end{center}
 
-The algorithm for restriction expressions was kindly provided by M\r{a}ns
-Huld\'en \citep{hulden:2009fsmnlp,hulden:2009thesis}; it is similar in
-several ways to the algorithm of Yli-Jyr\"a and Koskenniemi
-\citep{yli-jyra+koskenniemi:2004}.  Huld\'en also kindly provided his
-latest algorithms for compiling alternation rules
-\citep{hulden:2009thesis}, along with explanations and encouragement in
-private communications.
+\noindent
+The embedded network can be saved to file as a single network and could be
+applied by \acro{rtn}-savvy runtime code (not yet written) that knows the prefix convention.
 
-My \acro{sap} colleague Paola Nieddu performed the testing, and Phil
-Sours wrote the \acro{sap} \acro{rtn} runtime code.  Sours also
-ported OpenFst to the Windows platform.  Both Nieddu and Sours
-contributed to the design and implementation of Kleene.
+The unioning of the base network with the subnetworks also guarantees that
+the meaning of OTHER, if present, is standardized throughout all the
+networks.
 
-Lauri Karttunen, my old boss at Xerox Research, taught my most of what I know about finite-state
-computing, plus much that I have forgotten.  His c-fsm library, and his
-twolc, lexc and xfst languages, are the model for
-much of the semantics of Kleene.
+\subsection{Expanding an OpenFst \acro{rtn} into a Full Normal Network}
 
-Many others have gone out of their way to provide information, help or
-encouragement, including Andr\'e Kempe, Mike Wilkens,
-Helmut Schmid, Natasha Lloyd, and Kemal Oflazer.  I have not always
-followed their advice, and any infelicities in the \Kleene{} language and
-\acro{gui} are my responsibility.
+In some cases, it may also be useful to take an OpenFst \acro{rtn} and replace
+each reference to a subnetwork with an actual copy of that subnetwork,
+expanding the \acro{rtn} into a full normal network.  This is mathematically and
+computationally possible only if the \acro{rtn} is regular.  Using the same
+\verb!$rtn! example, a call to \verb!$^expandRtn()!
 
-\section{The Future of Kleene}
+\begin{Verbatim}[fontsize=\small]
+$expanded = $^expandRtn($rtn) ;
+\end{Verbatim}
+
+\noindent
+produces the following \verb!$expanded! network
+
+\begin{center}
+\includegraphics[width=\textwidth]{images/expanded.pdf}
+\end{center}
+
+\noindent
+In real-life \acro{rtn}s, with multiple references to the same
+subnetwork, the expanded network will be significantly bigger than the
+original.  
+
+If the \acro{rtn} contains cyclic references to subnetworks, it is
+context-free in power (i.e.\@ no longer regular in power), and its
+expansion would result in an infinite network.  The
+\verb!$^expandRtn($rtn)! function checks for cyclic references and throws
+an exception if the \verb!$rtn! is not regular.\footnote{In the OpenFst
+library, the \verb!ReplaceFst()! operation provides a convenient method
+that checks for cyclic references, and \verb!$^expandRtn()! invokes this
+method.}
+
+
 

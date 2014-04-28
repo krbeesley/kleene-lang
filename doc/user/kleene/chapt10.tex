@@ -1,215 +1,439 @@
-\chapter{\acro{rtn} Support}
 
-\label{sec:openfstrtn}
+\chapter{Other Syntax}
 
-%\section{Two Distinct Flavors of \acro{rtn} Support}
+\section{Void Functions with Names}
 
-% See saprtn.tex.notrack
-%Kleene is currently being expanded to provide support for two distinct
-%flavors of Recursive Transition Networks or \acro{rtn}s.  This is work in
-%progress.
+Void functions return no value, and their names are
+prefixed with the plain \verb!^!
+sigil, like all Kleene functions, but with nothing before the \verb!^!.
+Such void functions can be used to abbreviate and generalize a
+sequence of Kleene commands.
 
-%This section describes the Kleene support for \acro{rtn}s
-%compatible with the off-the-shelf functions from the OpenFst library.
-%\acro{sap} linguists creating pattern networks for the \acro{sap}
-%\acro{rtn} pattern-matching runtime code should ignore this section and
-%proceed immediately to section~\ref{sec:saprtn} starting on
-%page~\pageref{sec:saprtn}.
+\begin{Verbatim}
+^inputSigma($fst) {
+	$input = $^inputProj($fst) ;
+	sigma $input ;
+	draw $input ;
+}
 
-\section{OpenFst Recursive Transition Networks (\acro{rtn}s)}
+// an invocation of the defined void function
+^inputSigma(abc) ;
+\end{Verbatim}
 
-\subsection{Status}
+\section{Anonymous Void Functions}
 
-[KRB 2013-04]  WORK IN PROGRESS:  There is currently no runtime-code support for
-\init{rtn}s.  This chapter has not be reviewed recently.
+An anonymous void function looks like
+\verb!^(!\ldots\emph{args}\ldots\verb!)!\verb!{!\ldots\emph{body}\ldots\verb!}!,
+with the plain \verb!^! sigil
+marking a function that has no return value. 
 
-Kleene supports the building of Recursive Transition Networks
-(\acro{rtn}s) that are compatible with the OpenFst \texttt{Replace()} and
-\texttt{ReplaceFst()} operations.  An \acro{rtn} contains arc labels that
-are to be interpreted as ``references'' to subnetworks; and compatible
-\acro{rtn}-savvy runtime code, when applying a network to data, will
-recognize such a reference and ``push'' to the referenced subnetwork to
-continue the matching, and then ``pop'' back to the calling network when
-the subnetwork has successfully matched.  The references to subnetworks
-can also be thought of as non-terminal labels.
 
-\acro{rtn}s, containing references to subnetworks, are often smaller than
-full-sized networks that must contain a full copy of each subnetwork
-wherever it is needed.  However, \acro{rtn}s can denote context-free
-languages, and so can go beyond regular power; a special subclass of
-\acro{rtn}s remain regular.  The recognition/parsing of context-free
-languages requires memory, in particular a push-down stack, and so any
-runtime code to apply \acro{rtn}s must include such a stack.
+\section{Control Syntax}
 
-At the time of writing (13 October 2010) there are hints that the
-\acro{rtn} conventions currently required in OpenFst might change, and
-there is new library support for mathematically equivalent Pushdown
-Automata (\acro{pda}s) that we have not yet tested.  Kleene support for
-OpenFst \acro{rtn}s and \acro{pda}s will necessarily evolve along with
-the library.
+In addition to \fsm{}-, arithmetic- and function-assignment statements,
+\Kleene{} provides \verb!if-elsif-then! statements, \verb!while!  and
+\verb!until!  loops, iteration over list elements, and a variety of
+``housekeeping'' statements for input-output, executing pre-edited
+scripts, retrieving information about \fsm{}s, drawing \fsm{}s, etc.
+For example, numbered iteration could be implemented by defining the
+following functions (though \Kleene{} already provides the convenient
+\verb!{!\emph{n}\verb!}! postfix operator):
 
-\subsection{Syntax for Creating an OpenFst \acro{rtn}}
+\begin{Verbatim}
+$^iterate_by_recursion($fsm, #count) {
+    if (#count > 0) {
+        return $fsm $^iterate_by_recursion($fsm, #count - 1) ;
+    } else {
+        return "" ;
+    }
+}
 
-For the programmer, there needs to be a Kleene syntax to denote a
-reference to a subnetwork, and it needs to be distinct from the syntax
-that causes a copy of a network to be inserted.  For example, in this
-example
+$^iterate_by_loop($fsm, #count) {
+    $result = "" ;
+    while (#count > 0) {
+        $result = $result $fsm ;
+        #count = #count - 1 ;
+    }
+    return $result ;
+}
+\end{Verbatim}
 
-\begin{Verbatim}[fontsize=\small]
-$vowel = [aeiou] ;
-$net = k $vowel t $vowel b $vowel ;
+\section{Input/Output}
+
+\subsection{Scripts}
+
+When Kleene is invoked ``bare'' from the command line, using
+
+\begin{Verbatim}
+$ java -jar Kleene.jar
 \end{Verbatim}
 
 \noindent
-the \verb!$vowel! network will be copied three times into \verb!$net!.
-In real-life applications, a subnetwork might encode something much
-larger, such as nouns or even noun phrases in a natural language, and
-multiple copies could easily cause the final network to become very
-large, or even too large to compute.
+the \acro{gui} is launched, allowing users to type individual statements
+for immediate intepretation.\footnote{The dollar sign in these examples
+	represents the command-line prompt.  Kleene will initially be
+	packaged for distribution as an executable \acro{jar} file.} A Kleene
+	\acro{script} is a sequence of Kleene statements pre-edited and
+	stored in a file.  Scripts can be executed by including their
+	filenames in the command line,
 
-Kleene currently supports a wired-in function \verb!$^sub($s)! that
-programmers can use to denote a reference to a subnetwork \verb!$s!.\footnote{I'm
-not tied to \verb!$^sub($s)! and would be comfortable with alternatives such
-as \verb!$^ref($s)! or \verb!$^push($s)!, or even some special syntax like
-\verb!>$s<! or \verb!>>$s!.} 
-
-To continue with our trivial example, 
-
-\begin{Verbatim}[fontsize=\small]
-$vowel = [aeiou] ;
-$rtn = k $^sub($vowel) t $^sub($vowel) b $^sub($vowel) ;
+\begin{Verbatim}
+$ java -jar Kleene.jar myscript
+$ java -jar Kleene.jar myscript1 myscript2 ...
 \end{Verbatim}
 
 \noindent
-would result in an \verb!$rtn! network that contains three compact
-one-label references to \verb!$vowel! rather than three full copies of
-it.  In real-life applications, the savings in memory can be very
-significant.
+and Kleene will, by default, exit after all the scripts are executed.
+The script names can be paths such as
+\texttt{/Users/beesley/kleene/scripts/myscript.kl}.  By default, Kleene
+(and Java programs in general) will assume that the script file is in the
+default encoding of the operating system, and will convert it to Unicode
+accordingly.\footnote{Java's String objects are always Unicode.  Text
+input to Java programs is always converted to Unicode, one way or
+another.  By default, text output from Java is converted from Unicode to
+the default encoding of the operating system.}  If a script is not in the
+default encoding of the operating system, its encoding should be specified
+explicitly using the \texttt{-encoding} flag, which should appear before
+the filename(s):
 
-\subsection{What does a Reference Look Like in an OpenFst \acro{rtn}?}
-
-OpenFst networks consist of states and arcs, and each arc has two labels,
-an input label, and an output label.\footnote{The terminology of
-\emph{input} and \emph{output} labels is that of the OpenFst tradition.
-In the Xerox tradition, they are called \emph{upper} and \emph{lower}, or
-sometimes \emph{lexical} and \emph{surface}.}  In the actual network, the
-labels are really integers, and all Unicode characters, such as \emph{a},
-\emph{b}, \emph{c}, etc.\@ are represented using their standard Unicode
-code point values.  Multichar symbols are stored using code point values
-selected at random from a Unicode Private Use Area.
-
-To maximize compatibility with the off-the-shelf OpenFst
-\texttt{Replace()} and \texttt{ReplaceFst()} operations, the integer
-representing a reference to a subnetwork must currently appear on the
-\emph{output} side of an arc.  In Kleene, multichar symbol names
-representing a call to a subnetwork \verb!$s! are spelled \verb!__$s!,
-with two initial underscores, and the syntax \verb!$^sub($s)!  currently
-yields the following network.
-
-% see images/README for converting .ps files to .pdf and cropping them
-\begin{center}
-\includegraphics{images/reference.pdf}
-\end{center}
-
-\noindent
-Currently in OpenFst, the symbol \verb!__$s! could in fact appear also on
-the input side.  Of course, in the real network, the labels are really
-just integers, 0 for epsilon, and some arbitrary value from the Private
-Use Area for the multichar symbol.
-
-Kleene programmers should use the wired-in \verb!$^sub()! function to
-denote references to subnetworks and should not try to specify special
-symbols like \verb!__$s! directly.  For example, the following statement
-is illegal and will cause an exception to be thrown.
-
-\begin{Verbatim}[fontsize=\small]
-$rtn = "":'__$foo' ;    // raises an exception
+\begin{Verbatim}
+$ java -jar Kleene.jar -encoding UTF-8    myscript
+$ java -jar Kleene.jar -encoding Latin-1  myscript ...
 \end{Verbatim}
 
 \noindent
-The use of \verb!$^sub()! at the programming level will also make it easy
-for Kleene to adapt to any changes to \acro{rtn} representations that
-might be made in the underlying OpenFst library.
+To cause Kleene to execute one or more scripts---typically start-up
+scripts---and then launch the \acro{gui} for interactive input, add the
+\texttt{-gui} flag anywhere among the script names.
 
-\subsection{Embedding Subnetworks in an OpenFst \acro{rtn}}
+\begin{Verbatim}
+$ java -jar Kleene.jar myStartupScript -gui
+\end{Verbatim}
 
-The \verb!$^embedRtnSubnets($rtn)! function takes an OpenFst \acro{rtn}
-argument, i.e.\@ a network that contains OpenFst-format references to
-subnetworks, and returns a network that consists of the original network
-unioned with a prefixed copy of each referred-to subnetwork.  For each
-referred-to network \verb!$s!, the prefix consists of the special symbol
-\verb!__SUBNETWORKS! followed by the special symbol \verb!__$s!.  Thus
-from the following code
+To execute a Kleene script from the \acro{gui}, i.e.\@ from the Kleene
+language itself, use the \texttt{source} command, which requires one
+Kleene-regular-expression argument denoting a single-string filename or path,
+with an optional comma-separated second argument (also denoting a language of
+a single string) indicating the encoding of the source file.  In Kleene, a
+sequence of alphabetic letters such as \texttt{myscript} is of course such a
+single-string regular expression; and double-quoted strings, also regular
+expressions, are appropriate if the name or path contains special characters
+like periods, slashes and hyphens.
 
-\begin{Verbatim}[fontsize=\small]
-$p = p ;
-$q = q ;
-$rtn = a $^sub($p) b $^sub($q) ;
+\begin{Verbatim}
+// invoke from the Kleene GUI
+// By default, the encoding of the script is assumed to be the 
+//    default encoding of the operating system
+source "myscript.kl" ;
+source "/Users/beesley/kleene/scripts/testscript.kl" ;
+source "myscript.kl", "UTF-8" ; // specify the encoding
+\end{Verbatim}
+
+By default, Kleene will attempt to read the script file using the default
+encoding of your operating system, as perceived by Java. In Java code,
+the default encoding of the operating system is supposed to be returned by
+\texttt{System.getProperty("file.encoding")}, and on Linux this seems to work.
+However, Apple \init{os
+x} annoyingly reports the default encoding as ``MacRoman'' even if you've reset your locale
+otherwise.\footnote{In Apple \init{os x}, you can set your LANG
+environment variable to something like \verb!en_US.UTF-8!, which causes
+the \verb!locale! command to report \init{utf-8} encoding, but inside
+Java, \texttt{System.getProperty("file.encoding")} still returns
+MacRoman.  If you, like me, have set up your whole \init{os x} system for default
+\init{utf-8} encoding, and (naturally) expect Java to perceive the default encoding
+as \init{utf-8},
+you have to launch Kleene with something like \texttt{java -jar -Dfile.encoding-UTF-8
+Kleene.jar}.}
+
+In the Kleene \acro{gui}, the terminal widget has a pull-down \verb!Source!
+menu that brings up a window that allows you to browse for the source file and
+to indicate the encoding.  The encoding will be pre-set to the default encoding
+of the operating system, but it can be changed if necessary.
+
+\subsection{XML Input/Output}
+
+An \fsm{} can be written to file in Kleene's 
+\acro{xml} language using the \texttt{writeXml} command,
+which takes as arguments a regular expression representing the \fsm{} to be
+written, and a second regular expression indicating the file-path:
+
+\begin{Verbatim}
+writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
+writeXml (dog|cat|elephant)s? , 
+         "/Users/beesley/kleene/xml/animals.xml" ;
+\end{Verbatim}
+
+By default, the file is written in Unicode \acro{utf-8}, which is the
+official default encoding for all \acro{xml} files.\footnote{The
+\acro{xml} header of the file will be written as \texttt{<?xml
+version="1.0" encoding="UTF-8"?>}, though the overt specification of
+\acro{utf-8} encoding is redundant.}  Other encodings can be specified in
+an optional third argument, but the only other recommendable encoding is
+\acro{utf-16}.  \acro{xml} parsers are required to handle only
+\acro{utf-8} and \acro{utf-16}, though they may handle other encodings.
+Most users will want to stay with the default \acro{utf-8} encoding.
+
+\begin{Verbatim}
+// default UTF-8 output
+writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
+
+// explicit UTF-8 output
+writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml, "UTF-8" ;
+
+// explicit UTF-16 output
+writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml", "UTF-16" ;
+\end{Verbatim}
+
+In the Kleene \acro{gui}, the \verb!writeXml! command can be invoked by
+right-clicking on an \fsm{} icon and selecting the \verb!writeXml!
+item.  The file selection window allows you to select the encoding,
+which is pre-set to the recommended \acro{utf-8}.
+
+The built-in function \verb!$^readXml()! reads from a Kleene \acro{xml} file and returns an
+\fsm{}.
+
+\begin{Verbatim}
+// to read file fsm.xml in the current directory
+$newfsm = $^readXml("fsm.xml") ;
+
+// a full pathname can be specified
+$newnfsm = $^readXml("/Users/beesley/kleene/xml/fsm.xml") ;
+\end{Verbatim}
+
+The encoding of an
+\acro{xml} file is always 1) specified by an overt \texttt{encoding} in
+the \acro{xml} header, if present, or 2) detectable automatically from the
+\acro{bom} (Byte Order Mark), if present, or 3) \acro{utf-8} by default.
+The reading of \acro{xml} files is now done using the \acro{rome} library's
+\texttt{XmlReader} class, which knows how to detect the encoding of an
+\acro{xml} file.
+
+\subsection{\acro{dot} Output}
+
+\fsm{}s can be written to file in the GraphViz \verb!dot!
+format\footnote{\url{http://www.graphviz.org}} using the
+\texttt{writeDot} command, which is similar to the \texttt{writeXml} command.
+
+\begin{Verbatim}
+writeDot $fsm, "/Users/beesley/kleene/xml/fsm.dot" ;
+writeDot (dog|cat|elephant)s? , 
+         "/Users/beesley/kleene/xml/animals.dot" ;
+\end{Verbatim}
+
+By default, the file will be written to file in the \acro{utf-8}
+encoding.  A different encoding can be specified in an optional third
+argument, but the only valid alternative is \acro{iso-8859-1}, because
+the \verb!dot! parser can handle only \acro{utf-8} and \acro{iso-8859-1}.
+Most users will want to stay with the default \acro{utf-8} encoding,
+which is the only alternative if the sigma of the \fsm{} contains
+Unicode symbols beyond the \acro{iso-8859-1} range.
+
+In the Kleene \acro{gui}, the \verb!writeDot! command can be invoked by
+right-clicking on an \fsm{} icon and selecting the \verb!writeDot! item.
+The file selection window allows you to select the encoding, which is pre-set to the recommended \acro{utf-8}.  \acro{dot} output is used in the
+background when you invoke the \texttt{draw} command, which can also be
+generated by right-clicking on the \fsm{}'s icon and selecting the \texttt{draw} item, or
+by double-clicking on the icon.
+
+\subsection{Interactive Testing in the \acro{gui}}
+
+For interactive manual testing of an \fsm{} within the \acro{gui},
+use the Kleene \texttt{test} command, e.g.
+
+\begin{Verbatim}
+test $myfsm ;
+test (dog|cat|rat) '[Noun]':"" ( '[Sg]':"" | '[Pl]':s ) ;
 \end{Verbatim}
 
 \noindent
-the result \verb!$rtn! is this network containing two references to subnetworks
+The \texttt{test} command causes the indicated \fsm{} to be scanned for
+multi-character symbols, which are used to build 
+string-to-symbol tokenizers, one for the input side, and one for
+the output side.\footnote{These tokenizers are currently
+built using the Transliterator object from \acro{icu} (International
+Components for Unicode).}  A testing window is opened, with string
+input fields allowing the user to type in strings either for
+analysis or generation.  An input string for analysis is tokenized
+into symbols, built-in a one-string \fsm{}, and composed on the
+output (lower) side of the transducer; the input (upper) side of
+the composed \fsm{} is then extracted as the result.  Generation
+is the same, except that the one-string \fsm{} is composed on the
+input (upper) side of the original \fsm{}, and the output (lower)
+side of the composed \fsm{} is extracted as the result.  If the
+result language is reasonably finite, the individual strings are
+displayed in the terminal window.
 
-\begin{center}
-\includegraphics[width=\textwidth]{images/twoReferences.pdf}
-\end{center}
+When the \fsm{} being tested contains \acro{other} (unknown) characters,
+the output may be unintuitive; see Appendix~\ref{app:test} for more
+details.
 
-\noindent
-but the three referred-to networks remain separate.  After the following
-call to \verb!$^embedRtnSubnets($rtn)!, 
+When an \fsm{} is finite (no cycles) relatively small and an acceptor, you can print out
+the strings using the \texttt{print} command:
 
-\begin{Verbatim}[fontsize=\small]
-$embedded = $^embedRtnSubnets($rtn) ;
+\begin{Verbatim}
+$net = dog | cat | elephant ;
+print $net ;
+// output:
+//    cat: 0.0
+//    dog: 0.0
+//    elephant: 0.0
 \end{Verbatim}
 
+[KRB:  Random upper and lower strings.  New functionality 2013-04.  Not well tested yet.]
+For transducers and large \fst{}, even those with cycles, you can print out a random
+selection of upper-side strings, or lower-side strings, using the \texttt{randInput} (alias
+\texttt{randUpper}, \texttt{rinput} and \texttt{rupper}) command:
 
-\noindent
-the resulting \verb!$embedded! network looks like this
-
-\begin{center}
-\includegraphics[width=\textwidth]{images/embedded.pdf}
-\end{center}
-
-\noindent
-The embedded network can be saved to file as a single network and could be
-applied by \acro{rtn}-savvy runtime code (not yet written) that knows the prefix convention.
-
-The unioning of the base network with the subnetworks also guarantees that
-the meaning of OTHER, if present, is standardized throughout all the
-networks.
-
-\subsection{Expanding an OpenFst \acro{rtn} into a Full Normal Network}
-
-In some cases, it may also be useful to take an OpenFst \acro{rtn} and replace
-each reference to a subnetwork with an actual copy of that subnetwork,
-expanding the \acro{rtn} into a full normal network.  This is mathematically and
-computationally possible only if the \acro{rtn} is regular.  Using the same
-\verb!$rtn! example, a call to \verb!$^expandRtn()!
-
-\begin{Verbatim}[fontsize=\small]
-$expanded = $^expandRtn($rtn) ;
+\begin{Verbatim}
+randInput $fst ;
+randUpper $fst ;
 \end{Verbatim}
 
 \noindent
-produces the following \verb!$expanded! network
+Similarly, you can use the \texttt{randOutput} (alias \texttt{randLower}, \texttt{routput}
+and \texttt{rlower}) command to print out a random selection of the output/lowerside
+strings.
 
-\begin{center}
-\includegraphics[width=\textwidth]{images/expanded.pdf}
-\end{center}
+\begin{Verbatim}
+randOutput $fst ;
+randLower $fst ;
+\end{Verbatim}
 
 \noindent
-In real-life \acro{rtn}s, with multiple references to the same
-subnetwork, the expanded network will be significantly bigger than the
-original.  
+These commands are often useful during development to ``see what the upper (or lower)
+strings look like.''  These commands also have optional second and third arguments, the second
+being the number of strings to display (the default is currently 15), and the third is the
+maximum length of a string (default 50), which can be useful to avoid getting into infinite loops).
 
-If the \acro{rtn} contains cyclic references to subnetworks, it is
-context-free in power (i.e.\@ no longer regular in power), and its
-expansion would result in an infinite network.  The
-\verb!$^expandRtn($rtn)! function checks for cyclic references and throws
-an exception if the \verb!$rtn! is not regular.\footnote{In the OpenFst
-library, the \verb!ReplaceFst()! operation provides a convenient method
-that checks for cyclic references, and \verb!$^expandRtn()! invokes this
-method.}
+\begin{Verbatim}
+// print 20 random input strings
+randInput $fst, 20 ;
 
+// print 10 random input strings, max 25 symbols
+randUpper $fst, 10, 25 ;
+\end{Verbatim}
+
+\noindent
+The ``random'' function are based on the OpenFst RandGen() function.
+
+\section{Memory Management}
+
+Memory management commands are intended for use by the developers and
+maintainers of Kleene, not for typical users.
+
+Kleene is based on the OpenFst library, and the finite-state machines 
+(the actual states and arcs) are built by OpenFst and are therefore
+\CPP{} objects, i.e.\@ all the states and arcs, comprising a \CPP{}
+\fsm{} object, reside in the \CPP{} memory space.
+
+On the Java side of Kleene, each finite-state machine is represented by a
+Java Fst object,\footnote{Defined in the file \texttt{Fst.java}.} and
+each allocated Fst object holds a pointer to the corresponding \CPP{}
+finite-state machine object.\footnote{The Java Fst object also keeps
+track of each \fsm{}'s private sigma, which is a concept alien to
+OpenFst.}  The memory taken up by the Fst object itself is Java memory,
+and can be reclaimed by the normal Java garbage collection.  But the
+memory required by the states and arcs is \CPP{} memory and is invisible
+to the Java garbage collector.
+
+\subsection{Garbage Collection}
+
+The Kleene parser and interpreter are written in Java, which
+automatically performs garbage collection of Java objects when they no
+longer have any references to them.  In general, Kleene users should
+never have to worry about garbage collection, and even lower-level Java
+programmers have little control over when garbage collection is done.  
+
+In case it should become necessary or useful, Kleene offers the
+\texttt{gc} command, which when evaluated suggests to Java that ``now
+would be a good time to perform garbage collection''.\footnote{Java does
+not necessarily have to accept the hint to perform garbage collection.
+The \texttt{gc} command calls \texttt{System.gc()} and
+\texttt{System.runFinalization()}, multiple times, which is alleged to
+nudge Java more aggressively.  In a Java Fst object, the
+\texttt{finalize()} method calls a native \CPP{} function that in turn
+calls the normal \texttt{delete} command of \CPP{} to delete the \CPP{}
+finite-state machine (the states and arcs in \CPP{} memory). The
+\texttt{finalize()} method is advertised as the way to release/delete
+``native'', i.e.\@ non-Java, resources, so it's just what Kleene needs;
+but there is much debate among Java experts about if and how
+\texttt{finalize()} should be relied on.}
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = foo ;
+$bar = bar ;
+delete $foo, $bar ;
+gc ;
+\end{Verbatim}
+\end{samepage}
+
+\subsection{Java Memory Usage}
+
+Kleene also offers the \texttt{memory}
+command, which prints out a summary showing the maximum memory, the
+memory in use, and the free memory, as seen by Java.
+
+\begin{Verbatim}
+memory ;
+\end{Verbatim}
+
+\noindent
+The format of the output, not shown here, will no doubt evolve as needs
+become clear.  Note that Kleene currently has no way to interrogate the
+memory usage or availability in the \CPP{} memory space.
+
+\subsection{Java Fst Objects}
+
+Kleene now keeps track of how many Java Fst objects have been allocated,
+and how many have been ``finalized'', and this information can be
+displayed by the \texttt{fsts} command.  When an Fst object has been
+finalized, the Java object itself should be garbage collected, and the
+corresponding OpenFst finite-state machine should be deleted.
+
+\begin{Verbatim}
+fsts ;
+\end{Verbatim}
+
+\noindent
+The command also displays the number of ``live'' Fsts, which is the
+difference between the number of allocated Fsts and the number of finalized Fsts.
+
+\subsection{Contents of the Main Symbol Table}
+
+The \texttt{symtab} command prints a list of the items defined in the main
+``program'' symbol table, and these items should match the icons in the \acro{gui} symtab
+window.
+
+\begin{Verbatim}
+symtab ;
+\end{Verbatim}
+
+\subsubsection{Contents of the Global Symbol Table}
+
+The \texttt{gsymtab} command prints a list of the items defined in the global symbol
+table, which is the root of the Kleene environment and the mother of the
+``program'' symbol table.  The items in the list should correspond to the definitions
+in the system-supplied \texttt{.kleene/global/predefined.kl} start-up script.
+
+\begin{Verbatim}
+gsymtab ;
+\end{Verbatim}
+
+\subsection{C++ Memory Space}
+
+The Kleene system includes one custom-written non-OpenFst \CPP{} file,
+named \texttt{kleeneopenfst.cc}, that defines the ``native'' (\CPP{})
+functions directly callable from the Kleene interpreter and serves as the
+\acro{jni} bridge between Kleene and the OpenFst library.  As with any
+program involving C or \CPP{}, there is a significant danger of memory
+leaks; finding and plugging them will be a high priority.
+
+Another possible and significant source of \CPP{} memory leaks would be
+the creation of native finite-state machines that are never deleted; the
+\texttt{fsts} command, described above, may provide clues to tracking
+down such leaks.  Kleene currently has no direct way to interrogate the
+memory usage/availability in the \CPP{} memory space.\footnote{Memory
+profilers may provide some help here.}
 
 

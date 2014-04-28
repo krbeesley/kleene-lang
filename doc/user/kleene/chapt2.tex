@@ -18,16 +18,14 @@ writing, such pre-compiled binaries are available for
 
 \begin{itemize}
 \item
-Apple OS X, compiled on version 10.6.8 (Snow Leopard)
+Apple OS X, and
 \item
-Linux, 32-bit, compiled on Linux Mint 14
+Linux
 \end{itemize}
 
 \noindent
 Check the web site for the latest offerings.  
-The Linux binary should almost certainly work in Ubuntu, and perhaps other Linux
-distributions, but this remains to be tested.  32-bit compiles will also work on 64-bit
-processors.  It is hoped that Kleene will someday be available on Windows.
+It is hoped that Kleene will someday be available on Windows.
 
 To install Kleene, you will need to have some basic computer skills, including knowing how
 to
@@ -77,7 +75,7 @@ rather difficult, an exercise for experts, and this is definitely a target
 for simplification in the future.
 
 If a pre-compiled binary does not work for you, and you don't mind a little
-challenge, read the files \texttt{README.build} and \texttt{README.git},
+challenge, read the files \texttt{README.git} and \texttt{README.build},
 which will direct you to download the Kleene source code from a Github
 repository.  Follow the instructions in \texttt{README.build} and then
 those in \texttt{README.install}.  If you succeed in compiling and running
@@ -94,6 +92,8 @@ file is installed and then invoke
 $ java -jar Kleene.jar
 \end{Verbatim}
 
+\noindent
+or one of the aliases described in \texttt{README.install}.
 This should bring up the Kleene \acro{gui} (Graphical User Interface),
 which looks like this:
 
@@ -123,7 +123,7 @@ interactively.
 
 \subsection{First, is it working?}
 
-Just to make sure that Kleene is working, enter the following carefully in the bottom line of the
+Just to make sure that Kleene is working, enter the following statement carefully in the bottom line of the
 pseudo-terminal window:
 
 \begin{Verbatim}
@@ -319,7 +319,7 @@ by the \fsm{}.  (Don't worry now
 about the ``0:0,'' which is a weight and will be explained later.)
 You get the same result if you enter \texttt{d} in the
 lower-side input window.  But if you enter any other string, such as ``b'' or
-``ant'' or ``elephant,'' a message
+``dd'' or ``ant'' or ``elephant,'' a message
 indicates that the output is empty, i.e.\@ that the input string was not
 accepted.
 
@@ -354,7 +354,7 @@ of the one string ``dog,'' has four states and tree arcs.
 
 The testing procedure that \emph{applies} this \fsm{} to the string ``dog,'' involves
 first setting a match pointer to the first character \texttt{d} in the input string, 
-putting the machine in
+initializing the machine in
 its start state, and then looking for an arc labeled \texttt{d} leading out of the
 start state.  There is such an arc in this example, so the application 
 \emph{consumes} the input symbol \texttt{d}, resets the match pointer to the next
@@ -544,7 +544,7 @@ The operator for intersection is \&.
 \begin{Verbatim}
 $commonAnimals = 
    (dog | cat | elephant | whale | ant | bird | reindeer) & 
-   ( cat | horse | reindeer | snail | whale )
+   ( cat | horse | reindeer | snail | whale ) ; 
 print $animals ;
 // outputs: cat whale reindeer
 \end{Verbatim}
@@ -569,7 +569,8 @@ $UnivLang = .* ;
 
 \noindent
 Note that in Kleene, as in the Xerox Finite State Toolkit, is it not necessary
-for the programmer to declare the alphabet being used.  The . really represents any possible symbol.
+for the programmer to declare the alphabet being used.  In Kleene regular
+expressions, the . really represents any possible symbol.
 
 The Empty Language is the language that contains no strings at all, not even the empty
 string.  There are an infinite number of ways to denote the Empty Language, including
@@ -897,7 +898,7 @@ $\u03b1\u03b2 = a b ;
 
 Kleene supports Unicode to the extent that Java does, which is pretty well but not
 perfectly.  Users can write their scripts using the International Phonetic Alphabet, Greek,
-Cyrillic, Arabic, etc.\@ without ever needed to resort to clumsy transliterations.
+Cyrillic, Arabic, etc.\@ without ever needing to resort to clumsy transliterations.
 Whether the Kleene \gui{} can actually display a character depends on the fonts installed in
 your Java installation.
 
@@ -906,7 +907,8 @@ your Java installation.
 \subsubsection{Regular Languages and Acceptors}
 
 In formal language theory, a language is a set of strings.  A regular language, where
-\emph{regular} is a technical term, is formally defined as a language that can be defined
+\emph{regular} is a technical term,\footnote{In some traditions, the term
+\emph{rational} is used instead of \emph{regular}.} is formally defined as a language that can be defined
 using only concatenation, union and the Kleene-closure\footnote{The Kleene-closure is named
 after mathematician Steven Cole Kleene, who invented it.  The Kleene programming language
 is named after the same man.} operator *, which indicates zero or
@@ -927,12 +929,12 @@ In classic visualizations of acceptors, they have only a single label on
 each arc.  In OpenFst, and therefore in Kleene, all arc labels have two labels, an input
 label and an output label: \verb!i:o!.  By convention in OpenFst, an \fsm{} is an acceptor,
 or can be interpreted as an acceptor,
-if and only if all the labels have the same symbol as both the input and the output.
+if and only if each input label is equal to its associated output label.
 
 Regular languages, and the acceptors that encode them, have some very interesting and
 useful
 mathematical properties, known as closure properties.  For example, regular languages are
-\emph{closed} under the union operation because if you union two regular languages together, the
+\emph{closed} under the union operation because if you union any two regular languages together, the
 result is also a regular language.  Regular languages and the acceptors that
 encode them are closed under the following
 operations:
@@ -973,7 +975,8 @@ regular relations and finite-state transducers can have any number of levels, kn
 A finite-state transducer (\fst{}) has a finite number of states, one of which is
 designated as the start state, and zero or more of which are final.  An \fst{} can also
 contain zero of more labeled directed arcs that lead from a state to a state.  Each label
-consists of two parts, an input label and an output label, notated  \verb!i:o!.  The input
+consists of two parts, an input label and an output label, notated  \verb!i:o!.  In a finite-state
+transducer, the input
 and output labels of an arc can be different, or the same.
 
 In Kleene syntax, a label with \texttt{a} on the input side and \texttt{b} on the output
@@ -1043,10 +1046,11 @@ previous noun example, if an ordered pair (dog, dogs) is interpreted as (\emph{i
 \emph{outputString}),
 then the \fst{} that encodes the regular relation { (dog, dogs), (cat, cats), (elephant,
 elephants), (woman, women), (deer, deer)} would provide a transduction or \emph{mapping}
-from singular nouns like ``dog,'' ``cat'' and ``woman'' to their plural forms ``dogs,''
-``cats'' and ``women,'' respectively.  Looked at in the other direction,
+from singular nouns like ``dog,'' ``cat'' and ``woman'' to their \emph{related} plural forms ``dogs,''
+``cats'' and ``women,'' respectively.  Relations relate words to other words. 
+Looked at in the other direction,
 the same \fst{} provides a mapping from plural forms to their
-corresponding singular forms.
+related singular forms.
 
 Try building and testing the following example in the Kleene \gui{}:
 
@@ -1145,7 +1149,8 @@ applying the same \fst{} in the opposite direction, try entering
 \texttt{horse} in the \emph{lower} input field; the result will be \texttt{horse[Noun][Sg]}.
 And if you enter \texttt{horses} in the lower input field, the output will be \texttt{horse[Noun][Pl]}.
 Xerox researchers referred to this mode of application as \emph{analysis}, mapping from surfacy
-strings to abstract analysis strings.  \fst{}s are bidirectional. 
+strings to abstract analysis strings.  \fst{}s are bidirectional, and the Xerox visualization of
+\fst{}s emphasizes that bidirectionality. 
 Such \fst{}s, which perform morphological analysis and
 generation, can be written to model word analysis in natural languages like English, French, German,
 Arabic, Zulu, etc.
@@ -1188,9 +1193,13 @@ functions rather than using operators.  Here is how you take a defined
 $invertedFst = $^invert($fst) ;
 \end{Verbatim}
 
+\noindent
+That is, Kleene provides a function named \verb!$^invert! that takes one argument, an \fst, and
+returns a new \fst{} that is the inversion of the argument.  The argument itself is not modified. 
+
 \subsubsection{Closure Properties of Regular Relations/Transducers}
 
-The closure properties of regular relations, and the \fst{}s that encode them, are not
+The closure properties of regular relations, and of the \fst{}s that encode them, are not
 the same as the closure properties of regular languages.  In particular, \fst{}s are closed
 under concatenation, union and iteration, but not generally under subtraction, intersection
 or complementation.
@@ -1211,7 +1220,7 @@ Iteration	  	& A*\\
 
 \noindent
 If you try to subtract, intersect or complement transducers, Kleene will
-throw and exception and you will get an error message.
+throw an exception and you will get an error message.
 The illegal operations for transducers all reduce to subtraction.
 
 \vspace{4mm}
@@ -1256,7 +1265,7 @@ $fstrev = $^reverse($fst) ;
 \end{Verbatim}
 
 \noindent
-There are many more pre-defined functions, and it is also possible to define your own functions.
+There are many more pre-defined functions in Kleene, and it is also possible to define your own functions.
 
 Although you cannot, as we have already stated, subtract, intersect or complement
 transducers, you can combine them using \emph{composition}, a powerful operation that we
@@ -1350,6 +1359,8 @@ Phonological models
 \item
 Morphological analyzer/generators
 \item
+Taggers (part-of-speech disambiguators)
+\item
 Shallow parsers
 \item
 Speech generator/recognizers
@@ -1377,7 +1388,7 @@ efficiently.  Speech synthesis and speech recognition are often approached this 
 This book will focus mostly on morphological analysis, which is often the first step in
 computational linguistics.  After traditional fieldwork has defined the phonology,
 morphology and orthography of a language, and after reasonable lexicography has been done,
-finite-state implementation like Kleene can help the linguist take that information, often paper-bound,
+a finite-state implementation like Kleene can help the linguist take that information, often paper-bound,
 and animate it on
 computers, creating
 applications that analyze and look up words, providing a foundation for language

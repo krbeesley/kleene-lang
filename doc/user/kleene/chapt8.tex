@@ -1,439 +1,343 @@
+\chapter{Arithmetic Expressions}
 
-\chapter{Other Syntax}
+\label{chapt:arithmeticexpressions}
 
-\section{Void Functions with Names}
+\section{Mindtuning for Arithmetic Expressions}
 
-Void functions return no value, and their names are
-prefixed with the plain \verb!^!
-sigil, like all Kleene functions, but with nothing before the \verb!^!.
-Such void functions can be used to abbreviate and generalize a
-sequence of Kleene commands.
+While \Kleene{} is designed primarily for creating and manipulating
+finite-state networks, it does support arithmetic expressions, variables
+that hold arithmetic values, functions that return arithmetic values,
+etc.  Variables with an arithmetic value are marked with a \# sigil,
+functions that return an arithmetic value with \verb!#^!, etc.  Wherever a
+simple integer or float can appear in \Kleene{} syntax, including
+numbered iterations like \verb!a{2,4}! and weights like \verb!<0.1>!, an
+arbitrarily complex arithmetic expression can appear, e.g.\@ 
+\verb!a{2, #maxlength - 1}! and \verb!<#defaultweight + .01>!.\footnote{Internally,
+\Kleene{} stores arithmetic values as either a Long or a Double object.}
 
-\begin{Verbatim}
-^inputSigma($fst) {
-	$input = $^inputProj($fst) ;
-	sigma $input ;
-	draw $input ;
+The arguments passed to a function could be any mix of regular
+expressions and arithmetic expressions, and one of the biggest challenges
+during \Kleene{} design and development was the distinguishing and proper
+tokenization/parsing of the two separate expression types.  For example,
+both use the plus sign as an operator, but in arithmetic expressions it
+is a binary infix operator of fairly low precedence, e.g.\@  \verb!2+3!,
+while in regular expressions it is a unary postfix operator of fairly
+high precedence, e.g.\@ \verb!ab+c!.  Distinguishing the two
+expression types by inventing new operators---either for regular
+expressions or for arithmetic expressions---was judged to be
+completely unacceptable; and forcing users to surround regular
+expressions, or arithmetic expressions, with some kind of explicit
+delimiters, such as the Perl slashes /\ldots/, was deemed inelegant
+and undesirable.
+
+The solution adopted was to define a systematic set of sigils starting
+with \verb!$! for network-value variables and functions, and \verb!#! for
+arithmetic-value variables and functions.  Parser lookahead distinguishes
+\verb!#a+#b! as an arithmetic expression, involving addition, from
+\verb!$a+$b!, which is a regular expression indicating the concatenation
+of one or more iterations of network \verb!$a! with network \verb!$b!.
+Once the sigil system is mastered, users can, in almost all cases, simply
+type familiar regular and arithmetic expressions in appropriate places. 
+
+The remaining problematic cases are expressions like \verb!2! and
+\verb!2+3!, which start with digits.  Are they arithmetic expressions,
+having a integer or float value, or regular expressions, having a network
+value?  The \Kleene{} solution is to treat bare digits by default as
+arithmetic expressions.  To be interpreted as literal characters, and
+therefore regular expressions, digits must be literalized in the usual
+\Kleene{} ways:
+
+\begin{itemize}
+\item
+Using the prefix backslash literalizer:  \verb!\2!
+\item
+Surrounding them with double quotes: \verb!"2"!, or
+\item
+Putting them in square-bracketed expressions: \verb![2]! \verb![^2]! \verb![0-9]! \verb![^0-9]!
+\end{itemize}
+
+\section{Primary Arithmetic Expressions}
+
+The primary arithmetic expressions are the following:
+
+\vspace{.5cm}
+
+\renewcommand\tabcolsep{1.25mm}
+
+\noindent
+\begin{tabular}{|p{5.5cm}|l|}
+\hline
+\verb!0 1 42!  & decimal integers\\
+\hline
+\verb!0x1 0X1 0x1A 0X23ABC! & hex integers\\
+\hline
+\verb!2.5 .234 103.! & decimal floats\\
+\hline
+\verb!#n #count #foo! & names of variables denoting an arithmetic value\\
+\hline
+\verb!#^abs(#numexp)! \verb!#^arcCount($regexp)!
+\verb!#^stateCount($regexp)! \verb!#^myfunction(!\emph{args}\verb!)! & names of functions returning an arithmetic value\\
+%\hline
+%\verb!#@arr[1]! & arithmetic array reference\\
+\hline
+\end{tabular}
+
+\vspace{.5cm}
+
+\noindent
+Note that \Kleene{} does not support octal (base 8) representations of integers.
+
+\section{Arithmetic Expression Operators}
+
+The following regular expression operators are available, 
+listed from high to low precedence.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|l|l|l|}
+\hline
+( ) &  parenthetical grouping & circumfix &\\
+\hline
+\verb!+ -! & positive, negative & prefix &\\
+\hline
+\verb!* / %! & multiply, divide, mod & infix & left assoc.\\
+\hline
+\verb!+ -!  & add/subtract & infix & left assoc.\\
+\hline
+\verb/< <= >= == != >/ & Boolean comparisons & infix & left assoc.\\
+\hline
+\verb/!/ & Boolean NOT  & prefix & \\
+\hline
+\verb!&&! & Boolean AND & infix & left assoc.\\
+\hline
+\verb!||! & Boolean OR  & infix & left assoc.\\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+\noindent
+The result of boolean operations is always 1 (true) or 0 (false).  There
+is no separate boolean type in Kleene.
+
+\section{Arithmetic Functions}
+
+The following pre-defined arithmetic-valued functions are provided.
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|}
+\hline
+\verb!#^pathCount($fst)! \\
+\verb!#^stateCount($fst)! \\
+\verb!#^arcCount($fst)! \\
+\verb!#^arity($fst)! \\
+\hline
+\verb!#^abs(#num)! \\
+\verb!#^ceil(#num)! \\
+\verb!#^floor(#num)! \\
+\verb!#^round(#num)! \\
+\verb!#^log(#num)! \\
+\verb!#^prob2c(#num)! \\
+\verb!#^pct2c(#num)! \\
+\hline
+\verb!#^long(#num)! or \verb!#^int(#num)! \\
+\verb!#^double(#num)! or \verb!#^float(#num)! \\
+\verb!#^rint(#num)! \\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+
+In Kleene there is no difference between \verb!#^long(#num)! and
+\verb!#^int(#num)!; both are stored as long integers.\footnote{Long
+integers are stored internally as Java Long objects.}  Similarly, there
+is no difference between \verb!#^double(#num)! and \verb!#^float(#num)!;
+both are stored as double values.\footnote{Double values are stored
+internally as Java Double objects.}  
+
+The \verb!#^log(#num)! function returns the natural logarithm of the
+argument.
+The \verb!#^prob2c(#num)! takes an argument that represents a probability,
+where probabilities range from 1.0 (certain) to 0.0 (impossible), and
+returns a cost weight suitable for the Tropical Semiring.\footnote{In
+	the Tropical Semiring, the weights are \emph{costs}.  For any
+probability \emph{p}, the corresponding cost is $-$log(p).  A probability
+of 1.0 corresponds to a cost of 0.0, and a probability of 0.0
+corresponds to an infinite cost.}  The \verb!#^prob2c(#num)! function might
+be used in examples like the following,
+
+\begin{Verbatim}[fontsize=\small]
+$fsm = a b ( c <#^prob2c(0.1)> | d <#^prob2c(0.9)> ) ;
+\end{Verbatim}
+
+\noindent
+where the path containing \emph{c} has 0.1 probability, and the path containing
+\emph{d} has 0.9 probability.  The \verb!#^pct2c(#num)! is similar but allows you
+to express the weights as percentages, e.g.\ 10\% vs.\ 90\%.  The following example is equivalent to the
+one just above.
+
+\begin{Verbatim}[fontsize=\small]
+$fsm = a b ( c <#^pct2c(10)> | d <#^pct2c(90)> ) ;
+\end{Verbatim}
+
+
+[KRB:  explain why the \verb!#^pathCount()! is not completely accurate.
+Explain the other functions..]  
+
+\section{Boolean Functions}
+
+\subsection{Special Case of Arithmetic Functions}
+
+Boolean functions are special cases of arithmetic functions that return 1 for true and 0 for false.  They
+are typically used in if-else expressions or in loops for testing qualities of finite-state machines.
+The predefined boolean functions are 
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{|l|}
+\hline
+\verb!#^isAcceptor($fst)! \\
+\verb!#^isTransducer($fst)! \\
+\verb!#^isRtn($fst)! \\
+\hline
+\verb!#^isWeighted($fst)! \\
+\verb!#^isIDeterministic($fst)! or \verb!#^isUDeterministic($fst)!\\
+\verb!#^isODeterministic($fst)! or \verb!#^isLDeterministic($fst)!\\
+\verb!#^isCyclic($fst)!\\
+\verb!#^isIBounded($fst)! or \verb!#^isUBounded($fst)!\\
+\verb!#^isOBounded($fst)! or \verb!#^isLBounded($fst)!\\
+\verb!#^containsOther($fst)! \\
+\verb!#^hasClosedAlphabet($fst)! \\
+\verb!#^isEpsilonFree($fst)! \\
+\hline
+\verb!#^isEmptyLanguage($fst)! \\
+\verb!#^isEmptyStringLanguage($fst)! \\
+\verb!#^isString($fst)! or \verb!#^isSingleStringLanguage($fst)!\\
+\verb!#^containsEmptyString($fst)! \\
+\verb!#^isUniversalLanguage($fst)! \\
+\hline
+\end{tabular}
+
+\vspace{0.5cm}
+\noindent
+and others will no doubt be defined as they become needed.
+
+The \verb!#^isAcceptor($fst)! function returns true if and only if the
+argument network is semantically an
+acceptor.  In OpenFst, where all arc labels \emph{i}:\emph{o} in a finite-state machine
+are two-level, with an input label \emph{i} and an output label \emph{o}, an acceptor is a special case of a
+machine wherein each arc-label mapping is an identity mapping.\footnote{If the finite-state machine contains an arc labeled
+\acro{other\_nonid:other\_nonid}, then it will look like an acceptor to the OpenFst library, but in Kleene such
+a network is semantically and in practice a transducer; if \verb!#^isAcceptor()! is called on such
+a network the return value is 0 (false).  Conversely, if
+\verb!#^isTransducer()! is called on any network that
+contains an arc labeled \acro{other\_nonid:other\_nonid}, the return value is 1 (true).}
+
+The \verb!#^isTransducer($fst)! function returns true if and only if the argument network is semantically a
+non-identity transducer.  Thus if the machine contains any arc label like a:b, where the upper label is
+different from the lower label, \verb!#^isTransducer! will return true.\footnote{If the argument contains an
+arc labeled 
+\acro{other\_nonid:other\_nonid},
+then it will look like an identity relation to OpenFst itself, but in
+Kleene this is semantically a non-identity transducer and \verb!#^isTransducer! will return 0 (false).}
+
+The \verb!#^isWeighted($fst)! function returns true if and only if the argument
+finite-state machine contains any arc
+with a non-neutral weight value.
+
+The \verb!#^isIDeterministic($fst)! function returns true if and only if the finite-state machine is \emph{input}-side
+deterministic, where ``input'' here is taken in the OpenFst sense of the upper side.
+Similarly, the function \verb!#^isODeterministic($fst)! returns true if and only if the
+network is \emph{output}-side deterministic, in the OpenFst sense.\footnote{The spellings IDeterministic and ODeterministic are
+used inside the OpenFst library.}
+
+The \verb!#^isCyclic($fst)! function returns true if and only if the finite-state machine has cycles, also
+known as loops.
+
+The \verb!#^isIBounded($fst)! function returns true if and only if the finite-state machine has no input side
+epsilon loops.
+
+The \verb!$^isOBounded($fst)! function returns true if and only if the finite-state machine has no output side
+epsilon loops.
+
+The \verb!#^containsOther($fst)! function returns true if and only if the network
+contains at least one \acro{other\_id} or \acro{other\_nonid} label.
+Conversely, 
+\verb!#^hasClosedAlphabet($fst)! returns true if and only if the
+alphabet of the network is closed, i.e.\@ the network does not contain any 
+\acro{other\_id} or \acro{other\_nonid} labels.  Thus
+\verb!#^hasClosedAlphabet($fst)! is equivalent to 
+\verb@!#^containsOther($fst)@.
+
+The \verb!#^isEpsilonFree($fst)! function returns true if and only if the network contains no
+\acro{epsilon:epsilon} arcs,
+i.e.\@ no double-sided epsilon labels.  Because Kleene routinely runs epsilon-removal
+on all networks, which removes such double-sided epsilon arcs, unless such removal is
+explicitly turned off, there is seldom any practical need to call 
+\verb!#^isEpsilonFree($fst)!.
+
+The \verb!#^isEmptyLanguage($fst)! function returns true if and only if the network encodes the empty
+language, i.e.\@ the language that contains no strings at all, not even the empty string.
+
+The \verb!#^isEmptyStringLanguage($fst)! function returns true if and only if the network encodes the
+empty-string language, i.e.\@ the language that contains only the empty string.
+
+The \verb!#^isString($fst)! function, aliased as \verb!#^isSingleStringLanguage($fst)!, returns true if
+and only if the network encodes a language of exactly one string.
+
+The \verb!#^containsEmptyString($fst)! function returns true if and only if the network encodes a
+language that contains the empty string.
+
+The \verb!#^isUniversalLanguage($fst)! function returns true if and only if the network encodes the
+universal language, i.e.\@ the language that contains all possible strings.  [KRB, 2012-08-19:  This
+function will not be fully reliable until a ``compact sigma'' function is implemented.]
+
+\subsection{Assert and Require Statements}
+
+The \verb!assert(#numexp, $regexp)! statement has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!assert(#numexp, $regexp)! statement is typically used
+for testing.
+
+\begin{Verbatim}[fontsize=\small]
+$fst = a - a ;
+assert(#^isEmptyLanguage($fst), 
+        "Should denote the empty language.") ;
+
+$fst2 = a* ;
+assert(#^containsEmptyString($fst2), 
+        "Should contain the empty string.") ;
+\end{Verbatim}
+
+In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
+argument, which is analyzed as a boolean, and an optional second
+regular-expression argument, which must denote a single-string language.  If
+the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
+statement.  But if the first argument analyzes as false, a runtime exception is thrown and
+the single-string second argument, if present, is used as the exception
+message.  The \verb!require(#numexp, $regexp)! statement is typically used
+in user-defined functions to impose semantic restrictions on the
+arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
+and \verb!require(#numexp, $regexp)! arguments could be debated.  One
+possibility would be to implement a global switch that would cause all
+\verb!assert(#numexp, $regexp)! statements, but not 
+\verb!require(#numexp, $regexp)! statements, to be ignored at runtime.}
+
+\begin{Verbatim}[fontsize=\small]
+#^myIntersect($a, $b) {
+	require(#^isAcceptor($a) && #^isAcceptor($b), 
+    "The arguments to #^myIntersect must denote an acceptor.") ;
+
+	return $a & $b ;
 }
-
-// an invocation of the defined void function
-^inputSigma(abc) ;
 \end{Verbatim}
-
-\section{Anonymous Void Functions}
-
-An anonymous void function looks like
-\verb!^(!\ldots\emph{args}\ldots\verb!)!\verb!{!\ldots\emph{body}\ldots\verb!}!,
-with the plain \verb!^! sigil
-marking a function that has no return value. 
-
-
-\section{Control Syntax}
-
-In addition to \fsm{}-, arithmetic- and function-assignment statements,
-\Kleene{} provides \verb!if-elsif-then! statements, \verb!while!  and
-\verb!until!  loops, iteration over list elements, and a variety of
-``housekeeping'' statements for input-output, executing pre-edited
-scripts, retrieving information about \fsm{}s, drawing \fsm{}s, etc.
-For example, numbered iteration could be implemented by defining the
-following functions (though \Kleene{} already provides the convenient
-\verb!{!\emph{n}\verb!}! postfix operator):
-
-\begin{Verbatim}
-$^iterate_by_recursion($fsm, #count) {
-    if (#count > 0) {
-        return $fsm $^iterate_by_recursion($fsm, #count - 1) ;
-    } else {
-        return "" ;
-    }
-}
-
-$^iterate_by_loop($fsm, #count) {
-    $result = "" ;
-    while (#count > 0) {
-        $result = $result $fsm ;
-        #count = #count - 1 ;
-    }
-    return $result ;
-}
-\end{Verbatim}
-
-\section{Input/Output}
-
-\subsection{Scripts}
-
-When Kleene is invoked ``bare'' from the command line, using
-
-\begin{Verbatim}
-$ java -jar Kleene.jar
-\end{Verbatim}
-
-\noindent
-the \acro{gui} is launched, allowing users to type individual statements
-for immediate intepretation.\footnote{The dollar sign in these examples
-	represents the command-line prompt.  Kleene will initially be
-	packaged for distribution as an executable \acro{jar} file.} A Kleene
-	\acro{script} is a sequence of Kleene statements pre-edited and
-	stored in a file.  Scripts can be executed by including their
-	filenames in the command line,
-
-\begin{Verbatim}
-$ java -jar Kleene.jar myscript
-$ java -jar Kleene.jar myscript1 myscript2 ...
-\end{Verbatim}
-
-\noindent
-and Kleene will, by default, exit after all the scripts are executed.
-The script names can be paths such as
-\texttt{/Users/beesley/kleene/scripts/myscript.kl}.  By default, Kleene
-(and Java programs in general) will assume that the script file is in the
-default encoding of the operating system, and will convert it to Unicode
-accordingly.\footnote{Java's String objects are always Unicode.  Text
-input to Java programs is always converted to Unicode, one way or
-another.  By default, text output from Java is converted from Unicode to
-the default encoding of the operating system.}  If a script is not in the
-default encoding of the operating system, its encoding should be specified
-explicitly using the \texttt{-encoding} flag, which should appear before
-the filename(s):
-
-\begin{Verbatim}
-$ java -jar Kleene.jar -encoding UTF-8    myscript
-$ java -jar Kleene.jar -encoding Latin-1  myscript ...
-\end{Verbatim}
-
-\noindent
-To cause Kleene to execute one or more scripts---typically start-up
-scripts---and then launch the \acro{gui} for interactive input, add the
-\texttt{-gui} flag anywhere among the script names.
-
-\begin{Verbatim}
-$ java -jar Kleene.jar myStartupScript -gui
-\end{Verbatim}
-
-To execute a Kleene script from the \acro{gui}, i.e.\@ from the Kleene
-language itself, use the \texttt{source} command, which requires one
-Kleene-regular-expression argument denoting a single-string filename or path,
-with an optional comma-separated second argument (also denoting a language of
-a single string) indicating the encoding of the source file.  In Kleene, a
-sequence of alphabetic letters such as \texttt{myscript} is of course such a
-single-string regular expression; and double-quoted strings, also regular
-expressions, are appropriate if the name or path contains special characters
-like periods, slashes and hyphens.
-
-\begin{Verbatim}
-// invoke from the Kleene GUI
-// By default, the encoding of the script is assumed to be the 
-//    default encoding of the operating system
-source "myscript.kl" ;
-source "/Users/beesley/kleene/scripts/testscript.kl" ;
-source "myscript.kl", "UTF-8" ; // specify the encoding
-\end{Verbatim}
-
-By default, Kleene will attempt to read the script file using the default
-encoding of your operating system, as perceived by Java. In Java code,
-the default encoding of the operating system is supposed to be returned by
-\texttt{System.getProperty("file.encoding")}, and on Linux this seems to work.
-However, Apple \init{os
-x} annoyingly reports the default encoding as ``MacRoman'' even if you've reset your locale
-otherwise.\footnote{In Apple \init{os x}, you can set your LANG
-environment variable to something like \verb!en_US.UTF-8!, which causes
-the \verb!locale! command to report \init{utf-8} encoding, but inside
-Java, \texttt{System.getProperty("file.encoding")} still returns
-MacRoman.  If you, like me, have set up your whole \init{os x} system for default
-\init{utf-8} encoding, and (naturally) expect Java to perceive the default encoding
-as \init{utf-8},
-you have to launch Kleene with something like \texttt{java -jar -Dfile.encoding-UTF-8
-Kleene.jar}.}
-
-In the Kleene \acro{gui}, the terminal widget has a pull-down \verb!Source!
-menu that brings up a window that allows you to browse for the source file and
-to indicate the encoding.  The encoding will be pre-set to the default encoding
-of the operating system, but it can be changed if necessary.
-
-\subsection{XML Input/Output}
-
-An \fsm{} can be written to file in Kleene's 
-\acro{xml} language using the \texttt{writeXml} command,
-which takes as arguments a regular expression representing the \fsm{} to be
-written, and a second regular expression indicating the file-path:
-
-\begin{Verbatim}
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
-writeXml (dog|cat|elephant)s? , 
-         "/Users/beesley/kleene/xml/animals.xml" ;
-\end{Verbatim}
-
-By default, the file is written in Unicode \acro{utf-8}, which is the
-official default encoding for all \acro{xml} files.\footnote{The
-\acro{xml} header of the file will be written as \texttt{<?xml
-version="1.0" encoding="UTF-8"?>}, though the overt specification of
-\acro{utf-8} encoding is redundant.}  Other encodings can be specified in
-an optional third argument, but the only other recommendable encoding is
-\acro{utf-16}.  \acro{xml} parsers are required to handle only
-\acro{utf-8} and \acro{utf-16}, though they may handle other encodings.
-Most users will want to stay with the default \acro{utf-8} encoding.
-
-\begin{Verbatim}
-// default UTF-8 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml" ;
-
-// explicit UTF-8 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml, "UTF-8" ;
-
-// explicit UTF-16 output
-writeXml $fsm, "/Users/beesley/kleene/xml/fsm.xml", "UTF-16" ;
-\end{Verbatim}
-
-In the Kleene \acro{gui}, the \verb!writeXml! command can be invoked by
-right-clicking on an \fsm{} icon and selecting the \verb!writeXml!
-item.  The file selection window allows you to select the encoding,
-which is pre-set to the recommended \acro{utf-8}.
-
-The built-in function \verb!$^readXml()! reads from a Kleene \acro{xml} file and returns an
-\fsm{}.
-
-\begin{Verbatim}
-// to read file fsm.xml in the current directory
-$newfsm = $^readXml("fsm.xml") ;
-
-// a full pathname can be specified
-$newnfsm = $^readXml("/Users/beesley/kleene/xml/fsm.xml") ;
-\end{Verbatim}
-
-The encoding of an
-\acro{xml} file is always 1) specified by an overt \texttt{encoding} in
-the \acro{xml} header, if present, or 2) detectable automatically from the
-\acro{bom} (Byte Order Mark), if present, or 3) \acro{utf-8} by default.
-The reading of \acro{xml} files is now done using the \acro{rome} library's
-\texttt{XmlReader} class, which knows how to detect the encoding of an
-\acro{xml} file.
-
-\subsection{\acro{dot} Output}
-
-\fsm{}s can be written to file in the GraphViz \verb!dot!
-format\footnote{\url{http://www.graphviz.org}} using the
-\texttt{writeDot} command, which is similar to the \texttt{writeXml} command.
-
-\begin{Verbatim}
-writeDot $fsm, "/Users/beesley/kleene/xml/fsm.dot" ;
-writeDot (dog|cat|elephant)s? , 
-         "/Users/beesley/kleene/xml/animals.dot" ;
-\end{Verbatim}
-
-By default, the file will be written to file in the \acro{utf-8}
-encoding.  A different encoding can be specified in an optional third
-argument, but the only valid alternative is \acro{iso-8859-1}, because
-the \verb!dot! parser can handle only \acro{utf-8} and \acro{iso-8859-1}.
-Most users will want to stay with the default \acro{utf-8} encoding,
-which is the only alternative if the sigma of the \fsm{} contains
-Unicode symbols beyond the \acro{iso-8859-1} range.
-
-In the Kleene \acro{gui}, the \verb!writeDot! command can be invoked by
-right-clicking on an \fsm{} icon and selecting the \verb!writeDot! item.
-The file selection window allows you to select the encoding, which is pre-set to the recommended \acro{utf-8}.  \acro{dot} output is used in the
-background when you invoke the \texttt{draw} command, which can also be
-generated by right-clicking on the \fsm{}'s icon and selecting the \texttt{draw} item, or
-by double-clicking on the icon.
-
-\subsection{Interactive Testing in the \acro{gui}}
-
-For interactive manual testing of an \fsm{} within the \acro{gui},
-use the Kleene \texttt{test} command, e.g.
-
-\begin{Verbatim}
-test $myfsm ;
-test (dog|cat|rat) '[Noun]':"" ( '[Sg]':"" | '[Pl]':s ) ;
-\end{Verbatim}
-
-\noindent
-The \texttt{test} command causes the indicated \fsm{} to be scanned for
-multi-character symbols, which are used to build 
-string-to-symbol tokenizers, one for the input side, and one for
-the output side.\footnote{These tokenizers are currently
-built using the Transliterator object from \acro{icu} (International
-Components for Unicode).}  A testing window is opened, with string
-input fields allowing the user to type in strings either for
-analysis or generation.  An input string for analysis is tokenized
-into symbols, built-in a one-string \fsm{}, and composed on the
-output (lower) side of the transducer; the input (upper) side of
-the composed \fsm{} is then extracted as the result.  Generation
-is the same, except that the one-string \fsm{} is composed on the
-input (upper) side of the original \fsm{}, and the output (lower)
-side of the composed \fsm{} is extracted as the result.  If the
-result language is reasonably finite, the individual strings are
-displayed in the terminal window.
-
-When the \fsm{} being tested contains \acro{other} (unknown) characters,
-the output may be unintuitive; see Appendix~\ref{app:test} for more
-details.
-
-When an \fsm{} is finite (no cycles) relatively small and an acceptor, you can print out
-the strings using the \texttt{print} command:
-
-\begin{Verbatim}
-$net = dog | cat | elephant ;
-print $net ;
-// output:
-//    cat: 0.0
-//    dog: 0.0
-//    elephant: 0.0
-\end{Verbatim}
-
-[KRB:  Random upper and lower strings.  New functionality 2013-04.  Not well tested yet.]
-For transducers and large \fst{}, even those with cycles, you can print out a random
-selection of upper-side strings, or lower-side strings, using the \texttt{randInput} (alias
-\texttt{randUpper}, \texttt{rinput} and \texttt{rupper}) command:
-
-\begin{Verbatim}
-randInput $fst ;
-randUpper $fst ;
-\end{Verbatim}
-
-\noindent
-Similarly, you can use the \texttt{randOutput} (alias \texttt{randLower}, \texttt{routput}
-and \texttt{rlower}) command to print out a random selection of the output/lowerside
-strings.
-
-\begin{Verbatim}
-randOutput $fst ;
-randLower $fst ;
-\end{Verbatim}
-
-\noindent
-These commands are often useful during development to ``see what the upper (or lower)
-strings look like.''  These commands also have optional second and third arguments, the second
-being the number of strings to display (the default is currently 15), and the third is the
-maximum length of a string (default 50), which can be useful to avoid getting into infinite loops).
-
-\begin{Verbatim}
-// print 20 random input strings
-randInput $fst, 20 ;
-
-// print 10 random input strings, max 25 symbols
-randUpper $fst, 10, 25 ;
-\end{Verbatim}
-
-\noindent
-The ``random'' function are based on the OpenFst RandGen() function.
-
-\section{Memory Management}
-
-Memory management commands are intended for use by the developers and
-maintainers of Kleene, not for typical users.
-
-Kleene is based on the OpenFst library, and the finite-state machines 
-(the actual states and arcs) are built by OpenFst and are therefore
-\CPP{} objects, i.e.\@ all the states and arcs, comprising a \CPP{}
-\fsm{} object, reside in the \CPP{} memory space.
-
-On the Java side of Kleene, each finite-state machine is represented by a
-Java Fst object,\footnote{Defined in the file \texttt{Fst.java}.} and
-each allocated Fst object holds a pointer to the corresponding \CPP{}
-finite-state machine object.\footnote{The Java Fst object also keeps
-track of each \fsm{}'s private sigma, which is a concept alien to
-OpenFst.}  The memory taken up by the Fst object itself is Java memory,
-and can be reclaimed by the normal Java garbage collection.  But the
-memory required by the states and arcs is \CPP{} memory and is invisible
-to the Java garbage collector.
-
-\subsection{Garbage Collection}
-
-The Kleene parser and interpreter are written in Java, which
-automatically performs garbage collection of Java objects when they no
-longer have any references to them.  In general, Kleene users should
-never have to worry about garbage collection, and even lower-level Java
-programmers have little control over when garbage collection is done.  
-
-In case it should become necessary or useful, Kleene offers the
-\texttt{gc} command, which when evaluated suggests to Java that ``now
-would be a good time to perform garbage collection''.\footnote{Java does
-not necessarily have to accept the hint to perform garbage collection.
-The \texttt{gc} command calls \texttt{System.gc()} and
-\texttt{System.runFinalization()}, multiple times, which is alleged to
-nudge Java more aggressively.  In a Java Fst object, the
-\texttt{finalize()} method calls a native \CPP{} function that in turn
-calls the normal \texttt{delete} command of \CPP{} to delete the \CPP{}
-finite-state machine (the states and arcs in \CPP{} memory). The
-\texttt{finalize()} method is advertised as the way to release/delete
-``native'', i.e.\@ non-Java, resources, so it's just what Kleene needs;
-but there is much debate among Java experts about if and how
-\texttt{finalize()} should be relied on.}
-
-\begin{samepage}
-\begin{Verbatim}
-$foo = foo ;
-$bar = bar ;
-delete $foo, $bar ;
-gc ;
-\end{Verbatim}
-\end{samepage}
-
-\subsection{Java Memory Usage}
-
-Kleene also offers the \texttt{memory}
-command, which prints out a summary showing the maximum memory, the
-memory in use, and the free memory, as seen by Java.
-
-\begin{Verbatim}
-memory ;
-\end{Verbatim}
-
-\noindent
-The format of the output, not shown here, will no doubt evolve as needs
-become clear.  Note that Kleene currently has no way to interrogate the
-memory usage or availability in the \CPP{} memory space.
-
-\subsection{Java Fst Objects}
-
-Kleene now keeps track of how many Java Fst objects have been allocated,
-and how many have been ``finalized'', and this information can be
-displayed by the \texttt{fsts} command.  When an Fst object has been
-finalized, the Java object itself should be garbage collected, and the
-corresponding OpenFst finite-state machine should be deleted.
-
-\begin{Verbatim}
-fsts ;
-\end{Verbatim}
-
-\noindent
-The command also displays the number of ``live'' Fsts, which is the
-difference between the number of allocated Fsts and the number of finalized Fsts.
-
-\subsection{Contents of the Main Symbol Table}
-
-The \texttt{symtab} command prints a list of the items defined in the main
-``program'' symbol table, and these items should match the icons in the \acro{gui} symtab
-window.
-
-\begin{Verbatim}
-symtab ;
-\end{Verbatim}
-
-\subsubsection{Contents of the Global Symbol Table}
-
-The \texttt{gsymtab} command prints a list of the items defined in the global symbol
-table, which is the root of the Kleene environment and the mother of the
-``program'' symbol table.  The items in the list should correspond to the definitions
-in the system-supplied \texttt{.kleene/global/predefined.kl} start-up script.
-
-\begin{Verbatim}
-gsymtab ;
-\end{Verbatim}
-
-\subsection{C++ Memory Space}
-
-The Kleene system includes one custom-written non-OpenFst \CPP{} file,
-named \texttt{kleeneopenfst.cc}, that defines the ``native'' (\CPP{})
-functions directly callable from the Kleene interpreter and serves as the
-\acro{jni} bridge between Kleene and the OpenFst library.  As with any
-program involving C or \CPP{}, there is a significant danger of memory
-leaks; finding and plugging them will be a high priority.
-
-Another possible and significant source of \CPP{} memory leaks would be
-the creation of native finite-state machines that are never deleted; the
-\texttt{fsts} command, described above, may provide clues to tracking
-down such leaks.  Kleene currently has no direct way to interrogate the
-memory usage/availability in the \CPP{} memory space.\footnote{Memory
-profilers may provide some help here.}
 
 

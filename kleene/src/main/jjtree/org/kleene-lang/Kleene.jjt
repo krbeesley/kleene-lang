@@ -647,6 +647,26 @@ public class Kleene {
 
     boolean parsing_rrprod_def = false ;
 
+	// used in semantic LOOKAHEAD to determine if the LHS of a transducer
+	// rule is finished
+
+	// used in semantic lookahead for transducer-style rules
+	boolean isNotPartOfRuleLHS(int i) {
+		Token t = getToken(i) ;
+		if	(  t.kind == SLASH_OP
+			|| t.kind == COMMA_OP
+			|| t.kind == SEMICOLON
+			|| t.kind == COMPOSITION_OP_ASCII
+			|| t.kind == COMPOSITION_OP
+			|| t.kind == RPAREN
+			|| t.kind == VERTICAL_BAR_OP
+			|| t.kind == AMPERSAND 
+			|| t.kind == WHERE_MATCHED_LCURLY
+			|| t.kind == WHERE_MIXED_LCURLY )
+			return true ;
+		return false ;
+	}
+
 	// used in semantic LOOKAHEAD for the expression() production
 	boolean mustBeRegexp() {
 		int i ;
@@ -716,6 +736,7 @@ public class Kleene {
 					||	t.kind == NET_READ_XML_FUNC_ID
 					||	t.kind == NET_RAND_GEN_FUNC_ID
 					||	t.kind == NET_TO_STRING_FUNC_ID
+					||  t.kind == NET_CHAR_FOR_CPV_FUNC_ID
 					||	t.kind == NET_IMPLODE_FUNC_ID
 					||	t.kind == NET_EXPLODE_FUNC_ID
 
@@ -814,7 +835,8 @@ public class Kleene {
 					||	t.kind == LNG_CONTAINS_OTHER_FUNC_ID
 //					||	t.kind == LNG_IS_UNIVERSAL_LANGUAGE_FUNC_ID
 // #^isUniversalLanguage defined now in predefined.kl; don't try to do it here
-//					||	t.kind == LNG_EQUIVALENT_FUNC_ID
+					||	t.kind == LNG_EQUIVALENT_FUNC_ID
+					||	t.kind == LNG_RAND_EQUIVALENT_FUNC_ID
 					// end of boolean functions
 
 					||	t.kind == NUM_ABS_FUNC_ID
@@ -1230,6 +1252,7 @@ TOKEN: {
 
 	// see "println" below
 |	< PRINT_RW: 			"print" > : NON_INITIAL
+|	< PR_RW:				"pr" > : NON_INITIAL
 |   < BREAK_RW: 			"break" >	// leave in DEFAULT state
 
 // strings of 6 symbols
@@ -1474,11 +1497,12 @@ TOKEN: {
 
 	// for common right-arrow rule  a -> b / l _ r
 	// see also RIGHT_RULE_ARROW_ASCII -> 
-|	< RIGHT_RULE_ARROW:   		"\u2192" >	// Unicode RIGHTWARDS ARROW
+//|	< RIGHT_RULE_ARROW:   		"\u2192" >	// Unicode RIGHTWARDS ARROW
 	// for left-arrow-rule a <- b / l _ r
 	// see also LEFT_RULE_ARROW_ASCII <-
-|   < LEFT_RULE_ARROW:   		"\u2190" >	// Unicode LEFTWARDS ARROW
+//|   < LEFT_RULE_ARROW:   		"\u2190" >	// Unicode LEFTWARDS ARROW
 	// see also RESTRICTION_ARROW_ASCII =>
+
 |   < RESTRICTION_ARROW: 		"\u21D2" >	// Unicode RIGHTWARDS DOUBLE ARROW
 	// see also _E_
 |   < ELEMENT_OF_OP: 			"\u2208" >
@@ -1546,10 +1570,10 @@ TOKEN: {
 |   < LSQUARE_CIRCUMFLEX: 		"[^" >   : IN_SQUARE_BRACKETS
 
 	// see also RIGHT_RULE_ARROW
-|   < RIGHT_RULE_ARROW_ASCII: 	"->" >
+//|   < RIGHT_RULE_ARROW_ASCII: 	"->" >
 
 	// see also LEFT_RULE_ARROW
-|   < LEFT_RULE_ARROW_ASCII:  	"<-" >
+//|   < LEFT_RULE_ARROW_ASCII:  	"<-" >
 
 |   < RESTRICTION_ARROW_ASCII: 	"=>" >
 |   < BOOLEAN_OR_OP: 			"||" >
@@ -1576,13 +1600,13 @@ TOKEN: {
 
 // strings of 5 characters
 
-|	< MAX_L2R_DIRECTIVE:	"{max}" >
-|	< MIN_L2R_DIRECTIVE:	"{min}" >
+//|	< MAX_L2R_DIRECTIVE:	"{max}" >
+//|	< MIN_L2R_DIRECTIVE:	"{min}" >
 
 	// for (rare) right-to-left behavior, just spell
 	//	max and min backwards (right to left)
-|	< MAX_R2L_DIRECTIVE:	"{xam}" >
-|	< MIN_R2L_DIRECTIVE:	"{nim}" >
+//|	< MAX_R2L_DIRECTIVE:	"{xam}" >
+//|	< MIN_R2L_DIRECTIVE:	"{nim}" >
 }
 
 
@@ -1622,61 +1646,93 @@ TOKEN: {
 //						) >
 //		{
 //			input_stream.backup(1) ;
+//|
 
-
+	// a -> b
+	< RIGHT_RULE_ARROW: ( "\u2192" | "->" ) >
+|
 	// for optional right-arrow rule  a ->? b / l _ r
-//    < RIGHT_RULE_ARROW_OPT:   ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
+    < RIGHT_RULE_ARROW_OPT:   ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
 
 	// for right-arrow-rule, max, left-to-right behavior
 	// a+ {max}-> b / l _ r   or   a+ {maxl2r}-> b / l _ r
-//|   < RIGHT_RULE_ARROW_MAX_L2R:   <LCURLY> (<WHITESPACE>)* ( "max" | "maxl2r" )
-//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+|   
+	< MAX_RIGHT_RULE_ARROW:   <LCURLY> (<WHITESPACE>)* "max" (<WHITESPACE>)* <RCURLY>
+		(<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+	// for right-arrow-rule, max, left-to-right-behavior, opt
+	//  {max} ->?
+|   
+	< MAX_RIGHT_RULE_ARROW_OPT:   <LCURLY> (<WHITESPACE>)* "max" (<WHITESPACE>)* <RCURLY>
+		(<WHITESPACE>)* ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
 
 	// for right-arrow-rule, max, right-to-left behavior
-	// a+ {maxr2l}-> b / l _ r
-//|   < RIGHT_RULE_ARROW_MAX_R2L:       <LCURLY> (<WHITESPACE>)* "maxr2l"
-//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+	// a+ {xam}-> b / l _ r
+//|   
+//	< XAM_RIGHT_RULE_ARROW:   <LCURLY> (<WHITESPACE>)* "xam" (<WHITESPACE>)* <RCURLY> 
+//		(<WHITESPACE>)* ( "\u2192" | "->" ) >
 
- 	//  {min} and {minl2r} are equivalent
+//|   
+//	< XAM_RIGHT_RULE_ARROW_OPT:   <LCURLY> (<WHITESPACE>)* "xam" (<WHITESPACE>)* <RCURLY> 
+//		(<WHITESPACE>)* ( "\u2192" | "->" ) (<WHITESPACE>)> "?" >
+
 	//  for right-arrow-rule, min, left-to-right behavior
 	//  a+b+ {min}-> b / l _ r    or  a+b+ {minl2r}-> b / l _ r
-//|   < RIGHT_RULE_ARROW_MIN_L2R:       <LCURLY> (<WHITESPACE>)* ( "min" | "minl2r" )
-//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+|   < MIN_RIGHT_RULE_ARROW:       <LCURLY> (<WHITESPACE>)* "min" (<WHITESPACE>)* <RCURLY> 
+		(<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+|   < MIN_RIGHT_RULE_ARROW_OPT:       <LCURLY> (<WHITESPACE>)* "min" (<WHITESPACE>)* <RCURLY> 
+		(<WHITESPACE>)* ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
 
 	//  for right-arrow-rule, min, right-to-left behavior
-	//  a+b+ {minr2l}-> b / l _ r
-//|   < RIGHT_RULE_ARROW_MIN_R2L:       <LCURLY> (<WHITESPACE>)* "minr2l"
-//		(<WHITESPACE>)* <RCURLY> (<WHITESPACE>)* ( "\u2192" | "->" ) >
+	//  a+b+ {nim}-> b / l _ r
+//|   < NIM_RIGHT_RULE_ARROW:       <LCURLY> (<WHITESPACE>)* "nim" (<WHITESPACE>)* <RCURLY> 
+//		(<WHITESPACE>)* ( "\u2192" | "->" ) >
+
+//|   < NIM_RIGHT_RULE_ARROW_OPT:       <LCURLY> (<WHITESPACE>)* "nim" (<WHITESPACE>)* <RCURLY> 
+//		(<WHITESPACE>)* ( "\u2192" | "->" ) (<WHITESPACE>)* "?" >
+
+	// a <- b
+|
+	< LEFT_RULE_ARROW: (  "\u2190" | "<-" )  >
 
 	// for left-arrow-rule optional
 	// a <-? b / l _ r
-//|   < LEFT_RULE_ARROW_OPT:   "\u2190" (<WHITESPACE>)* "?" >    
-//|   < LEFT_RULE_ARROW_OPT_ASCII: "<-" (<WHITESPACE>)* "?" >
+|   < LEFT_RULE_ARROW_OPT:   ( "\u2190" | "<-" )  (<WHITESPACE>)* "?" >    
 
-	//  <-{max} and <-{maxl2r} are equivalent
 	//  for left-arrow-rule, max, left-to-right behavior
 	//  a <-{max} b+ / l _ r
-//|   < LEFT_RULE_ARROW_MAX_L2R: ( "\u2190" | "<-" ) (<WHITESPACE>)* 
-//		<LCURLY> (<WHITESPACE>)* ( "max" | "maxl2r" ) (<WHITESPACE>)* <RCURLY> >
+|   < LEFT_RULE_ARROW_MAX: ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+		<LCURLY> (<WHITESPACE>)* "max" (<WHITESPACE>)* <RCURLY> >
+
+|   < LEFT_RULE_ARROW_OPT_MAX: ( "\u2190" | "<-" ) (<WHITESPACE>)* "?" (<WHITESPACE>)*
+		<LCURLY> (<WHITESPACE>)* "max" (<WHITESPACE>)* <RCURLY> >
 
 	//  for left-arrow-rule, max, right-to-left behavior
-	//  a <-{maxr2l} b+ / l _ r
-//|   < LEFT_RULE_ARROW_MAX_R2L:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
-//		<LCURLY> (<WHITESPACE>)* "maxr2l" (<WHITESPACE>)* <RCURLY> >
+	//  a <-{xam} b+ / l _ r
+//|   < LEFT_RULE_ARROW_XAM:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITESPACE>)* "xam" (<WHITESPACE>)* <RCURLY> >
 
-	//  <-{min} and <-{minl2r} are equivalent
+//|   < LEFT_RULE_ARROW_OPT_XAM:   ( "\u2190" | "<-" ) (<WHITESPACE>)* "?" (<WHITESPACE>)*
+//		<LCURLY> (<WHITESPACE>)* "xam" (<WHITESPACE>)* <RCURLY> >
+
 	//  for left-arrow-rule, min, left-to-right behavior
 	//  a <-{min} a+b+ / l _ r
-//|   < LEFT_RULE_ARROW_MIN_L2R:  ( "\u2190" | "<-" ) (<WHITESPACE>)* 
-//		<LCURLY> (<WHITESPACE>)* ( "min" | "minl2r" ) (<WHITESPACE>)* <RCURLY>  >
+|   < LEFT_RULE_ARROW_MIN:  ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+		<LCURLY> (<WHITESPACE>)* "min" (<WHITESPACE>)* <RCURLY>  >
+
+|   < LEFT_RULE_ARROW_OPT_MIN:  ( "\u2190" | "<-" ) (<WHITESPACE>)* "?" (<WHITESPACE>)*
+		<LCURLY> (<WHITESPACE>)* "min" (<WHITESPACE>)* <RCURLY>  >
 
 	//  for left-arrow-rule, min, right-to-left behavior
-	//  a <-{minr2l} a+b+ / l _ r
-//|   < LEFT_RULE_ARROW_MIN_R2L:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
-//		<LCURLY> (<WHITESPACE>)* "minr2l" (<WHITESPACE>)* <RCURLY>  >
+	//  a <-{nim} a+b+ / l _ r
+//|   < LEFT_RULE_ARROW_NIM:   ( "\u2190" | "<-" ) (<WHITESPACE>)* 
+//		<LCURLY> (<WHITET_SPACE>)* "nim" (<WHITESPACE>)* <RCURLY>  >
 
-//|
+//|   < LEFT_RULE_ARROW_OPT_NIM:   ( "\u2190" | "<-" ) (<WHITESPACE>)* "?" (<WHITESPACE>)*
+//		<LCURLY> (<WHITET_SPACE>)* "nim" (<WHITESPACE>)* <RCURLY>  >
 
+|
     < ANY_ANY: "." ( <WHITESPACE> )* ":" ( <WHITESPACE> )* "." > 
 
 	// plain "where" is equivalent to "where matched"
@@ -1945,14 +2001,15 @@ TOKEN: {
 |   < NET_INPUTPROJ_DEST_FUNC_ID:  		"$^__inputproj!" >
 |   < NET_OUTPUTPROJ_FUNC_ID: 			"$^__outputproj" >
 |	< NET_CLOSE_SIGMA_FUNC_ID: 			"$^__closeSigma" >
+|	< NET_CHAR_FOR_CPV_FUNC_ID:			"$^__charForCpv" >
 
 |	< LNG_IS_UBOUNDED_FUNC_ID:			"#^__isUBounded" >
 |	< LNG_IS_LBOUNDED_FUNC_ID:			"#^__isLBounded" >
 |	< LNG_IS_ACCEPTOR_FUNC_ID:			"#^__isAcceptor" >
 |   < LNG_STATECOUNT_FUNC_ID: 			"#^__stateCount" >
 |	< LNG_IS_WEIGHTED_FUNC_ID:			"#^__isWeighted" >
-//|	< LNG_EQUIVALENT_FUNC_ID:			"#^__equivalent">
-			// KRB: think about this one
+|	< LNG_EQUIVALENT_FUNC_ID:			"#^__equivalent">
+|	< LNG_RAND_EQUIVALENT_FUNC_ID:		"#^__randEquivalent">
 
 // strings of 15 characters
 
@@ -2905,6 +2962,7 @@ void statement(): {}
 |	sys_print_statement()
 |	sys_println_statement()
 |	print_statement()
+|	pr_statement()
 |	println_statement()
 |	exception_statement()
 |   info_statement()
@@ -3434,6 +3492,12 @@ void print_statement() #print_statement: {}
 	// 1st arg FST to list, 2nd arg separator
 }
 
+void pr_statement() #pr_statement: {}
+{
+	<PR_RW> regexp() ( <COMMA_OP> regexp() ) ? <SEMICOLON>
+	// 1st arg FST to list, 2nd arg separator
+}
+
 void println_statement() #println_statement: {}
 {
 	<PRINTLN_RW> regexp() <SEMICOLON>
@@ -3714,7 +3778,8 @@ void primary_numexp(): {}
 	// KRB: #^isUniversalLanguage() now defined in predefined.kl
 	// but won't be reliable until something
 	// 		like the Xerox 'compact sigma' is implemented
-//|	lng_equivalent_func_call()		// __equivalent
+|	lng_equivalent_func_call()			// __equivalent
+|	lng_rand_equivalent_func_call()		// __randEquivalent
 
 | 	num_abs_func_call()
 | 	dbl_ceil_func_call()
@@ -3838,9 +3903,15 @@ void poss_rule_exp() :
   int markup_exp_count = 0 ;
 }
 {
+	// This production is for _possible_ rules, including
+	//	1.  rules starting with some kind of unambiguous rule arrow or MARKUP_OP
+	//	2.  rules starting with unioned-exp() (a regular expression) then followed by
+	//			a rule arrow/operator
+	//	3.  just a regular expression (not followed by a rule arrow/operator)
+
 	(
-		// This section just for rules that start with ~~~, the MARKUP_OP
-		// (they must be left-arrow rules, with no left_markup_insertion)
+		// This subsection just for rules that start with ~~~, the MARKUP_OP
+		// (they must be left-arrow rules, with a null/missing left_markup_insertion)
 
 		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
 						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
@@ -3852,177 +3923,237 @@ void poss_rule_exp() :
 		#rule_lhs_markup(markup_exp_count)
 
 		// 1 node on the jjtree stack
-		// must be a rule left arrow here
-		(  
-		  	// <-? {max}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MAX_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
+		// must be some kind of rule left arrow next
+		( 
+			<LEFT_RULE_ARROW>
+			(
+				// Catch a parsing problem found by Paola
+				// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+				LOOKAHEAD ( {mustBeNumexp()} )
+				{ appendGuiError("Tokenization/parse problem: " +
+					"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+					"as either < -1> or <(-1)>") ;
+				}
+				//numexp()
+			|
+				// KRB: do not allow markup here  (the upper lhs is markup)
 				(unioned_exp() #rule_lhs_lower(1))
+				// this completes the LHS of the rule (counting as one rule_section
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
+				// the RHS of a rule is optional
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
+				// where clauses are also optional, grouped, if present under #where_clauses
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-		|  	// <- {max}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MAX_L2R_DIRECTIVE>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_oblig(rule_section_count)
+			)
+		|
+			<LEFT_RULE_ARROW_OPT>
+			// <-?
 				// KRB: do not allow markup here
 				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|  	// <-? {xam}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MAX_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-		|  	// <- {xam}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MAX_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-		|  	// <-? {min}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// <- {min}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// <-? {nim}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						    where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// <- {nim}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
-						    where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|	// <-?
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
-							| <WHERE_MIXED_LCURLY>)
+						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_left_arrow_opt(rule_section_count)
-
-		|	// <-
-		    ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				(
-					// Catch a parsing problem found by Paola
-					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
-					LOOKAHEAD ( {mustBeNumexp()} )
-					{ appendGuiError("Tokenization/parse problem: " +
-						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
-						"as either < -1> or <(-1)>") ;
-					}
-					//numexp()
-				|
-					// KRB: do not allow markup here  (the upper lhs is markup)
-					(unioned_exp() #rule_lhs_lower(1))
-					// this completes the LHS of the rule (counting as one rule_section
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					// the RHS of a rule is optional
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					// where clauses are also optional, grouped, if present under #where_clauses
-					( LOOKAHEAD(  <WHERE_MATCHED_LCURLY>
-								| <WHERE_MIXED_LCURLY> )
+		|  
+			<LEFT_RULE_ARROW_MAX>
+			// <- {max}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_oblig(rule_section_count)
-				)
-		)
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MAX>
+		  	// <-? {max}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_XAM>
+			//// <- {xam}
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_OPT_XAM>
+			//// <-? {xam}
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_opt(rule_section_count)
+		|  	
+			<LEFT_RULE_ARROW_MIN>
+			// <- {min}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
+		|  
+			<LEFT_RULE_ARROW_OPT_MIN>
+			// <-? {min}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_NIM>
+			//// <- {nim} 
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_OPT_NIM>
+			//// <-? {nim} 
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_opt(rule_section_count)
 
-	| 	// in poss_rule_exp()
-		// This sub-section covers rules that start with a regular expression
+		)  // end of subsection for rules starting with <MARKUP_OP>
+
+	| 	
+		// rule starts with <-, must be transducer-style rule
+		<LEFT_RULE_ARROW>
+		// <- a:b			transducer-style rule
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_oblig(rule_section_count)
+	|
+		// rule starts with <-?, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT>
+		// <-? a:b			transducer-style rule
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_opt(rule_section_count)
+	|
+		// rule starts with <-{max}, must be transducer-style rule
+		<LEFT_RULE_ARROW_MAX>
+		// <-{max} a:b  	transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
+	|
+		// rule starts with <-?{max}, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT_MAX>
+		// a:b <-?{max}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
+//	|
+		// rule starts with <-{xam}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_XAM> 
+		// <-{xam} a:b		transducer-style rule (questionable)
+			// ( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
+//	|
+		// rule starts with <-?{xam}, must be transducer-style rule
+		//<LEFT_RULE_ARROW__OPT_XAM> 
+		// a:b <-?{xam}		transducer-style rule (questionable)
+			// ( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
+	|
+		// rule starts with <-{min}, must be transducer-style rule
+		<LEFT_RULE_ARROW_MIN>
+		// a:b <-{min}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
+	|
+		// rule starts with <-?{min}, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT_MIN>
+		// a:b <-?{min}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+//	|
+		// rule starts with <-{nim}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_NIM>
+		// a:b <-{nim}		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
+//	|
+		// rule starts with <-?{nim}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_OPT_NIM>
+		// a:b <-?{nim}		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+	|
+
+		// This sub-section covers (possible) rules that start with a regular expression
+		// If no rule arrow or MARKUP_OP follows, then it's just a unioned_exp()
 	
 		unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
 
@@ -4046,613 +4177,250 @@ void poss_rule_exp() :
 		// We have already parsed a unioned_exp(), a possible start of an alternation rule;
 
 		// N.B. the following disjunction, leading to parsing rules, is optional ( ... )?
-		( 
+		// The unioned_exp()  (a regular expression) just found might or might not be
+		//	the start of a rule.  To be a rule, it must be followed by an arrow operator
+		//  and perhaps other rule directives.
+		(
+			// unioned_exp() just found might be the start of an alternation rules
+
 			// right-arrow rules:  N.B. IF EDITED, SEE rule() AND MAKE PARALLEL EDITS
-			
-			// KRB:  one location for transducer rules, e.g.
-			//  a:x ->? / left _ right
-			//  a:x -> / left _ right
 
-			//  a:x ->? / left _ right
-			// LOOKAHEAD(3)
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_opt(rule_section_count)
+			// rule-arrow complexes starting with ->
 
-			//	a:x -> / left _ right
-			// LOOKAHEAD(2)
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_oblig(rule_section_count)
-
-		   // ->?
-		   LOOKAHEAD(2)
-		       ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()		
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
+			LOOKAHEAD( { 	getToken(1).kind == RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			// a:b ->    transducer-style rule
+			<RIGHT_RULE_ARROW>
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )? 
-				#rule_right_arrow_opt(rule_section_count)
-
-		|  // ->
-		   ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_oblig(rule_section_count)
+		|
+			<RIGHT_RULE_ARROW>
+			// a -> b
+				#rule_lhs_upper(1)	
 				// KRB:  here possibility of markup rules
-				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
-				// old, allowed straightforward rewrite rule only
-				//(unioned_exp() #rule_lhs_lower(1)) 	// and this unioned_exp is the left-hand lower side
-				#rule_lhs(2) { rule_section_count = 1 ; }  // a rule must always have a left-hand side
-
-				// optional right-hand side of a rule
+				rule_lhs_lower_or_markup()	
+				// leaves a #rule_lhs_lower or #rule_lhs_markup node on the stack
+				#rule_lhs(2) { rule_section_count = 1 ; }  
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				// zero or more where clauses
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
-
-		//|	// {max} ->? /
-			// LOOKAHEAD(4)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
-		//|
-			//	{max} -> /
-			// LOOKAHEAD(3)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
-
-		//|	// {max} <-? /
-			// LOOKAHEAD(4)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
-		//|
-			//	{max} <- /
-			// LOOKAHEAD(3)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|   // {max} ->?
-			LOOKAHEAD(3)
-				<MAX_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-					#rule_lhs_upper(1)
-					rule_lhs_lower_or_markup()
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-					
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_right_arrow_max_l2r_opt(rule_section_count)
-
-		|   // {max} ->
-			<MAX_L2R_DIRECTIVE>
-			( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+		|
+			LOOKAHEAD( {	getToken(1).kind == RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<RIGHT_RULE_ARROW_OPT>
+			// a:b ->?   transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_opt(rule_section_count)
+		|
+			<RIGHT_RULE_ARROW_OPT>
+		   // a ->? b 
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()		
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MAX_RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MAX_RIGHT_RULE_ARROW>
+			// a:b {max} ->    transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
+		|   
+			<MAX_RIGHT_RULE_ARROW>
+			// a {max} -> b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_max_l2r_oblig(rule_section_count)
-
-		//|	// {xam} ->? /
-			// LOOKAHEAD(4)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
-		//|
-			//	{xam} -> /
-			// LOOKAHEAD(3)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
-
-		//|	// {xam} <-? /
-			// LOOKAHEAD(4)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
-		//|
-			//	{xam} <- /
-			// LOOKAHEAD(3)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
-
-		|   // {xam} ->?
-			LOOKAHEAD(3)
-				<MAX_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
+		|
+			LOOKAHEAD( {	getToken(1).kind == MAX_RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MAX_RIGHT_RULE_ARROW_OPT>
+			//	a:b {max} ->? 
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l_opt(rule_section_count)
-
-		|   // {xam} ->
-				<MAX_R2L_DIRECTIVE> 
-				// followed by
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
+		|
+			<MAX_RIGHT_RULE_ARROW_OPT>
+			 // a {max} ->? b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l_oblig(rule_section_count)
-
-		//|	// {min} ->? /
-			// LOOKAHEAD(4)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+				#rule_right_arrow_max_l2r_opt(rule_section_count)
 		//|
-			//	{min} -> /
-			// LOOKAHEAD(3)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
-
-		//|	// {min} <-? /
-			// LOOKAHEAD(4)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+			//LOOKAHEAD( { 	getToken(1).kind == XAM_RIGHT_RULE_ARROW
+			//		   &&	isNotPartOfRuleLHS(2)
+			//})
+				//<XAM_RIGHT_RULE_ARROW>
+				// a:b {xam}->		transducer-style rule
+					// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+					//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+					//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//			   |<WHERE_MIXED_LCURLY>)
+					//			   where_clauses() { rule_section_count += 1 ; } )?
+					//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
 		//|
-			//	{min} <- /
-			// LOOKAHEAD(3)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// {min} ->?
-			LOOKAHEAD(3)
-				<MIN_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
+			//<XAM_RIGHT_RULE_ARROW>
+				// a {xam} -> b
+				//		#rule_lhs_upper(1)
+				//		rule_lhs_lower_or_markup()
+				//		#rule_lhs(2) { rule_section_count = 1 ; }
+				//		( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//		( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//				   |<WHERE_MIXED_LCURLY>)
+				//				   where_clauses() { rule_section_count += 1 ; } )?
+				//		#rule_right_arrow_max_r2l_oblig(rule_section_count)
+		//|
+			//LOOKAHEAD( {	getToken(1).kind == XAM_RIGHT_RULE_ARROW_OPT
+			//			 &&	isNotPartOfRuleLHS(2)
+			//})
+				//<XAM_RIGHT_RULE_ARROW_OPT>
+				// a:b {xam}->?		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//<XAM_RIGHT_RULE_ARROW_OPT>
+				// a {xam}->? b
+				//		#rule_lhs_upper(1)
+				//		rule_lhs_lower_or_markup()
+				//		#rule_lhs(2) { rule_section_count = 1 ; }
+				//		( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//		( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//				   |<WHERE_MIXED_LCURLY>)
+				//				   where_clauses() { rule_section_count += 1 ; } )?
+				//		#rule_right_arrow_max_r2l_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MIN_RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MIN_RIGHT_RULE_ARROW>
+			// a:b {min}->		transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// {min} ->
-				<MIN_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
+		|
+			<MIN_RIGHT_RULE_ARROW>
+			// a {min}-> b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_min_l2r_oblig(rule_section_count)
-
-		//|	// {nim} ->? /
-			// LOOKAHEAD(4)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MIN_RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MIN_RIGHT_RULE_ARROW_OPT>
+			// a:b {min}->?		transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+		|
+			<MIN_RIGHT_RULE_ARROW_OPT>
+				// a {min}->? b
+					#rule_lhs_upper(1)
+					rule_lhs_lower_or_markup()
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_right_arrow_min_l2r_opt(rule_section_count)
 		//|
-			//	{nim} -> /
-			// LOOKAHEAD(3)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
-
-		//|	// {nim} <-? /
-			// LOOKAHEAD(4)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+			//LOOKAHEAD( {	getToken(1).kind == NIM_RIGHT_RULE_ARROW
+			//			 &&	isNotPartOfRuleLHS(2)
+			//} )
+			//<NIM_RIGHT_RULE_ARROW>
+			// a:b {nim}->		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
 		//|
-			//	{nim} <- /
-			// LOOKAHEAD(3)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|  	// {nim} ->?
-			LOOKAHEAD(3)
-				<MIN_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// {nim} ->
-				<MIN_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l_oblig(rule_section_count)
-
-
-			// left-arrow rules    a <- b / l _ r where ...
-
-	// |
-			//// KRB:  one location for transducer rules, e.g.
-			//  a:x <-? / left _ right
-			//  a:x <- / left _ right
-
-			//  a:x <-? / left _ right
-			// LOOKAHEAD(3)
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_opt(rule_section_count)
-
-			//	a:x <- / left _ right
-			// LOOKAHEAD(2)
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_oblig(rule_section_count)
-
-		|  	// <-? {max}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MAX_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-		|  	// <- {max}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MAX_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|  	// <-? {xam}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MAX_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-		|  	// <- {xam}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MAX_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-		|  	// <-? {min}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// <- {min}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// <-? {nim}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// <- {nim}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|  	// <-?
-			LOOKAHEAD(2)
-			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-
-		|  // <-
-		   ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			//<NIM_RIGHT_RULE_ARROW>
+			// a {nim}-> b
+				//#rule_lhs_upper(1)
+				//rule_lhs_lower_or_markup()
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//  		   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_right_arrow_min_r2l_oblig(rule_section_count)
+		//|
+			//LOOKAHEAD( {	getToken(1).kind == NIM_RIGHT_RULE_ARROW_OPT
+			//			 &&	isNotPartOfRuleLHS(2)
+			//} )
+			//<NIM_RIGHT_RULE_ARROW_OPT>
+				// a:b {nim}->?		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//<NIM_RIGHT_RULE_ARROW_OPT>
+				// a {nim}->? b
+					//#rule_lhs_upper(1)
+					//rule_lhs_lower_or_markup()
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_right_arrow_min_r2l_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW>
+			// a <- b
 				#rule_lhs_upper(1)
 				(
 					// Catch a parsing problem found by Paola
@@ -4667,193 +4435,261 @@ void poss_rule_exp() :
 					// KRB:  do NOT allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
+		|
+			<LEFT_RULE_ARROW_OPT>
+			// a <-? b
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_MAX>
+			// a <-{max} b
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MAX>
+			// a <-?{max} b
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_XAM>
+				// a <-{xam} b
+					//#rule_lhs_upper(1)
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_OPT_XAM>
+			// a <-?{xam} b
+				//#rule_lhs_upper(1)
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_MIN>
+			// a <-{min} b
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MIN>
+			// a <-?{min} b
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_NIM>
+			// a <-{nim} b
+				//#rule_lhs_upper(1)
+				//// KRB:  do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_OPT_NIM>
+				// a <-?{nim} b
+				//#rule_lhs_upper(1)
+				//// KRB:  do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_opt(rule_section_count)
+			
 
-
-			// left-arrow markup rules
+			// left-arrow markup rules (the regexp found so far is the Y
+			// in the examples below)
 
 		|  <MARKUP_OP> 				// 		Y ~~~ Z <- X  /  left _ right
 									// or	Y ~~~   <- X  /  left _ right
-			#left_markup_insertion(1) 						// the Y part has been matched
+			#left_markup_insertion(1) 		// the Y part has been matched
 			{ markup_exp_count = 1 ; }
-			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; })?	// the optional Z part
-			#rule_lhs_markup(markup_exp_count)				// covering Y ~~~ Z
+			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; })?	
+			// the optional Z part
+			#rule_lhs_markup(markup_exp_count)		// covering Y ~~~ Z
 
 			// after parsing  Y ~~~ Z here
 			// there must now be a left-rule-arrow of some kind
-
-			(  
-			  	// <-? {max}
-				LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				<MAX_L2R_DIRECTIVE>
+			( 
+				<LEFT_RULE_ARROW>
+				// <-
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
 					// KRB: do not allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-			|  	// <- {max}
-				LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<MAX_L2R_DIRECTIVE>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+			|
+				<LEFT_RULE_ARROW_OPT>
+				// <-?
 					// KRB: do not allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-			|  	// <-? {xam}
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MAX_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-			|  	// <- {xam}
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MAX_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-			|  	// <-? {min}
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MIN_L2R_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-			|  	// <- {min}
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_L2R_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-			|  	// <-? {nim} 
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MIN_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-			|  	// <- {nim} 
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_R2L_DIRECTIVE>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-			|	// <-?
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-					// KRB: do not allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_opt(rule_section_count)
-
-			|	// <-
-			    ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-					(
-						// Catch a parsing problem found by Paola
-						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
-						LOOKAHEAD ( {mustBeNumexp()} )
-						{ appendGuiError("Tokenization/parse problem: " +
-							"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
-							"as either < -1> or <(-1)>") ;
-						}
-						//numexp()
-					|
-						// KRB: do not allow markup here
-						(unioned_exp() #rule_lhs_lower(1))
-						#rule_lhs(2) { rule_section_count = 1 ; }
-
-						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-						( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			|
+				<LEFT_RULE_ARROW_MAX>
+				// <- {max}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-						#rule_left_arrow_oblig(rule_section_count)
-					)
+					#rule_left_arrow_max_l2r_oblig(rule_section_count)
+			|
+				<LEFT_RULE_ARROW_OPT_MAX>
+			  	// <-? {max}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r_opt(rule_section_count)
+			//|  	
+				//<LEFT_RULE_ARROW_XAM>
+				// <- {xam}
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+			//|  
+				//<LEFT_RULE_ARROW_OPT_XAM>
+				// <-? {xam}
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_opt(rule_section_count)
+			|  
+				<LEFT_RULE_ARROW_MIN>
+				// <- {min}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_oblig(rule_section_count)
+			|  	
+				<LEFT_RULE_ARROW_OPT_MIN>
+				// <-? {min}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_opt(rule_section_count)
+			//|  	
+				//<LEFT_RULE_ARROW_NIM>
+				// <- {nim} 
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+			//| 
+				//<LEFT_RULE_ARROW_OPT_NIM>
+				// <-? {nim} 
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_min_r2l_opt(rule_section_count)
 			)
 
-			// language-restriction expression
+			// language-restriction expression =>
+			// can only appear after a unioned_exp()  (i.e. a regular expression).
+			// This possibility does not exist under rule(), which accepts only
+			// alternation rules (not rule-like rule-restriction expressions.
 
 		|  ( <RESTRICTION_ARROW> | <RESTRICTION_ARROW_ASCII> ) 
 			#restriction_lhs(1)
@@ -4861,7 +4697,6 @@ void poss_rule_exp() :
 			#restriction_exp(2)
 		)?
 	)
-
 }
 
 // ******************************************************************************
@@ -4875,11 +4710,25 @@ void rule() :
   int markup_exp_count = 0 ;
 }
 {
+	// This production is for rules only, including
+	//	1.  rules starting with some kind of unambiguous rule arrow or MARKUP_OP
+	//	2.  rules starting with unioned-exp() (a regular expression) then followed by
+	//			a rule arrow/operator
+	//	3.  just a regular expression (not followed by a rule arrow/operator)
+
+	// the content here is much like that in poss_rule_exp(), except
+	//	1.  it excludes language-restriction expressions with  => arrow
+	//	2.  it excludes plain non-rule regular expressions, ending
+	//			)
+	//		)		// i.e. not optional here, as in poss_rule_exp()
+	//  }
+
 	(
-		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  
-						//		(insert empty string to left)
-						// or                      ~~~   <-  X  / ...  
-						//		(insert empty string both sides, a no-op)
+		// This subsection just for rules that start with ~~~, the MARKUP_OP
+		// (they must be left-arrow rules, with a null/missing left_markup_insertion)
+
+		<MARKUP_OP>		// definite markup rule:   ~~~ Z <-  X  / ...  (insert empty string to left)
+						// or                      ~~~   <-  X  / ...  (insert empty string both sides)
 		// must be a left-arrow rule, with markup on the upper side,
 		// lacking an explicit left_markup_insertion (will be interpreted as empty string)
 		{ markup_exp_count = 0 ; }
@@ -4888,787 +4737,503 @@ void rule() :
 		#rule_lhs_markup(markup_exp_count)
 
 		// 1 node on the jjtree stack
-		// must be a rule left arrow here
-		(  
-		  	// <-? {max}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				<MAX_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
+		// must be some kind of rule left arrow next
+		( 
+			<LEFT_RULE_ARROW>
+			(
+				// Catch a parsing problem found by Paola
+				// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+				LOOKAHEAD ( {mustBeNumexp()} )
+				{ appendGuiError("Tokenization/parse problem: " +
+					"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+					"as either < -1> or <(-1)>") ;
+				}
+				//numexp()
+			|
+				// KRB: do not allow markup here  (the upper lhs is markup)
 				(unioned_exp() #rule_lhs_lower(1))
+				// this completes the LHS of the rule (counting as one rule_section
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
+				// the RHS of a rule is optional
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
+				// where clauses are also optional, grouped, if present under #where_clauses
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-		|  	// <- {max}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<MAX_L2R_DIRECTIVE>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_oblig(rule_section_count)
+			)
+		|
+			<LEFT_RULE_ARROW_OPT>
+			// <-?
 				// KRB: do not allow markup here
 				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|  	// <-? {xam}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MAX_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-		|  	// <- {xam}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MAX_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-		|  	// <-? {min}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// <- {min}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_L2R_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// <-? {nim} 
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// <- {nim} 
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_R2L_DIRECTIVE>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|	// <-?
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-				// KRB: do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_left_arrow_opt(rule_section_count)
-
-		|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				(
-					// Catch a parsing problem found by Paola
-					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
-					LOOKAHEAD ( {mustBeNumexp()} )
-					{ appendGuiError("Tokenization/parse problem: " +
-						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
-						"as either < -1> or <(-1)>") ;
-					}
-					//numexp()
-				|
-					// KRB: do not allow markup here  (the upper lhs is markup)
-					(unioned_exp() #rule_lhs_lower(1))
-					// this completes the LHS of the rule (counting as one rule_section
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					// the RHS of a rule is optional
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					// where clauses are also optional, grouped, if present under #where_clauses
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_oblig(rule_section_count)
-				)
-		)
-
-
-	| 	// in rule()
-		// sub-section starting with unioned_exp()
-		
-		unioned_exp()
-
-		// N.B. here the following parenthesized expression is not optional; this production
-		// is called when you really need a rule, i.e. inside $^parallel(rule, rule, ...)
-		(
-
-			// right-arrow rules
-			// N.B. if edited, see poss_rule_exp() and MAKE PARALLEL EDITS
-
-			// KRB:  one location for transducer rules, e.g.
-			//  a:x ->? / left _ right
-			//  a:x -> / left _ right
-
-			//  a:x ->? / left _ right
-			// LOOKAHEAD(3)
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_opt(rule_section_count)
-
-			//	a:x -> / left _ right
-			// LOOKAHEAD(2)
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_oblig(rule_section_count)
-
-		  	LOOKAHEAD(2)
-			// ->?
-		 	( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
+		|  
+			<LEFT_RULE_ARROW_MAX>
+			// <- {max}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )? 
-				#rule_right_arrow_opt(rule_section_count)
-
-		|  // ->
-		    ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				#rule_lhs_upper(1)	// then the unioned_exp already matched is the left-hand upper side
-				// KRB: allow markup here
-				rule_lhs_lower_or_markup()	// leaves a #rule_lhs_lower or #rule_lhs_markup node
-				// old
-				//(unioned_exp() #rule_lhs_lower(1))	// and this unioned_exp is the left-hand lower side
-				#rule_lhs(2) { rule_section_count = 1 ; }  // a rule must always have a left-hand side
-
-				// optional right-hand side of a rule
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MAX>
+		  	// <-? {max}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_XAM>
+			//// <- {xam}
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_OPT_XAM>
+			//// <-? {xam}
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_opt(rule_section_count)
+		|  	
+			<LEFT_RULE_ARROW_MIN>
+			// <- {min}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
+		|  
+			<LEFT_RULE_ARROW_OPT_MIN>
+			// <-? {min}
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_NIM>
+			//// <- {nim} 
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+		//|  
+			//<LEFT_RULE_ARROW_OPT_NIM>
+			//// <-? {nim} 
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_opt(rule_section_count)
 
-				// zero or more where clauses
+		)  // end of subsection for rules starting with <MARKUP_OP>
+
+	| 	
+		// rule starts with <-, must be transducer-style rule
+		<LEFT_RULE_ARROW>
+		// <- a:b			transducer-style rule
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_oblig(rule_section_count)
+	|
+		// rule starts with <-?, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT>
+		// <-? a:b			transducer-style rule
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_opt(rule_section_count)
+	|
+		// rule starts with <-{max}, must be transducer-style rule
+		<LEFT_RULE_ARROW_MAX>
+		// <-{max} a:b  	transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
+	|
+		// rule starts with <-?{max}, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT_MAX>
+		// a:b <-?{max}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
+//	|
+		// rule starts with <-{xam}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_XAM> 
+		// <-{xam} a:b		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
+//	|
+		// rule starts with <-?{xam}, must be transducer-style rule
+		//<LEFT_RULE_ARROW__OPT_XAM> 
+		// a:b <-?{xam}		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
+	|
+		// rule starts with <-{min}, must be transducer-style rule
+		<LEFT_RULE_ARROW_MIN>
+		// a:b <-{min}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
+	|
+		// rule starts with <-?{min}, must be transducer-style rule
+		<LEFT_RULE_ARROW_OPT_MIN>
+		// a:b <-?{min}		transducer-style rule (questionable)
+			( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					   |<WHERE_MIXED_LCURLY>)
+					   where_clauses() { rule_section_count += 1 ; } )?
+			#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+//	|
+		// rule starts with <-{nim}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_NIM>
+		// a:b <-{nim}		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
+//	|
+		// rule starts with <-?{nim}, must be transducer-style rule
+		//<LEFT_RULE_ARROW_OPT_NIM>
+		// a:b <-?{nim}		transducer-style rule (questionable)
+			//( unioned_exp() #rule_lhs_transducer(1) { rule_section_count = 1 ; } )
+			//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			//			   |<WHERE_MIXED_LCURLY>)
+			//			   where_clauses() { rule_section_count += 1 ; } )?
+			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+	|
+		// This sub-section covers (possible) rules that start with a regular expression
+		// If no rule arrow or MARKUP_OP follows, then it's just a unioned_exp()
+	
+		unioned_exp()	// possible start of a rule (see if the next token is a rule-like operator)
+
+		// when something starts out looking like a regular expression,
+		// it could be the start of an alternation rule, or a language
+		// restriction expression; after finding a unioned_exp(), see
+		// if the next token is an arrow operator or a <MARKUP_OP>
+
+		// N.B. Unless we have a "transducer rule",
+		// the LHS parts of an alternation rule or language restriction
+		// expression shouldn't be semantic transducers, but they could still be
+		// acceptors and have the syntactic form of a cross-product expression,
+		// e.g.   a:a -> b:b
+		// So need to allow the upper and lower expressions to be syntactically
+		// composed, but do a semantic check during evaluation to make sure
+		// that they denote acceptors.
+
+		// N.B. if the composition operator (_o_) appears inside a sub-expression of a rule
+		// then it must be in parentheses
+
+		// We have already parsed a unioned_exp(), a possible start of an alternation rule;
+
+		// N.B. the following disjunction, leading to parsing rules, is optional ( ... )?
+		// The unioned_exp()  (a regular expression) just found might or might not be
+		//	the start of a rule.  To be a rule, it must be followed by an arrow operator
+		//  and perhaps other rule directives.
+		(
+			// unioned_exp() just found might be the start of an alternation rules
+
+			// right-arrow rules:  N.B. IF EDITED, SEE rule() AND MAKE PARALLEL EDITS
+
+			// rule-arrow complexes starting with ->
+
+			LOOKAHEAD( { 	getToken(1).kind == RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			// a:b ->    transducer-style rule
+			<RIGHT_RULE_ARROW>
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_oblig(rule_section_count)
+		|
+			<RIGHT_RULE_ARROW>
+			// a -> b
+				#rule_lhs_upper(1)	
+				// KRB:  here possibility of markup rules
+				rule_lhs_lower_or_markup()	
+				// leaves a #rule_lhs_lower or #rule_lhs_markup node on the stack
+				#rule_lhs(2) { rule_section_count = 1 ; }  
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )? 
 				#rule_right_arrow_oblig(rule_section_count)
-
-		//|	// {max} ->? /
-			// LOOKAHEAD(4)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
-		//|
-			//	{max} -> /
-			// LOOKAHEAD(3)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
-
-		//|	// {max} <-? /
-			// LOOKAHEAD(4)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_l2r_opt(rule_section_count)
-		//|
-			//	{max} <- /
-			// LOOKAHEAD(3)
-			// <MAX_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|   // {max} ->?
-			LOOKAHEAD(3)
-				<MAX_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
+		|
+			LOOKAHEAD( {	getToken(1).kind == RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<RIGHT_RULE_ARROW_OPT>
+			// a:b ->?   transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_l2r_opt(rule_section_count)
-
-		|   // {max} ->
-				<MAX_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_transducer_right_arrow_opt(rule_section_count)
+		|
+			<RIGHT_RULE_ARROW_OPT>
+		   // a ->? b 
+				#rule_lhs_upper(1)
+				rule_lhs_lower_or_markup()		
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )? 
+				#rule_right_arrow_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MAX_RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MAX_RIGHT_RULE_ARROW>
+			// a:b {max} ->    transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_max_l2r_oblig(rule_section_count)
+		|   
+			<MAX_RIGHT_RULE_ARROW>
+			// a {max} -> b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_max_l2r_oblig(rule_section_count)
-
-		//|	// {xam} ->? /
-			// LOOKAHEAD(4)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
-		//|
-			//	{xam} -> /
-			// LOOKAHEAD(3)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
-
-		//|	// {xam} <-? /
-			// LOOKAHEAD(4)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_r2l_opt(rule_section_count)
-		//|
-			//	{xam} <- /
-			// LOOKAHEAD(3)
-			// <MAX_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_max_r2l_oblig(rule_section_count)
-
-
-		|  	// {xam} ->?
-		    LOOKAHEAD(3)
-				<MAX_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
+		|
+			LOOKAHEAD( {	getToken(1).kind == MAX_RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MAX_RIGHT_RULE_ARROW_OPT>
+			//	a:b {max} ->? 
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l_opt(rule_section_count)
-
-		|  	// {xam} ->
-				<MAX_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_transducer_right_arrow_max_l2r_opt(rule_section_count)
+		|
+			<MAX_RIGHT_RULE_ARROW_OPT>
+			 // a {max} ->? b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-				
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_max_r2l_oblig(rule_section_count)
-
-		//|	// {min} ->? /
-			// LOOKAHEAD(4)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+				#rule_right_arrow_max_l2r_opt(rule_section_count)
 		//|
-			//	{min} -> /
-			// LOOKAHEAD(3)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
-
-		//|	// {min} <-? /
-			// LOOKAHEAD(4)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_l2r_opt(rule_section_count)
+			//LOOKAHEAD( { 	getToken(1).kind == XAM_RIGHT_RULE_ARROW
+			//		   &&	isNotPartOfRuleLHS(2)
+			//})
+				//<XAM_RIGHT_RULE_ARROW>
+				// a:b {xam}->		transducer-style rule
+					// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+					//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+					//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//			   |<WHERE_MIXED_LCURLY>)
+					//			   where_clauses() { rule_section_count += 1 ; } )?
+					//	#rule_transducer_right_arrow_max_r2l_oblig(rule_section_count)
 		//|
-			//	{min} <- /
-			// LOOKAHEAD(3)
-			// <MIN_L2R_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// {min} ->?
-			LOOKAHEAD(3)
-				<MIN_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
+			//<XAM_RIGHT_RULE_ARROW>
+				// a {xam} -> b
+				//		#rule_lhs_upper(1)
+				//		rule_lhs_lower_or_markup()
+				//		#rule_lhs(2) { rule_section_count = 1 ; }
+				//		( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//		( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//				   |<WHERE_MIXED_LCURLY>)
+				//				   where_clauses() { rule_section_count += 1 ; } )?
+				//		#rule_right_arrow_max_r2l_oblig(rule_section_count)
+		//|
+			//LOOKAHEAD( {	getToken(1).kind == XAM_RIGHT_RULE_ARROW_OPT
+			//			 &&	isNotPartOfRuleLHS(2)
+			//})
+				//<XAM_RIGHT_RULE_ARROW_OPT>
+				// a:b {xam}->?		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_max_r2l_opt(rule_section_count)
+		//|
+			//<XAM_RIGHT_RULE_ARROW_OPT>
+				// a {xam}->? b
+				//		#rule_lhs_upper(1)
+				//		rule_lhs_lower_or_markup()
+				//		#rule_lhs(2) { rule_section_count = 1 ; }
+				//		( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//		( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//				   |<WHERE_MIXED_LCURLY>)
+				//				   where_clauses() { rule_section_count += 1 ; } )?
+				//		#rule_right_arrow_max_r2l_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MIN_RIGHT_RULE_ARROW
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MIN_RIGHT_RULE_ARROW>
+			// a:b {min}->		transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// {min} ->
-				<MIN_L2R_DIRECTIVE>
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
+				#rule_transducer_right_arrow_min_l2r_oblig(rule_section_count)
+		|
+			<MIN_RIGHT_RULE_ARROW>
+			// a {min}-> b
 				#rule_lhs_upper(1)
 				rule_lhs_lower_or_markup()
 				#rule_lhs(2) { rule_section_count = 1 ; }
-
 				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 				#rule_right_arrow_min_l2r_oblig(rule_section_count)
-
-		//|	// {nim} ->? /
-			// LOOKAHEAD(4)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		|
+			LOOKAHEAD( {	getToken(1).kind == MIN_RIGHT_RULE_ARROW_OPT
+					   &&	isNotPartOfRuleLHS(2)
+			} )
+			<MIN_RIGHT_RULE_ARROW_OPT>
+			// a:b {min}->?		transducer-style rule
+				#rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_transducer_right_arrow_min_l2r_opt(rule_section_count)
+		|
+			<MIN_RIGHT_RULE_ARROW_OPT>
+				// a {min}->? b
+					#rule_lhs_upper(1)
+					rule_lhs_lower_or_markup()
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_right_arrow_min_l2r_opt(rule_section_count)
 		//|
-			//	{nim} -> /
-			// LOOKAHEAD(3)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
-
-		//|	// {nim} <-? /
-			// LOOKAHEAD(4)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <QUESTION_MARK> 
-			// <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_r2l_opt(rule_section_count)
+			//LOOKAHEAD( {	getToken(1).kind == NIM_RIGHT_RULE_ARROW
+			//			 &&	isNotPartOfRuleLHS(2)
+			//} )
+			//<NIM_RIGHT_RULE_ARROW>
+			// a:b {nim}->		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_min_r2l_oblig(rule_section_count)
 		//|
-			//	{nim} <- /
-			// LOOKAHEAD(3)
-			// <MIN_R2L_DIRECTIVE>
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-			// <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|  	// {nim} ->?
-			LOOKAHEAD(3)
-				<MIN_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// {nim} -> 
-				<MIN_R2L_DIRECTIVE> 
-				( <RIGHT_RULE_ARROW> | <RIGHT_RULE_ARROW_ASCII> )
-				#rule_lhs_upper(1)
-				rule_lhs_lower_or_markup()
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_right_arrow_min_r2l_oblig(rule_section_count)
-
-			// left-arrow rules
-
-	// |
-			//// KRB:  one location for transducer rules, e.g.
-			//  a:x <-? / left _ right
-			//  a:x <- / left _ right
-
-			//  a:x <-? / left _ right
-			// LOOKAHEAD(3)
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK> <SLASH_OP>
-			//// new AST node
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_opt(rule_section_count)
-
-			//	a:x <- / left _ right
-			// LOOKAHEAD(2)
-			// ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <SLASH_OP>
-			// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
-			//// this kind of rule must have a slash, but optionally a real right-hand side
-			//  ( LOOKAHEAD( { mustBeRegexp() } ) rule_rhs() { rule_section_count += 1 ; } )?
-			//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-			//			   |<WHERE_MIXED_LCURLY>)
-			//			   where_clauses() { rule_section_count += 1 ; } )?
-			//// new AST node
-			//	#rule_transducer_left_arrow_oblig(rule_section_count)
-
-		|  	// <-? {max}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<QUESTION_MARK>
-				<MAX_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do NOT allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-		|  	// <- {max}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-				<MAX_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do NOT allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-		|  	// <-? {xam}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )  
-				<QUESTION_MARK>
-				<MAX_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do NOT allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-		|  	// <- {xam}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )  
-				<MAX_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB: do NOT allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-		|  	// <-? {min}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-		|  	// <- {min}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_L2R_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-		|  	// <-? {nim}
-			LOOKAHEAD(3)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<QUESTION_MARK>
-				<MIN_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-		|  	// <- {nim}
-			LOOKAHEAD(2)
-				( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-				<MIN_R2L_DIRECTIVE>
-				#rule_lhs_upper(1)
-				// KRB:  do not allow markup here
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-		|  	// <-?
-			LOOKAHEAD(2)
-			( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-				#rule_lhs_upper(1)
-				(unioned_exp() #rule_lhs_lower(1))
-				#rule_lhs(2) { rule_section_count = 1 ; }
-
-				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-						   |<WHERE_MIXED_LCURLY>)
-						   where_clauses() { rule_section_count += 1 ; } )?
-				#rule_left_arrow_opt(rule_section_count)
-
-		|  ( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
+			//<NIM_RIGHT_RULE_ARROW>
+			// a {nim}-> b
+				//#rule_lhs_upper(1)
+				//rule_lhs_lower_or_markup()
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//  		   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_right_arrow_min_r2l_oblig(rule_section_count)
+		//|
+			//LOOKAHEAD( {	getToken(1).kind == NIM_RIGHT_RULE_ARROW_OPT
+			//			 &&	isNotPartOfRuleLHS(2)
+			//} )
+			//<NIM_RIGHT_RULE_ARROW_OPT>
+				// a:b {nim}->?		transducer-style rule
+				// #rule_lhs_transducer(1) { rule_section_count = 1 ; }
+				//  ( <SLASH_OP> rule_rhs() { rule_section_count += 1 ; } )?
+				//	( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//			   |<WHERE_MIXED_LCURLY>)
+				//			   where_clauses() { rule_section_count += 1 ; } )?
+				//	#rule_transducer_right_arrow_min_r2l_opt(rule_section_count)
+		//|
+			//<NIM_RIGHT_RULE_ARROW_OPT>
+				// a {nim}->? b
+					//#rule_lhs_upper(1)
+					//rule_lhs_lower_or_markup()
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_right_arrow_min_r2l_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW>
+			// a <- b
 				#rule_lhs_upper(1)
 				(
 					// Catch a parsing problem found by Paola
@@ -5680,192 +5245,264 @@ void rule() :
 					}
 					//numexp()
 				|
-					// KRB: do NOT allow markup here
+					// KRB:  do NOT allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 						   |<WHERE_MIXED_LCURLY>)
 						   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_oblig(rule_section_count)
 				)
+		|
+			<LEFT_RULE_ARROW_OPT>
+			// a <-? b
+				#rule_lhs_upper(1)
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_MAX>
+			// a <-{max} b
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MAX>
+			// a <-?{max} b
+				#rule_lhs_upper(1)
+				// KRB: do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_max_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_XAM>
+				// a <-{xam} b
+					//#rule_lhs_upper(1)
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_OPT_XAM>
+			// a <-?{xam} b
+				//#rule_lhs_upper(1)
+				//// KRB: do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_max_r2l_opt(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_MIN>
+			// a <-{min} b
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_oblig(rule_section_count)
+		|
+			<LEFT_RULE_ARROW_OPT_MIN>
+			// a <-?{min} b
+				#rule_lhs_upper(1)
+				// KRB:  do not allow markup here
+				(unioned_exp() #rule_lhs_lower(1))
+				#rule_lhs(2) { rule_section_count = 1 ; }
+				( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+				#rule_left_arrow_min_l2r_opt(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_NIM>
+			// a <-{nim} b
+				//#rule_lhs_upper(1)
+				//// KRB:  do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+		//|
+			//<LEFT_RULE_ARROW_OPT_NIM>
+				// a <-?{nim} b
+				//#rule_lhs_upper(1)
+				//// KRB:  do not allow markup here
+				//(unioned_exp() #rule_lhs_lower(1))
+				//#rule_lhs(2) { rule_section_count = 1 ; }
+				//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+				//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+				//		   |<WHERE_MIXED_LCURLY>)
+				//		   where_clauses() { rule_section_count += 1 ; } )?
+				//#rule_left_arrow_min_r2l_opt(rule_section_count)
+			
 
+			// left-arrow markup rules (the regexp found so far is the Y
+			// in the examples below)
 
-			// left-arrow markup rules
-
-		|  <MARKUP_OP> 				// Y ~~~ Z <- X  /  left _ right
-			#left_markup_insertion(1) 						// the Y part has been matched
+		|  <MARKUP_OP> 				// 		Y ~~~ Z <- X  /  left _ right
+									// or	Y ~~~   <- X  /  left _ right
+			#left_markup_insertion(1) 		// the Y part has been matched
 			{ markup_exp_count = 1 ; }
-			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; } )?	// the optional Z part
-			#rule_lhs_markup(markup_exp_count)						// covering Y ~~~ Z
+			( unioned_exp() #right_markup_insertion(1) { markup_exp_count += 1 ; })?	
+			// the optional Z part
+			#rule_lhs_markup(markup_exp_count)		// covering Y ~~~ Z
 
 			// after parsing  Y ~~~ Z here
 			// there must now be a left-rule-arrow of some kind
-
-			(  
-			  	// <-? {max}
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-					<QUESTION_MARK>
-					<MAX_L2R_DIRECTIVE>
-					// KRB: do NOT allow markup here
+			( 
+				<LEFT_RULE_ARROW>
+				// <-
+				(
+					// Catch a parsing problem found by Paola
+					// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
+					LOOKAHEAD ( {mustBeNumexp()} )
+					{ appendGuiError("Tokenization/parse problem: " +
+						"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
+						"as either < -1> or <(-1)>") ;
+					}
+					//numexp()
+				|
+					// KRB: do not allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r_opt(rule_section_count)
-
-			|  	// <- {max}
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-					<MAX_L2R_DIRECTIVE>
-					// KRB: do NOT allow markup here
+						   |<WHERE_MIXED_LCURLY>)
+						   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_oblig(rule_section_count)
+				)
+			|
+				<LEFT_RULE_ARROW_OPT>
+				// <-?
+					// KRB: do not allow markup here
 					(unioned_exp() #rule_lhs_lower(1))
 					#rule_lhs(2) { rule_section_count = 1 ; }
-
 					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_l2r_oblig(rule_section_count)
-
-			|  	// <-? {xam} 
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MAX_R2L_DIRECTIVE>
-					// KRB: do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l_opt(rule_section_count)
-
-			|  	// <- {xam} 
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MAX_R2L_DIRECTIVE>
-					// KRB: do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_max_r2l_oblig(rule_section_count)
-
-			|  	// <-? {min}
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MIN_L2R_DIRECTIVE>
-					// KRB:  do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r_opt(rule_section_count)
-
-			|  	// <- {min}
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_L2R_DIRECTIVE>
-					// KRB:  do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_l2r_oblig(rule_section_count)
-
-			|  	// <-? {nim} 
-				LOOKAHEAD(3)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<QUESTION_MARK>
-					<MIN_R2L_DIRECTIVE>
-					// KRB:  do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l_opt(rule_section_count)
-
-			|  	// <- {nim} 
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) 
-					<MIN_R2L_DIRECTIVE>
-					// KRB:  do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
-							   |<WHERE_MIXED_LCURLY>)
-							   where_clauses() { rule_section_count += 1 ; } )?
-					#rule_left_arrow_min_r2l_oblig(rule_section_count)
-
-			|	// <-?
-				LOOKAHEAD(2)
-					( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> ) <QUESTION_MARK>
-					// KRB: do NOT allow markup here
-					(unioned_exp() #rule_lhs_lower(1))
-					#rule_lhs(2) { rule_section_count = 1 ; }
-
-					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
 					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
 					#rule_left_arrow_opt(rule_section_count)
-
-			|	( <LEFT_RULE_ARROW> | <LEFT_RULE_ARROW_ASCII> )
-					(
-						// Catch a parsing problem found by Paola
-						// e.g. <-3>, intended negative weight, tokenized as <- 3 > 
-						LOOKAHEAD ( {mustBeNumexp()} )
-						{ appendGuiError("Tokenization/parse problem: " +
-							"<- was tokenized as a left arrow; retype a negative weight like <-1> " +
-							"as either < -1> or <(-1)>") ;
-						}
-						//numexp()
-					|
-						// KRB:  do NOT allow markup here
-						(unioned_exp() #rule_lhs_lower(1))
-						#rule_lhs(2) { rule_section_count = 1 ; }
-
-						( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
-
-						( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+			|
+				<LEFT_RULE_ARROW_MAX>
+				// <- {max}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
 							   |<WHERE_MIXED_LCURLY>)
 							   where_clauses() { rule_section_count += 1 ; } )?
-						#rule_left_arrow_oblig(rule_section_count)
-					)
+					#rule_left_arrow_max_l2r_oblig(rule_section_count)
+			|
+				<LEFT_RULE_ARROW_OPT_MAX>
+			  	// <-? {max}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_max_l2r_opt(rule_section_count)
+			//|  	
+				//<LEFT_RULE_ARROW_XAM>
+				// <- {xam}
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_oblig(rule_section_count)
+			//|  
+				//<LEFT_RULE_ARROW_OPT_XAM>
+				// <-? {xam}
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_max_r2l_opt(rule_section_count)
+			|  
+				<LEFT_RULE_ARROW_MIN>
+				// <- {min}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_oblig(rule_section_count)
+			|  	
+				<LEFT_RULE_ARROW_OPT_MIN>
+				// <-? {min}
+					// KRB: do not allow markup here
+					(unioned_exp() #rule_lhs_lower(1))
+					#rule_lhs(2) { rule_section_count = 1 ; }
+					( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+							   |<WHERE_MIXED_LCURLY>)
+							   where_clauses() { rule_section_count += 1 ; } )?
+					#rule_left_arrow_min_l2r_opt(rule_section_count)
+			//|  	
+				//<LEFT_RULE_ARROW_NIM>
+				// <- {nim} 
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_min_r2l_oblig(rule_section_count)
+			//| 
+				//<LEFT_RULE_ARROW_OPT_NIM>
+				// <-? {nim} 
+					//// KRB: do not allow markup here
+					//(unioned_exp() #rule_lhs_lower(1))
+					//#rule_lhs(2) { rule_section_count = 1 ; }
+					//( <SLASH_OP>  rule_rhs() { rule_section_count += 1 ; } )? 
+					//( LOOKAHEAD(<WHERE_MATCHED_LCURLY>
+					//		   |<WHERE_MIXED_LCURLY>)
+					//		   where_clauses() { rule_section_count += 1 ; } )?
+					//#rule_left_arrow_min_r2l_opt(rule_section_count)
 			)
+
+			// language-restriction expression =>
+			// can only appear after a unioned_exp()  (i.e. a regular expression).
+			// This possibility does not exist under rule(), which accepts only
+			// alternation rules (not rule-like rule-restriction expressions.
 		)
 	)
 }
@@ -5881,15 +5518,16 @@ void rule_lhs_lower_or_markup(): {}
 		(
 			( unioned_exp() #right_markup_insertion(1) )?
 		) #rule_lhs_markup
-
-	| 	LOOKAHEAD(unioned_exp() <MARKUP_OP>)
+	| 	
+		LOOKAHEAD(unioned_exp() <MARKUP_OP>)
 		// there is a left_markup_insertion, with optional right_markup_insertion following MARKUP_OP
 		( (unioned_exp() #left_markup_insertion(1))
 		  <MARKUP_OP>
 		  (unioned_exp() #right_markup_insertion(1))?
 		) #rule_lhs_markup
 
-	|   (unioned_exp()) #rule_lhs_lower
+	|   
+		(unioned_exp()) #rule_lhs_lower
 	)
 }
  
@@ -6132,6 +5770,7 @@ void primary_regexp():
 | net_outputproj_func_call()
 
 | net_to_string_func_call()
+| net_char_for_cpv_func_call()
 | net_implode_func_call()
 | net_explode_func_call()
 
@@ -6593,10 +6232,16 @@ void lng_contains_other_func_call() #lng_contains_other_func_call: {}
 //}
 
 
-//void lng_equivalent_func_call() #lng_equivalent_func_call: {}
-//{
-//	<LNG_EQUIVALENT_FUNC_ID> regexp_regexp_numexp_arg_list() 
-//}
+void lng_equivalent_func_call() #lng_equivalent_func_call: {}
+{
+	<LNG_EQUIVALENT_FUNC_ID> regexp_regexp_numexp_arg_list() 
+}
+
+void lng_rand_equivalent_func_call() #lng_rand_equivalent_func_call: {}
+{
+	<LNG_RAND_EQUIVALENT_FUNC_ID> regexp_regexp_numexp_numexp_numexp_numexp_arg_list() 
+}
+
 
 void num_abs_func_call() #num_abs_func_call: {}
 {
@@ -6606,6 +6251,11 @@ void num_abs_func_call() #num_abs_func_call: {}
 void net_to_string_func_call() #net_to_string_func_call: {}
 {
 	<NET_TO_STRING_FUNC_ID> numexp_one_arg_list()
+}
+
+void net_char_for_cpv_func_call() #net_char_for_cpv_func_call: {}
+{
+	<NET_CHAR_FOR_CPV_FUNC_ID> numexp_one_arg_list()
 }
 
 void net_implode_func_call() #net_implode_func_call: {}
@@ -7198,6 +6848,12 @@ void regexp_numexp_numexp_arg_list() : {}
 void regexp_regexp_numexp_arg_list() : {}
 {
 	<LPAREN> regexp() <COMMA_OP> regexp() <COMMA_OP> numexp() <RPAREN>
+}
+
+void regexp_regexp_numexp_numexp_numexp_numexp_arg_list() : {}
+{
+	<LPAREN> regexp() <COMMA_OP> regexp() <COMMA_OP> numexp() <COMMA_OP>
+	numexp() <COMMA_OP> numexp() <COMMA_OP> numexp() <RPAREN>
 }
 
 void numexp_one_arg_list() : {}

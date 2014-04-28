@@ -1,6 +1,30 @@
 
 		Kleene Version Notes
 
+2014-04-28
+	Added pr (print, without the weight)
+
+2014-02-25
+	Transducer-style rules are working.
+	Added $^equivalent() (used for acceptors)
+	// the caller must pass at least the first two arguments
+	#^equivalent($one, $two, 
+			#delta=#kDeltaFromOpenFst) {
+	return #^__equivalent($one, $two, #delta) ;      // built-in
+	}
+
+	and $^randEquivalent() (used for transducers)
+	// the caller must supply at least the 3 initial args
+	#^randEquivalent($one, $two, #npath, 
+				#delta = #kDeltaFromOpenFst,
+				#seed = 60, 		// 60 seconds (C++ def.  value is time(0))
+				#path_length = 60 ) {  	// C++ def value is MAX_INT;
+										// Java Integer.MAX_VALUE
+										// is 2147483647
+	return #^__randEquivalent($one, $two, #npath, 
+							#delta, #seed, #path_length) ;      // built-in
+	}
+
 2013-11-22
 	Added $^flatten($fst) and $^flatten!($fst)
 	Added $^flatten4rule($fst) and $^flatten4rule!($fst), to be used in

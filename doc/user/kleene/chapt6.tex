@@ -1,341 +1,452 @@
-\chapter{Arithmetic Expressions}
+\chapter{Examples with Weights}
 
-\section{Mindtuning for Arithmetic Expressions}
+\label{chapt:exampleswithweights}
 
-While \Kleene{} is designed primarily for creating and manipulating
-finite-state networks, it does support arithmetic expressions, variables
-that hold arithmetic values, functions that return arithmetic values,
-etc.  Variables with an arithmetic value are marked with a \# sigil,
-functions that return an arithmetic value with \verb!#^!, etc.  Wherever a
-simple integer or float can appear in \Kleene{} syntax, including
-numbered iterations like \verb!a{2,4}! and weights like \verb!<0.1>!, an
-arbitrarily complex arithmetic expression can appear, e.g.\@ 
-\verb!a{2, #maxlength - 1}! and \verb!<#defaultweight + .01>!.\footnote{Internally,
-\Kleene{} stores arithmetic values as either a Long or a Double object.}
+\section{Introduction}
 
-The arguments passed to a function could be any mix of regular
-expressions and arithmetic expressions, and one of the biggest challenges
-during \Kleene{} design and development was the distinguishing and proper
-tokenization/parsing of the two separate expression types.  For example,
-both use the plus sign as an operator, but in arithmetic expressions it
-is a binary infix operator of fairly low precedence, e.g.\@  \verb!2+3!,
-while in regular expressions it is a unary postfix operator of fairly
-high precedence, e.g.\@ \verb!ab+c!.  Distinguishing the two
-expression types by inventing new operators---either for regular
-expressions or for arithmetic expressions---was judged to be
-completely unacceptable; and forcing users to surround regular
-expressions, or arithmetic expressions, with some kind of explicit
-delimiters, such as the Perl slashes /\ldots/, was deemed inelegant
-and undesirable.
+This chapter, definitely work in progress, presents examples that
+use weights.  New examples will be added as they become available.
 
-The solution adopted was to define a systematic set of sigils starting
-with \verb!$! for network-value variables and functions, and \verb!#! for
-arithmetic-value variables and functions.  Parser lookahead distinguishes
-\verb!#a+#b! as an arithmetic expression, involving addition, from
-\verb!$a+$b!, which is a regular expression indicating the concatenation
-of one or more iterations of network \verb!$a! with network \verb!$b!.
-Once the sigil system is mastered, users can, in almost all cases, simply
-type familiar regular and arithmetic expressions in appropriate places. 
+\section{Weighted Edit Distance for Spelling Correction}
 
-The remaining problematic cases are expressions like \verb!2! and
-\verb!2+3!, which start with digits.  Are they arithmetic expressions,
-having a integer or float value, or regular expressions, having a network
-value?  The \Kleene{} solution is to treat bare digits by default as
-arithmetic expressions.  To be interpreted as literal characters, and
-therefore regular expressions, digits must be literalized in the usual
-\Kleene{} ways:
+The following script, based on an example by M\r{a}ns Huldén, illustrates how weighted \fst{}s
+can be used to make a spelling corrector that returns a set of possible
+corrections ranked by likelihood, or even just the best (most likely)
+correction, for a misspelled word.
 
-\begin{itemize}
-\item
-Using the prefix backslash literalizer:  \verb!\2!
-\item
-Surrounding them with double quotes: \verb!"2"!, or
-\item
-Putting them in square-bracketed expressions: \verb![2]! \verb![^2]! \verb![0-9]! \verb![^0-9]!
-\end{itemize}
+One phenomenon that we need to model is the degree of dissimilarity between an
+observed misspelled word and a correctly spelled possible correction.  For example, the misspelled
+word \emph{accomodation} is intuitively very similar to the correct word
+\emph{accommodation}, differing in only one missing letter.  Similarly,
+\emph{panick}
+is very similar to \emph{panic}, differing in having one extra letter.  And
+\emph{advertize} is similar to the correctly spelled \emph{advertise}, differing only
+in one changed letter. Increasing in dissimilarity, \emph{camoflague} differs from
+\emph{camouflage} in two letters, \emph{garentee} also differs from
+\emph{guarantee} in
+two letters, and \emph{bizness} differs from \emph{business} in three letters.
 
-\section{Primary Arithmetic Expressions}
+We can characterize the amount of dissimilarity between two words as the \emph{edit distance},
+a measure of the number of editing changes, or the amount of work, required to change one word into the
+other.  The changes could include adding a letter, deleting a letter, or changing
+one letter into another letter.
 
-The primary arithmetic expressions are the following:
+Weighted Kleene \fst{}s have weights that are ``costs,'' and
+the edit distance can be formalized in Kleene as the cost of
+transducing one word into another, assigning a cost to deleting a
+letter, a cost to adding a letter and a cost to changing one letter into
+another letter.  In the Tropical Semiring, the costs associated with multiple changes are simply
+added together to yield the total cost.  Mapping a letter to itself is free, involving no cost,
+i.e.\@ a neutral cost of 0.0.  Of
+course, with
+enough editing changes, any word can be changed to any other word,
+but intuitively we want to concentrate on the possible corrections that
+involve the lowest cost, the fewest edits.  These intuitions will be encoded in what is known 
+as a \emph{error model} or \emph{edit model}.
 
-\vspace{.5cm}
+Another phenomenon that needs to be modeled is the fact that some words are
+simply more common than others in any reasonably sized corpus.  Looking at a misspelled word
+in isolation,
+if a set of possible corrections having the same edit distance includes a more common word and
+	some less
+common words, the more common word is more likely to be the best correction.  For
+example, the misspelled ``frm'' differs in only one letter from the possible
+corrections ``farm,'' ``firm'' and ``from,'' but ``from'' is far more common than
+the alternatives and is---considered in isolation---more likely to be the intended
+word.  These intuitions will be encoded in a (unigram) \emph{language model}.
 
-\renewcommand\tabcolsep{1.25mm}
+We will build our weighted edit-modeling transducer from four main parts.  The first
+part is the identity mapping:
 
-\noindent
-\begin{tabular}{|p{5.5cm}|l|}
-\hline
-\verb!0 1 42!  & decimal integers\\
-\hline
-\verb!0x1 0X1 0x1A 0X23ABC! & hex integers\\
-\hline
-\verb!2.5 .234 103.! & decimal floats\\
-\hline
-\verb!#n #count #foo! & names of variables denoting an arithmetic value\\
-\hline
-\verb!#^abs(#numexp)! \verb!#^arcCount($regexp)!
-\verb!#^stateCount($regexp)! \verb!#^myfunction(!\emph{args}\verb!)! & names of functions returning an arithmetic value\\
-%\hline
-%\verb!#@arr[1]! & arithmetic array reference\\
-\hline
-\end{tabular}
-
-\vspace{.5cm}
-
-\noindent
-Note that \Kleene{} does not support octal (base 8) representations of integers.
-
-\section{Arithmetic Expression Operators}
-
-The following regular expression operators are available, 
-listed from high to low precedence.
-
-\vspace{0.5cm}
-
-\noindent
-\begin{tabular}{|l|l|l|l|}
-\hline
-( ) &  parenthetical grouping & circumfix &\\
-\hline
-\verb!+ -! & positive, negative & prefix &\\
-\hline
-\verb!* / %! & multiply, divide, mod & infix & left assoc.\\
-\hline
-\verb!+ -!  & add/subtract & infix & left assoc.\\
-\hline
-\verb/< <= >= == != >/ & Boolean comparisons & infix & left assoc.\\
-\hline
-\verb/!/ & Boolean NOT  & prefix & \\
-\hline
-\verb!&&! & Boolean AND & infix & left assoc.\\
-\hline
-\verb!||! & Boolean OR  & infix & left assoc.\\
-\hline
-\end{tabular}
-
-\vspace{0.5cm}
-
-\noindent
-The result of boolean operations is always 1 (true) or 0 (false).  There
-is no separate boolean type in Kleene.
-
-\section{Arithmetic Functions}
-
-The following pre-defined arithmetic-valued functions are provided.
-
-\vspace{0.5cm}
-
-\noindent
-\begin{tabular}{|l|}
-\hline
-\verb!#^pathCount($fst)! \\
-\verb!#^stateCount($fst)! \\
-\verb!#^arcCount($fst)! \\
-\verb!#^arity($fst)! \\
-\hline
-\verb!#^abs(#num)! \\
-\verb!#^ceil(#num)! \\
-\verb!#^floor(#num)! \\
-\verb!#^round(#num)! \\
-\verb!#^log(#num)! \\
-\verb!#^prob2c(#num)! \\
-\verb!#^pct2c(#num)! \\
-\hline
-\verb!#^long(#num)! or \verb!#^int(#num)! \\
-\verb!#^double(#num)! or \verb!#^float(#num)! \\
-\verb!#^rint(#num)! \\
-\hline
-\end{tabular}
-
-\vspace{0.5cm}
-
-In Kleene there is no difference between \verb!#^long(#num)! and
-\verb!#^int(#num)!; both are stored as long integers.\footnote{Long
-integers are stored internally as Java Long objects.}  Similarly, there
-is no difference between \verb!#^double(#num)! and \verb!#^float(#num)!;
-both are stored as double values.\footnote{Double values are stored
-internally as Java Double objects.}  
-
-The \verb!#^log(#num)! function returns the natural logarithm of the
-argument.
-The \verb!#^prob2c(#num)! takes an argument that represents a probability,
-where probabilities range from 1.0 (certain) to 0.0 (impossible), and
-returns a cost weight suitable for the Tropical Semiring.\footnote{In
-	the Tropical Semiring, the weights are \emph{costs}.  For any
-probability \emph{p}, the corresponding cost is $-$log(p).  A probability
-of 1.0 corresponds to a cost of 0.0, and a probability of 0.0
-corresponds to an infinite cost.}  The \verb!#^prob2c(#num)! function might
-be used in examples like the following,
-
-\begin{Verbatim}[fontsize=\small]
-$fsm = a b ( c <#^prob2c(0.1)> | d <#^prob2c(0.9)> ) ;
+\begin{Verbatim}
+$ident = . <0.0> ;	// map any symbol to itself
 \end{Verbatim}
 
 \noindent
-where the path containing \emph{c} has 0.1 probability, and the path containing
-\emph{d} has 0.9 probability.  The \verb!#^pct2c(#num)! is similar but allows you
-to express the weights as percentages, e.g.\ 10\% vs.\ 90\%.  The following example is equivalent to the
-one just above.
+Recall that . (dot) denotes any symbol or the transducer that maps any
+symbol to itself.  Such identity mappings are free, having no cost in
+our spell-checking example, so we assign the identity mapping a weight of 0:0.
 
-\begin{Verbatim}[fontsize=\small]
-$fsm = a b ( c <#^pct2c(10)> | d <#^pct2c(90)> ) ;
+The second part is
+
+\begin{Verbatim}
+$changecost = <7.0> ;
+$delete = .:"" $changecost ;  // map a symbol to the empty string
 \end{Verbatim}
 
+\noindent which denotes the transducer that maps any symbol, denoted as . (dot),
+downward to the empty string, denoted \texttt{""}.  We arbitrarily assign the
+weight of 7.0 to such a deletion, a value that we can adjust later.
 
-[KRB:  explain why the \verb!#^pathCount()! is not completely accurate.
-Explain the other functions..]  
+The third part is
 
-\section{Boolean Functions}
-
-\subsection{Special Case of Arithmetic Functions}
-
-Boolean functions are special cases of arithmetic functions that return 1 for true and 0 for false.  They
-are typically used in if-else expressions or in loops for testing qualities of finite-state machines.
-The predefined boolean functions are 
-
-\vspace{0.5cm}
-
-\noindent
-\begin{tabular}{|l|}
-\hline
-\verb!#^isAcceptor($fst)! \\
-\verb!#^isTransducer($fst)! \\
-\verb!#^isRtn($fst)! \\
-\hline
-\verb!#^isWeighted($fst)! \\
-\verb!#^isIDeterministic($fst)! or \verb!#^isUDeterministic($fst)!\\
-\verb!#^isODeterministic($fst)! or \verb!#^isLDeterministic($fst)!\\
-\verb!#^isCyclic($fst)!\\
-\verb!#^isIBounded($fst)! or \verb!#^isUBounded($fst)!\\
-\verb!#^isOBounded($fst)! or \verb!#^isLBounded($fst)!\\
-\verb!#^containsOther($fst)! \\
-\verb!#^hasClosedAlphabet($fst)! \\
-\verb!#^isEpsilonFree($fst)! \\
-\hline
-\verb!#^isEmptyLanguage($fst)! \\
-\verb!#^isEmptyStringLanguage($fst)! \\
-\verb!#^isString($fst)! or \verb!#^isSingleStringLanguage($fst)!\\
-\verb!#^containsEmptyString($fst)! \\
-\verb!#^isUniversalLanguage($fst)! \\
-\hline
-\end{tabular}
-
-\vspace{0.5cm}
-\noindent
-and others will no doubt be defined as they become needed.
-
-The \verb!#^isAcceptor($fst)! function returns true if and only if the
-argument network is semantically an
-acceptor.  In OpenFst, where all arc labels \emph{i}:\emph{o} in a finite-state machine
-are two-level, with an input label \emph{i} and an output label \emph{o}, an acceptor is a special case of a
-machine wherein each arc-label mapping is an identity mapping.\footnote{If the finite-state machine contains an arc labeled
-\acro{other\_nonid:other\_nonid}, then it will look like an acceptor to the OpenFst library, but in Kleene such
-a network is semantically and in practice a transducer; if \verb!#^isAcceptor()! is called on such
-a network the return value is 0 (false).  Conversely, if
-\verb!#^isTransducer()! is called on any network that
-contains an arc labeled \acro{other\_nonid:other\_nonid}, the return value is 1 (true).}
-
-The \verb!#^isTransducer($fst)! function returns true if and only if the argument network is semantically a
-non-identity transducer.  Thus if the machine contains any arc label like a:b, where the upper label is
-different from the lower label, \verb!#^isTransducer! will return true.\footnote{If the argument contains an
-arc labeled 
-\acro{other\_nonid:other\_nonid},
-then it will look like an identity relation to OpenFst itself, but in
-Kleene this is semantically a non-identity transducer and \verb!#^isTransducer! will return 0 (false).}
-
-The \verb!#^isWeighted($fst)! function returns true if and only if the argument
-finite-state machine contains any arc
-with a non-neutral weight value.
-
-The \verb!#^isIDeterministic($fst)! function returns true if and only if the finite-state machine is \emph{input}-side
-deterministic, where ``input'' here is taken in the OpenFst sense of the upper side.
-Similarly, the function \verb!#^isODeterministic($fst)! returns true if and only if the
-network is \emph{output}-side deterministic, in the OpenFst sense.\footnote{The spellings IDeterministic and ODeterministic are
-used inside the OpenFst library.}
-
-The \verb!#^isCyclic($fst)! function returns true if and only if the finite-state machine has cycles, also
-known as loops.
-
-The \verb!#^isIBounded($fst)! function returns true if and only if the finite-state machine has no input side
-epsilon loops.
-
-The \verb!$^isOBounded($fst)! function returns true if and only if the finite-state machine has no output side
-epsilon loops.
-
-The \verb!#^containsOther($fst)! function returns true if and only if the network
-contains at least one \acro{other\_id} or \acro{other\_nonid} label.
-Conversely, 
-\verb!#^hasClosedAlphabet($fst)! returns true if and only if the
-alphabet of the network is closed, i.e.\@ the network does not contain any 
-\acro{other\_id} or \acro{other\_nonid} labels.  Thus
-\verb!#^hasClosedAlphabet($fst)! is equivalent to 
-\verb@!#^containsOther($fst)@.
-
-The \verb!#^isEpsilonFree($fst)! function returns true if and only if the network contains no
-\acro{epsilon:epsilon} arcs,
-i.e.\@ no double-sided epsilon labels.  Because Kleene routinely runs epsilon-removal
-on all networks, which removes such double-sided epsilon arcs, unless such removal is
-explicitly turned off, there is seldom any practical need to call 
-\verb!#^isEpsilonFree($fst)!.
-
-The \verb!#^isEmptyLanguage($fst)! function returns true if and only if the network encodes the empty
-language, i.e.\@ the language that contains no strings at all, not even the empty string.
-
-The \verb!#^isEmptyStringLanguage($fst)! function returns true if and only if the network encodes the
-empty-string language, i.e.\@ the language that contains only the empty string.
-
-The \verb!#^isString($fst)! function, aliased as \verb!#^isSingleStringLanguage($fst)!, returns true if
-and only if the network encodes a language of exactly one string.
-
-The \verb!#^containsEmptyString($fst)! function returns true if and only if the network encodes a
-language that contains the empty string.
-
-The \verb!#^isUniversalLanguage($fst)! function returns true if and only if the network encodes the
-universal language, i.e.\@ the language that contains all possible strings.  [KRB, 2012-08-19:  This
-function will not be fully reliable until a ``compact sigma'' function is implemented.]
-
-\subsection{Assert and Require Statements}
-
-The \verb!assert(#numexp, $regexp)! statement has a required arithmetic first
-argument, which is analyzed as a boolean, and an optional second
-regular-expression argument, which must denote a single-string language.  If
-the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
-statement.  But if the first argument analyzes as false, a runtime exception is thrown and
-the single-string second argument, if present, is used as the exception
-message.  The \verb!assert(#numexp, $regexp)! statement is typically used
-for testing.
-
-\begin{Verbatim}[fontsize=\small]
-$fst = a - a ;
-assert(#^isEmptyLanguage($fst), 
-        "Should denote the empty language.") ;
-
-$fst2 = a* ;
-assert(#^containsEmptyString($fst2), 
-        "Should contain the empty string.") ;
+\begin{Verbatim}
+$insert = "":. $changecost ;  // map the empty string to a symbol
 \end{Verbatim}
 
-In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
-argument, which is analyzed as a boolean, and an optional second
-regular-expression argument, which must denote a single-string language.  If
-the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
-statement.  But if the first argument analyzes as false, a runtime exception is thrown and
-the single-string second argument, if present, is used as the exception
-message.  The \verb!require(#numexp, $regexp)! statement is typically used
-in user-defined functions to impose semantic restrictions on the
-arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
-and \verb!require(#numexp, $regexp)! arguments could be debated.  One
-possibility would be to implement a global switch that would cause all
-\verb!assert(#numexp, $regexp)! statements, but not 
-\verb!require(#numexp, $regexp)! statements, to be ignored at runtime.}
+\noindent which denotes the transducer that maps the empty string downward to any
+symbol, inserting a symbol where there was none before.  Such mappings are technically known as
+epentheses.  We assign such
+insertions the weight of 7.0.
 
-\begin{Verbatim}[fontsize=\small]
-#^myIntersect($a, $b) {
-	require(#^isAcceptor($a) && #^isAcceptor($b), 
-    "The arguments to #^myIntersect must denote an acceptor.") ;
+Finally, the fourth part is
 
-	return $a & $b ;
+\begin{Verbatim}
+$swap = ( .:. - . ) $changecost ;
+\end{Verbatim}
+
+\noindent
+Recall that \texttt{.:.} denotes the transducer that maps any symbol to any
+symbol, including itself.  Then \texttt{( .:. - . )} denotes the transducer
+that maps any symbol to any other symbol, \emph{not} including identity mappings.  We
+assign such letter swaps the cost of 7.0.
+
+Armed with these definitions, the model for transducing between a 
+misspelled word and a properly spelled word, the \emph{edit model}, is a
+sequence of zero or more identity mappings, deletions, insertions or changes,
+i.e. in Kleene terms:
+
+\begin{Verbatim}
+$editModel = ( $ident | $delete | $insert | $swap )* ;
+\end{Verbatim}
+
+We also need a \emph{language model} that encodes the language (i.e.\@ the
+set) of properly spelled words that will serve as possible corrections.  
+Initially, such a model can be constructed
+as a simple union of words,
+
+\begin{Verbatim}
+$langModel = a | back | bake | bee | carrot | deer | eye ;
+// and so on for hundreds, thousands, millions of words
+\end{Verbatim}
+
+\noindent
+extending it eventually to hundreds of thousands or even millions of words.  For the purposes
+of this example, we can simply search the web for posted wordlists, such as the
+``Simpsons Frequency Dictionary,''\footnote{\url{http://pastebin.com/anKcMdvk}} which contains the 5000 most frequent words
+found in open subtitles from The Simpsons television series.  If we download this list, we can, with a
+little editing,\footnote{There are some apparently extraneous punctuation letters
+	in this list, and for Kleene regular expressions, some vertical bars (``pipes''), digits and punctuation
+letters need to be removed or literalized using double quotes or backslashes.} convert it into a useful test model.
+
+\begin{Verbatim}
+$langModel = the | you | i | a | to | and | of | it  ... ;
+// the full list has 5000 words, some needing editing 
+//     to compile correctly in Kleene
+\end{Verbatim}
+
+\noindent
+Then if the misspelled word is \emph{frm}, the language of possible corrections,
+\verb!$corr! is computed as
+
+\begin{Verbatim}
+$corr = frm _o_ $editModel _o_ $langModel ;
+// FstType: vector, Semiring: standard, 12992 states,
+56693 arcs, 2330246 paths, Transducer, Weighted, Closed Sigma
+\end{Verbatim}
+
+\noindent
+When I run this experiment, using the bare Simpsons wordlist, with my edits, Kleene
+informs me that the result \texttt{\$corr} contains 2330246 paths, representing
+the fact that, with enough edits, \emph{frm} can be transduced into any of the
+5000 words in the language model, in multiple ways.
+
+At this point, we can start to use the weights (costs) to focus on the more
+likely corrections, given our edit model and language model.  In the OpenFst
+library, the function that prunes an \fsm{} to contain only the best paths (i.e.\@
+lowest cost, in the Tropical Semiring) is called ShortestPath.  That operation
+and terminology is exposed in the Kleene function \verb!$^shortestPath($fst, #nshortest=1)!.  For
+example, we can limit \verb!$corr! to the best five corrections using
+
+\begin{Verbatim}
+$corr = $^shortestPath($^lowerside(frm 
+                                   _o_ 
+                                   $editModel 
+                                   _o_ 
+                                   $langModel), 
+                       5) ;
+print $corr ;
+fry : 7.0
+from : 7.0
+firm : 7.0
+farm : 7.0
+arm : 7.0
+\end{Verbatim}
+
+\noindent
+Each of the five possible corrections has a weight of 7.0, indicating (in our
+current model) that just one edit was needed to change \emph{frm} into the correctly
+spelled word.  
+
+If we ask ShortestPath to return just one result,
+
+\begin{Verbatim}
+$corr = $^shortestPath($^lowerside(frm 
+                                   _o_ 
+                                   $editModel 
+                                   _o_ 
+                                   $langModel), 
+                       1) ;
+print $corr ;
+arm : 7.0
+\end{Verbatim}
+
+\noindent
+it randomly gives us \emph{arm}, which is as close to \emph{frm} as the other possibilities,
+but intuitively is not the mostly likely correction.  
+
+What's missing in this experiment so far is a modeling of the fact that some
+words, in the language model, occur more frequently than others.  And when a
+misspelled word is considered in isolation, possible corrections that are more
+likely should have precedence over those that are less likely.  We
+know intuitively that \emph{from}, a common English function word, occurs more often than the
+alternatives \emph{farm}, \emph{firm}, \emph{fry} and \emph{arm},  and we can confirm this by looking at actual frequency counts.  Again, we will
+model likelihood using cost weights in the Tropical Semiring.
+
+
+The Simpsons word list, in fact, gives us some additional information that allows
+us to at least approximate the probability (and therefore the cost) of each
+correct word.  The top of the list looks like this:
+
+\begin{Verbatim}
+Rank   Word                           Frequency
+1      the                            (107946)
+2      you                            (98068)
+3      i                              (91502)
+4      a                              (79241)
+5      to                             (70362)
+6      and                            (47916)
+7      of                             (42175)
+8      it                             (36497)
+9      in                             (32503)
+10     my                             (32254)
+11     that                           (32083)
+12     is                             (31533)
+13     this                           (29902)
+14     me                             (28208)
+...
+\end{Verbatim}
+
+\noindent
+The ``Frequency'' column shows the count of occurrences of each word from the
+corpus.  For example, the probability of a word being \emph{the}, i.e.\@ the probability of
+selecting a word from the corpus at random, and having it be \emph{the}, is
+computed as the count of occurrences of \emph{the}, here 107946, divided by the
+total number of tokens in the corpus, i.e.\@
+
+\begin{Verbatim}
+	P(the) = 107946 / TotalTokens
+\end{Verbatim}
+
+\noindent
+Disappointingly, the Simpsons wordlist doesn't tell us the TotalTokens,
+so we are left to do some semi-intelligent guessing.  In the Brown Corpus, the
+most common word in English, 
+\emph{the}, is said to account for almost 7\% of the tokens.  For now, let's accept
+this number as being valid for the Simpsons corpus as well.  If 107946 instances of \emph{the}
+represent 7\% of the corpus, then the total number of tokens is a little over one and half
+million.
+
+\begin{Verbatim}
+	107946 / TotalTokens = .07
+
+	TotalTokens = 1542085
+\end{Verbatim}
+
+\noindent
+Let's use the round number of 1,500,000.  The probability of \emph{the}, and some
+other common words, can then be estimated at
+
+\begin{Verbatim}
+	P(the) = 107946 / 1,500,000 = 0.07196
+
+	P(you) = 98068 / 1,500000 = 0.06538
+
+	P(i) = 91502 / 1,500,000 = 0.06100
+
+	P(a) = 79241 / 1,500,000 = 0.05300
+\end{Verbatim}
+
+\noindent
+Note that as the frequency of occurrence decreases, the probability value also decreases.  
+As usual, if the probability of an event, such as the appearance of the word \emph{the} in
+running English text, is p,
+then the cost is computed as $-$log(p).
+
+\begin{Verbatim}
+	C(the) = -log(107946 / 1,500,000) = 2.63159
+
+	C(you) = -log(98068 / 1,500,000) = 2.72756
+
+	C(i) = -log(91502 / 1,500,000) = 2.79686
+
+	C(a) = -log(79241 / 1,500,000) = 2.94073
+\end{Verbatim}
+
+\noindent
+Note that as the frequencies/probabilities decrease, the costs \emph{in}crease.
+High probabilities correspond to low costs, and low probabilities correspond to
+high costs.
+
+These costs can now be included in an improved language model.  If we tediously precompute
+the costs, we can simply list the cost for each word, using the usual
+angle-bracket syntax.
+
+\begin{Verbatim}
+$langModel = 
+  the   <2.63159>
+| you   <2.72756>
+| i     <2.79686>
+| a     <2.940731>
+... ;
+\end{Verbatim}
+
+\noindent
+Alternatively, we can let Kleene convert the probabilities into costs using the
+\verb!#^prob2c()! function, which is pre-defined as 
+
+\begin{Verbatim}
+#^prob2c(#prob) {
+    return -#^log(#prob) ;
 }
 \end{Verbatim}
 
+\noindent
+The definition of the improved, weighted language model might then look like this, with
+\verb!#TotalTokens! defined as 1500000.0, a floating-point number, so that
+when it is used in division, the result is also a float.
+
+\begin{Verbatim}
+#TotalTokens = 1500000.0 ;
+
+$langModel = 
+  the   <#^prob2c(107946 / #TotalTokens)>
+| you   <#^prob2c(98068 / #TotalTokens)>
+| i     <#^prob2c(91502 / #TotalTokens)>
+| a     <#^prob2c(79241 / #TotalTokens)>
+... ;
+// and so on for all 5000 words in the model
+\end{Verbatim}
+
+\noindent
+We could easily adjust the value of \verb!#TotalTokens! if we ever get more
+precise information about the size of the corpus.
+
+With the improved language model, now weighted, the best correction for \emph{frm} selected by
+\verb!$^shortestPath()! is now \emph{from}, which intuitively seems right.
+
+\begin{Verbatim}
+$corr = $^shortestPath($^lowerside(frm 
+                                   _o_ 
+                                   $editModel 
+                                   _o_ 
+                                   $langModel)) ;
+print $corr ;
+from : 12.295898
+\end{Verbatim}
+
+\noindent
+And we can see the top \emph{n} possible corrections by passing an optional numerical
+argument to \verb!$^shortestPath()!, e.g.\@ 10:
+
+\begin{Verbatim}
+$corr = $^shortestPath($^lowerside(frm 
+                                   _o_ 
+                                   $editModel 
+                                   _o_ 
+                                   $langModel), 
+                       10) ;
+print $corr ;
+from : 12.295898
+from : 15.744141
+arm : 15.818359
+farm : 16.557617
+fry : 17.483398
+firm : 17.483398
+for : 18.069336
+i'm : 18.161133
+are : 18.52832
+him : 19.44336
+\end{Verbatim}
+
+After the language model is defined, the rest of the script is shown below,
+including the definition of the convenience 
+functions \verb!$^correct()!, which returns an \fsm{},
+and \verb!^correctp()!, which simply prints out the results.  Both functions have an
+optional numerical second argument, default 1, which controls how many paths are
+retained in the shortest-path result, and an optional numerical third argument, 
+default 7.0, which assigns the
+weight for each editing change.
+
+\begin{Verbatim}
+$ident = . ;        // identity mapping, no change
+
+//	Three kinds of changes
+
+$delete = .:"" ;    // map any symbol to the empty string
+
+$insert = "":. ;    // map the empty string to any symbol
+
+$swap = .:. - . ;   // map one symbol to another symbol 
+                    // (not to itself)
+
+// Higher change weights (costs) make changes more costly,
+//  favoring corrections that look as much as possible
+//  like the misspelled word. Lower change weights will
+//  tend to favor "corrections" that are very high-frequency
+//  words, no matter how high the edit distance between
+//  the observed misspelled word and the proposed corrections.
+
+$^editModel(#changecost) {
+    return (  $ident <0.0> | 
+              $delete <#changecost> | 
+              $insert <#changecost> |
+              $swap <#changecost>
+           )* ;
+}
+
+
+$^correct($word, #num=1, #changecost = 7.0) {
+    return $^shortestPath($^lowerside($word 
+                                      _o_ 
+                                      $^editModel(#changecost) 
+                                      _o_
+                                      $langModel), 
+                          #num) ;
+}
+
+^correctp($word, #num=1, #changecost=7.0) {
+    print "\n" ;
+    print $^toString(#num) " correction(s) for " $word ;
+    print $^shortestPath($^lowerside($word 
+                                     _o_ 
+                                    $^editModel(#changecost)
+                                    _o_
+                                    $langModel), 
+                        #num) ;
+}
+
+// end of script
+\end{Verbatim}
+
+Once the script is loaded, one can simply call
+
+\begin{Verbatim}
+print $^correct(misspelledword) ;
+
+print $^correct(misspelledword, 5) ;
+
+print $^correct(misspelledword, 5, 8.0) ;
+\end{Verbatim}
+
+\noindent
+or just
+
+\begin{Verbatim}
+^correctp(misspelledword) ;
+
+^correctp(misspelledword, 5) ;
+
+^correctp(misspelledword, 5, 8.0) ;
+\end{Verbatim}
 

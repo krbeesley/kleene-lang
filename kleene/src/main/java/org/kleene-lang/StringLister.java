@@ -28,5 +28,7 @@ public interface StringLister {
 	public void pop() ;
 
 	public void emit(float w) ;
+
+	// public void emitNoWeight() ;
 }
 

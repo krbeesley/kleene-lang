@@ -225,12 +225,29 @@ public class Hulden {
 
 	// used to exclude special symbols from A and B on the LHS,
 	// A -> B
+	// old version assumed that the fst was an acceptor 
+	/*
 	public Fst CleanupSpecialSymbolsAction(Fst fst) {
 		if (fst.getContainsOther()) {
 			return lib.Intersect(	fst, 
 							  		notContainsFst(SpecialSymbolsAction())
 							 	) ;
 		}
+		// else
+		return fst ;
+	}
+	*/
+
+	// new version, accommodating transducer rules, allows fst
+	// to be a transducer
+	public Fst CleanupSpecialSymbolsAction(Fst fst) {
+		if (fst.getContainsOther()) {
+			return lib.Compose3Fsts(	notContainsFst(SpecialSymbolsAction()),
+										fst, 
+							  			notContainsFst(SpecialSymbolsAction())
+							 		) ;
+		}
+		// else
 		return fst ;
 	}
 
@@ -634,8 +651,12 @@ public class Hulden {
 	// define Longest(X)	[	Tape1of3(IOpen Tape1Sig* ["@O@"|IOpen] Tape1Sig*) 
 	//						& 	Tape2of3(X/"@0@" - [?* "@0@"])
 	//						] ;
+	//
+	//	2013-12-27 KRB I think there needs to be a LongestRightArrow (orig)
+	//  and a new LongestLeftArrow for left-arrow rules
 
-	public Fst Longest(Fst X) {
+	// public Fst Longest(Fst X) {
+	public Fst LongestRightArrow(Fst X) {
 		return lib.Intersect(
 					Tape1of3(
 						lib.Concat4Fsts(
@@ -648,7 +669,10 @@ public class Hulden {
 									lib.KleeneStar(Tape1Sig())
 						)
 					),
-					Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+					// Orig uses Tape2of3, Hulden suggests using Upper here
+					//Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+					// YES.  Upper seems to work here
+					Upper(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
 											lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
 														lib.OneArcFst(hardEpsilonSym)
 													  )
@@ -657,6 +681,34 @@ public class Hulden {
 					)
 				) ;
 	}
+
+	public Fst LongestLeftArrow(Fst X) {
+		return lib.Intersect(
+					Tape1of3(
+						lib.Concat4Fsts(
+									IOpen(),
+									lib.KleeneStar(Tape1Sig()),
+									lib.Union(
+										lib.OneArcFst(outsideMarkerSym),
+										IOpen()
+									),
+									lib.KleeneStar(Tape1Sig())
+						)
+					),
+					// difference here, with Tape3of3 instead of Tape2of3
+					// Hulden suggests using Lower
+					//Tape3of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+					// YES, Lower works here, Tape3of3 does not
+					Lower(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+											lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+														lib.OneArcFst(hardEpsilonSym)
+													  )
+							
+											)
+					)
+				) ;
+	}
+
 
 	// First symbol is not [ and string contains [ (leftmost match)
 	//
@@ -674,8 +726,10 @@ public class Hulden {
 	// Hulden
 	// define Leftmost(X)	[Upper(X) & Tape1of3("@O@" ?* IOpen ?*) ] ;
 	// imposes a restriction based on tape 1
-
-	public Fst Leftmost(Fst x) {
+	//
+	// 2014-01-01 
+	//public Fst Leftmost(Fst x) {
+	public Fst LeftmostRightArrow(Fst x) {
 		return lib.Intersect(
 					Upper(x),
 					Tape1of3(lib.Concat4Fsts(
@@ -688,15 +742,46 @@ public class Hulden {
 			) ;
 	}
 
+	public Fst LeftmostLeftArrow(Fst x) {
+		return lib.Intersect(
+					Lower(x),
+					Tape1of3(lib.Concat4Fsts(
+										lib.OneArcFst(outsideMarkerSym),
+										lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+										IOpen(),
+										lib.KleeneStar(lib.OneArcFst(lib.otherIdSym))
+							)
+					)
+			) ;
+	}
+
+
 	// Beesley
 	// first attempt to define Rightmost(X), would be
 	// define Rightmost(X) [ Upper(X) & Tape1of3(?* IClose ?* "@O@")] ;
 	// wrote to Hulden 2012-10-26; seems to work, but it now looks like Longest(X)
 	// needs a LongestR2L(X) variant that I haven't figured out yet.
+	//
+	// 2013-12-27 KRB  I think that there needs to be a separate RightmostRightArrow (orig)
+	// and a new RightmostLeftArrow for left-arrow rules
 	
-	public Fst Rightmost(Fst x) {
+	//public Fst Rightmost(Fst x) {
+	public Fst RightmostRightArrow(Fst x) {
 		return lib.Intersect(
 				Upper(x),
+				Tape1of3(lib.Concat4Fsts(
+									lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+									IClose(),
+									lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+									lib.OneArcFst(outsideMarkerSym)
+									)
+					    )
+				) ;
+	}
+
+	public Fst RightmostLeftArrow(Fst x) {
+		return lib.Intersect(
+				Lower(x),
 				Tape1of3(lib.Concat4Fsts(
 									lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
 									IClose(),
@@ -712,24 +797,50 @@ public class Hulden {
 
 	// Hulden
 	// define Shortest(X)	[Tape1of3("@I[@" \IClose*) & Tape2of3(X)] ;
+	//
+	// 2013-12-27 KRB I think that there needs to be a ShortestRightArrow (orig)
+	// and a new ShortestLeftArrow for left-arrow rules
 
-	public Fst Shortest(Fst X) {
+	// public Fst Shortest(Fst X) {
+	public Fst ShortestRightArrow(Fst X) {
 		return lib.Intersect(
 					Tape1of3(lib.Concat(
 								lib.OneArcFst(IOpenSym),
 								lib.KleeneStar(lib.SymbolComplement(IClose()))
 								)
 					),
-					Tape2of3(X)
+					// 2014-01-01 Hulden suggests use of Upper instead of Tape2of3,
+					// seems to work for LongestRightArrow
+					//Tape2of3(X)
+					Upper(X)
 				) ;
 	}
+
+	public Fst ShortestLeftArrow(Fst X) {
+		return lib.Intersect(
+					Tape1of3(lib.Concat(
+								lib.OneArcFst(IOpenSym),
+								lib.KleeneStar(lib.SymbolComplement(IClose()))
+								)
+					),
+					// difference here, Tape3of3 instead of Tape2of3
+					// 2014-01-01 Hulden suggests use of Lower here
+					//Tape3of3(X)
+					Lower(X)
+				) ;
+	}
+
 
 	// An upper string (tape 2) X which is completely aligned with @O@ symbols,
 	// i.e. no part of it is rewritten
 
 	// Hulden
 	// define Unrewritten(X)	[X .o. [0:"@O@" ? 0:?]* ].l ;
-
+	//
+	// KRB 2014-01-01 this works for both right-arrow and left-arrow rules
+	// because when tape 1 has @O@ ("outside"), and tape 2 has a symbol,
+	// then tape 3 has @ID@
+	//
 	public Fst Unrewritten(Fst X) {
 		return lib.OutputProjection(lib.Compose(
 									X,
@@ -796,7 +907,6 @@ public class Hulden {
 					) ;
 	}
 
-
 	//define CP(X,Y) 	Tape1of3(ISyms*) & 
 	//					Tape23of3(Align2(X,Y)) & 
 	//					[ 	"@I[@"  ? ? 
@@ -810,10 +920,19 @@ public class Hulden {
 
 
 	public Fst CP(Fst X, Fst Y) {
+		// temp debug
+		Fst align2 = Align2(X, Y) ;
+		System.out.println("from Hulden CP, Align2(X,Y)") ;
+		lib.FstDump(align2) ; 
+
 		Fst resultFst = lib.Intersect3Fsts(
 
 				Tape1of3(lib.KleeneStar(ISyms())),
-				Tape23of3(Align2(X, Y)),
+
+				// temp debug
+				//Tape23of3(Align2(X, Y)),
+				Tape23of3(align2),
+				
 				lib.Union3Fsts(
 					lib.Concat3Fsts(
 						lib.Concat3Fsts(
@@ -844,6 +963,46 @@ public class Hulden {
 		return resultFst ;
 	}
 
+	// to flatten a transducer in a transducer rule
+	public Fst CPflatten(Fst T) {
+		int hardEpsilonSymVal = symmap.putsym(hardEpsilonSym) ;
+				// Use Flatten4Rule here instead of Align2
+		Fst flatBigram = lib.Flatten4Rule(T, hardEpsilonSymVal) ;
+		// temp debug
+		System.out.println("From Hulden CPflatten, flatBigram") ; 
+		lib.FstDump(flatBigram) ;
+		Fst resultFst = lib.Intersect3Fsts(
+				Tape1of3(lib.KleeneStar(ISyms())),
+				Tape23of3(flatBigram),
+				lib.Union3Fsts(
+					lib.Concat3Fsts(
+						lib.Concat3Fsts(
+							lib.OneArcFst(IOpenSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						),
+						lib.KleeneStar(lib.Concat3Fsts(
+										lib.OneArcFst(ISym),
+										lib.OneArcFst(lib.otherIdSym),
+										lib.OneArcFst(lib.otherIdSym)
+										)
+						),
+						lib.Concat3Fsts(
+							lib.OneArcFst(ICloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+						)
+					),
+					lib.Concat3Fsts(
+							lib.OneArcFst(IOpenAndCloseSym),
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(lib.otherIdSym)
+					),
+					lib.OneArcFst(lib.Epsilon)
+				)
+			) ;
+		return resultFst ;
+	}
 
 	// Hulden
 	// define DeleteFirstSymbol(X) [X .o. [?:0  ?*]].l ;

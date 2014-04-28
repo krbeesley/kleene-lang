@@ -72,5 +72,21 @@ public class FstStringLister implements StringLister {
 
 		terminal.appendToHistory(sb.toString() + " : " + w) ;
 	}
+
+	public void emitNoWeight() {
+		int i ;
+		// get String from intStack (basically a list of label integers)
+		StringBuilder sb = new StringBuilder() ;
+		// iterate through the integers, convert to StringBuffer (UTF-16)
+		for (Iterator<Integer> iter = intStack.iterator(); iter.hasNext() ; ) {
+			i = iter.next().intValue() ;
+			// don't output [eps]
+			if (i != 0) {
+				sb.append(symmap.getsym(i)) ;
+			}
+		}
+
+		terminal.appendToHistory(sb.toString()) ;
+	}
 }
 

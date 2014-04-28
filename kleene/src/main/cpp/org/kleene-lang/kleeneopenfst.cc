@@ -1238,19 +1238,35 @@ Java_OpenFstLibraryWrapper_iterateLowHighNative
 	return (jlong)(uintptr_t) resultFstp ;
 }
 
-/*
+
 JNIEXPORT jboolean JNICALL
 Java_OpenFstLibraryWrapper_isEquivalentNative
   (JNIEnv *env, jclass cls,
    jlong first,
    jlong second,
-   jdouble delta)
+   jdouble delta)	// OpenFst Equivalent calls for double delta
 {
-	StdVectorFst * one = (StdVectorFst *)(uintptr_t) first ;
-	StdVectorFst * two = (StdVectorFst *)(uintptr_t) second ;
-	return (jboolean) Equivalent(one, two, (double) delta) ;
+	StdVectorFst * firstFstPtr = (StdVectorFst *)(uintptr_t) first ;
+	StdVectorFst * secondFstPtr = (StdVectorFst *)(uintptr_t) second ;
+	return (jboolean) Equivalent(*firstFstPtr, *secondFstPtr, (double) delta) ;
 }
-*/
+
+
+JNIEXPORT jboolean JNICALL
+Java_OpenFstLibraryWrapper_isRandEquivalentNative
+  (JNIEnv *env, jclass cls,
+   jlong first,
+   jlong second,
+   jlong npath,
+   jfloat delta,		// OpenFst RandEquivalent calls for float delta
+   jint seed,
+   jint path_length)
+{
+	StdVectorFst * firstFstPtr = (StdVectorFst *)(uintptr_t) first ;
+	StdVectorFst * secondFstPtr = (StdVectorFst *)(uintptr_t) second ;
+	return (jboolean) RandEquivalent(*firstFstPtr, *secondFstPtr, npath, delta, seed, path_length) ;
+}
+
 
 JNIEXPORT jboolean JNICALL
 Java_OpenFstLibraryWrapper_isAcceptorNative
@@ -3317,6 +3333,70 @@ Java_OpenFstLibraryWrapper_listAllStringsNative
 			env, stringLister, pushMID, popMID, emitMID) ;
 }
 
+// KRB:  ask Phil if the first param should be
+// StdVectorFst * (uintptr_t) fstp
+void listAllStringsNoWeightHelper(StdVectorFst * fstp, StateId state, 
+		int projection, JNIEnv *env, jobject stringLister, 
+		jmethodID pushMID, jmethodID popMID, jmethodID emitNoWeightMID) {
+
+		if (fstp->Final(state) != Weight::Zero()) {
+			// KRB:  semiring generalization point?
+			// then the current state is final; emit a string (with its weight)
+			env->CallVoidMethod(stringLister, emitNoWeightMID) ;
+		}
+		// now look for exit arcs from this state
+		for (ArcIterator<StdVectorFst> aiter(*fstp, state); !aiter.Done(); aiter.Next()) {
+			// get the current arcs
+			const StdArc &arc = aiter.Value() ;
+
+			if (projection == 0) {  // input side, push a label
+				env->CallVoidMethod(stringLister, pushMID, (jint) arc.ilabel) ;
+			} else {                // output side, push a label
+				env->CallVoidMethod(stringLister, pushMID, (jint) arc.olabel) ;
+			}
+			// then recursively call, following the exit arc to a new state
+			// KRB:  semiring generalization point?
+			listAllStringsNoWeightHelper(fstp, arc.nextstate, projection,
+					env, stringLister, pushMID, popMID, emitNoWeightMID) ;
+			env->CallVoidMethod(stringLister, popMID) ;
+		}
+}
+
+
+JNIEXPORT void JNICALL
+Java_OpenFstLibraryWrapper_listAllStringsNoWeightNative
+	(JNIEnv *env, jclass cls,
+	 jlong fstPtr,
+	 jint projection,  // 0 for input, 1 for output
+	 jobject stringLister)   // Java object that knows how to display Strings
+{
+	// it is up to the calling program to call numPaths to make
+	// sure that the language/relation is finite
+	StdVectorFst *fstp = (StdVectorFst *)(uintptr_t) fstPtr ;
+
+	// stringLister is a handle to an object that implements StringLister
+	jclass stringListerClass = env->GetObjectClass(stringLister) ;
+
+	jmethodID pushMID = env->GetMethodID(stringListerClass, "push", "(I)V") ;
+	if (pushMID == 0) {
+		return ;
+	}
+
+	jmethodID popMID = env->GetMethodID(stringListerClass, "pop", "()V") ;
+	if (popMID == 0) {
+		return ;
+	}
+
+	jmethodID emitNoWeightMID = env->GetMethodID(stringListerClass, "emitNoWeight", "()V") ;
+	if (emitNoWeightMID == 0) {
+		return ;
+	}
+
+	listAllStringsNoWeightHelper(fstp, fstp->Start(), projection, 
+			env, stringLister, pushMID, popMID, emitNoWeightMID) ;
+}
+
+
 JNIEXPORT void JNICALL
 Java_OpenFstLibraryWrapper_iterate4mcsNative
 	(JNIEnv *env, jclass cls,   // because it's a class (static) native method 
@@ -4231,7 +4311,7 @@ Java_OpenFstLibraryWrapper_flattenInPlaceNative
 			ilabel = arc.ilabel ;
 			if (ilabel == 0)	// epsilon
 				ilabel = hardEpsilonSymVal ;
-				// in a flattened FSM, need to hard a hardEpsilonSymbol
+				// in a flattened FSM, need to have a hardEpsilonSymbol
 				// to avoid losing the transition to epsilonRemove
 			else if (ilabel == otherNonIdSymVal)
 				ilabel = otherIdSymVal ;
@@ -4305,7 +4385,7 @@ Java_OpenFstLibraryWrapper_flatten4RuleInPlaceNative
 			ilabel = arc.ilabel ;
 			if (ilabel == 0)	// epsilon
 				ilabel = hardEpsilonSymVal ;
-				// in a flattened FSM, need to hard a hardEpsilonSymbol
+				// in a flattened FSM, need to have a hardEpsilonSymbol
 				// to avoid losing the transition to epsilonRemove
 			olabel = arc.olabel ;
 			if (olabel == 0)	// epsilon

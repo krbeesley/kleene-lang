@@ -26,6 +26,7 @@
 # (review to see what can be made public)
 doc-notrack/
 dotkleene/tmp/*
+doc/user/kleene/.gitignore
 doc/engineering/notes/rules/hulden/*
 
 # don't track dependency libraries, typically .tar, .jar, .gz or .tgz
