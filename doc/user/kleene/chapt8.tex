@@ -140,8 +140,8 @@ The following pre-defined arithmetic-valued functions are provided.
 \verb!#^floor(#num)! \\
 \verb!#^round(#num)! \\
 \verb!#^log(#num)! \\
-\verb!#^prob2c(#num)! \\
-\verb!#^pct2c(#num)! \\
+\verb!#^prob2c(#prob)! \\
+\verb!#^pct2c(#pct)! \\
 \hline
 \verb!#^long(#num)! or \verb!#^int(#num)! \\
 \verb!#^double(#num)! or \verb!#^float(#num)! \\
@@ -160,13 +160,13 @@ internally as Java Double objects.}
 
 The \verb!#^log(#num)! function returns the natural logarithm of the
 argument.
-The \verb!#^prob2c(#num)! takes an argument that represents a probability,
+The \verb!#^prob2c(#prob)! takes an argument that represents a probability,
 where probabilities range from 1.0 (certain) to 0.0 (impossible), and
 returns a cost weight suitable for the Tropical Semiring.\footnote{In
 	the Tropical Semiring, the weights are \emph{costs}.  For any
 probability \emph{p}, the corresponding cost is $-$log(p).  A probability
 of 1.0 corresponds to a cost of 0.0, and a probability of 0.0
-corresponds to an infinite cost.}  The \verb!#^prob2c(#num)! function might
+corresponds to an infinite cost.}  The \verb!#^prob2c(#prob)! function might
 be used in examples like the following,
 
 \begin{Verbatim}[fontsize=\small]
@@ -175,7 +175,7 @@ $fsm = a b ( c <#^prob2c(0.1)> | d <#^prob2c(0.9)> ) ;
 
 \noindent
 where the path containing \emph{c} has 0.1 probability, and the path containing
-\emph{d} has 0.9 probability.  The \verb!#^pct2c(#num)! is similar but allows you
+\emph{d} has 0.9 probability.  The \verb!#^pct2c(#pct)! is similar but allows you
 to express the weights as percentages, e.g.\ 10\% vs.\ 90\%.  The following example is equivalent to the
 one just above.
 

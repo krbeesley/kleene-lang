@@ -78,8 +78,8 @@ $^reverse($fst) {
 	return $^__reverse($fst) ; 	// built-in
 }
 
-$^shortestPath($fst, #nshortest = 1) {
-	return $^__shortestPath($fst, #nshortest) ;
+$^shortestPath($fst, #num = 1) {
+	return $^__shortestPath($fst, #num) ;
 }
 
 $^inputside!($fst) {
@@ -812,10 +812,16 @@ $@^map($^func, $@list) {
 #^getIntCpv($fst) {
 	return #^__getIntCpv($fst) ;
 }
+// alias
+#^char2cpv = #^getIntCpv ;
+// e.g.    #^char2cpv(a)
 
 $^charForCpv(#num) {
 	return $^__charForCpv(#num) ;
 }
+// alias
+$^cpv2char = $^charForCpv ;
+// so  $^cpv2char(0x61) is equivalent to \u0061
 
 #^outputLabelsIncludeCpv($fst, #cpv) {
 	return #^__outputLabelsIncludeCpv($fst, #cpv) ;

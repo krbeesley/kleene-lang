@@ -5,12 +5,536 @@
 \section{Introduction}
 
 The purpose of this chapter is to present some non-trivial examples that
-do not involve weights.  This is definitely work in progress, and the
-	examples will be corrected and expanded in future releases.
+do not involve weights.  This is definitely work in progress, and
+examples will be added, corrected and expanded in future releases.
 
 \section{Spanish Morphology}
 
 \subsection{Spanish Verbs}
+
+\subsubsection{Mind-Tuning}
+
+I chose Spanish as an initial example because Spanish is widely
+studied and extensively documented, and I have some basic
+familiarity with it.  I will start with modeling
+Spanish verbs---in particular, the highly productive
+regular first conjugation.  
+
+The various Spanish verb classes, and
+their conjugations, are documented in numerous published
+books\footnote{See books such as \emph{501 Spanish Verbs} and especially the
+verb-conjugation books published by Larousse and Bescherelle.} and are
+even available on the Internet.\footnote{See, for example,
+\url{http://www.conjugacion.es} for the conjugations of
+Spanish verbs.}  I hope eventually to
+offer a Kleene script, downloadable from \url{www.kleene-lang.org},
+that handles all Spanish verbs.  I emphasize that my approach in the
+following script is only one of many.
+
+By long lexicographic convention, Spanish verbs are listed in
+dictionaries under the infinitive form, e.g.\@ the infinitive
+\emph{amar}, meaning ``to love,'' is the conventional \emph{dictionary
+citation form}.  In Spanish and other languages, the traditional dictionary citation
+forms should not be confused with baseforms or roots.  If anything, the
+root
+of the ``love'' verb is just \emph{am}, to which various suffixes
+are attached.  The infinitive citation form, \emph{amar}, is really just \emph{am}
+with an \emph{ar} suffix; it is just one of the many conjugated forms
+of the verb.  However, in a bow to tradition, we will
+initially list verbs in their infinitive forms, and analyses of verbs
+will show the infinitive form to facilitate lookup in traditional
+dictionaries.  The script will use alternation
+rules to strip the infinitive suffixes from the lower side of the
+\fsm{}s before adding other suffixes to implement the various conjugated
+forms.
+
+
+\subsubsection{Modeling Spanish First-conjugation Verbs}
+
+A verb class traditionally called the \emph{first conjugation}
+contains thousands of regular verbs whose
+infinitive forms end in \emph{-ar}, including \emph{amar} ``to love,''
+\emph{cantar} ``to sing,'' and \emph{hablar} ``to speak.''  My Larousse
+\emph{Conjugación} book
+calls this verb class number 3, and I will use the Larousse numbers
+(with some modification)
+to distinguish the various verb-conjugation classes.  We can start
+by collecting a sampling of this class of verbs in a simple union of the
+infinitive forms.
+
+\begin{Verbatim}
+
+// "First Conjugation" class 3
+$V3CitationForms =
+amar |
+cantar |
+cortar |
+hablar |
+simular ;	// and continue to add hundreds more
+\end{Verbatim}
+
+\noindent
+See \url{http://www.www.conjugacion.es/del/verbo/amar.php}, the
+Larousse or Bescherelle books, or any of the other sources for a table
+showing all the conjugated forms.  We will limit ourselves for now to the
+single-word conjugations, ignoring composite multi-word conjugations.
+Clitic
+pronouns will also be ignored for the time being. 
+
+These charts contain conjugation groups, almost always of six forms,
+showing the
+
+\begin{Verbatim}
+1st person singular
+2nd person singular
+3rd person singular
+1st person plural
+2nd person plural
+3rd person plural
+\end{Verbatim}
+
+\noindent
+forms for present indicative, preterite imperfective, preterite perfect,
+future indicative, conditional, etc.  For example, the six present indicative
+forms of \emph{amar} are
+
+
+\begin{Verbatim}
+amo
+amas
+ama
+amamos
+amáis
+aman
+\end{Verbatim}
+
+\noindent
+showing that \emph{amo} (``I love'') is the first-person singular present indicative form of
+\emph{amar}, \emph{amas} (``thou lovest'') is the second-person singular,
+\emph{ama} (``he/she loves'') is the
+third-person singular, \emph{amamos} (``we love'') is the first-person plural,
+\emph{amáis} (``you love'') is the second-person plural, and \emph{aman} (``they
+love'') is the third-person plural.   The root
+is \emph{am}, and the six
+suffixes for this group are pretty obviously \emph{o}, \emph{as}, \emph{a}, \emph{amos},
+\emph{áis} and \emph{an}.  We want to
+build a morphological analyzer that will eventually accept any 
+orthographical verb string, e.g.\@ \emph{amo}, and return
+a string that includes the infinitive \emph{amar}, the information that it is a
+verb, and the information that it is the first-person singular present indicative
+form.  
+We will employ a number of multi-character symbol tags to
+convey part-of-speech, person, number, tense, aspect and mood information.  Our
+\fsm{} will include paths like the following, ignoring alignment and epsilons,
+
+\begin{Verbatim}
+Upper:   amar[VERB][V3][PresIndic][1P][Sg]
+Lower:   amo
+\end{Verbatim}
+
+\noindent
+where \texttt{[VERB]}, \texttt{[V3]}, \texttt{[PresIndic]}, \texttt{[1P]} and \texttt{[Sg]} are
+multi-character symbols.  Conversely, we want to be able to apply the same
+\fsm{} in a downward direction to the upper-side string, and see the output
+\emph{amo}.
+
+While the spellings of the lower-side words in the
+\fsm{} are determined by the rules of Spanish orthography, the design of the upper-side
+analysis strings is in our hands, and some care and study should go into that
+design.  This is just one possible design.\footnote{Another possibility is to include
+\init{xml}-like symbols to mark up the analysis strings.}
+Don't worry too much about the spelling of the multi-character symbols;
+we will show later that they can be changed trivially at a later time, using
+alternation rules.
+Multi-characters symbols like \texttt{[V3]}, identifying the Larousse conjugation
+class, can also be changed trivially to other tags (e.g.\@ to reflect some other
+numbering system) or simply deleted.  Here is the list that we
+will use in the script:
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+[VERB] & verb (part of speech) \\
+\hline
+[V1], [V2], [V3], [V4], etc. & verb conjugation classes\\
+\hline
+[PresIndic] & present indicative\\
+\hline
+[PretImperf] & preterite imperfect\\
+\hline
+[PretPerf] & preterite perfect\\
+\hline
+[FutIndic] & future indicative\\
+\hline
+[Cond] & conditional\\
+\hline
+[PresSubj] & present subjunctive\\
+\hline
+[ImperfSubj] & imperfect subjunctive\\
+\hline
+[Var1] & variant 1 (of the imperfect subjunctive)\\
+\hline
+[Var2] & variant 2 (of the imperfect subjunctive)\\
+\hline
+[FutSubj] & future subjunctive\\
+\hline
+[Imptv] & imperative\\
+\hline
+[Infin] & infinitive\\
+\hline
+[PresPart] & present participle\\
+\hline
+[PastPart] & past participle\\
+\hline
+\end{tabular}
+\end{center}
+
+Starting from the dictionary citation forms, such as \emph{amar}, we want to
+leave the full \emph{amar} on the upper side but
+effectively strip off the \emph{-ar} infinitive ending on the lower side, leaving
+just the root.  This can be accomplished with the following first-draft function,
+to be expanded and generalized later:
+
+
+\begin{Verbatim}
+$^stripRegInfinEnding($fst, $classTag) {
+    return ( $fst 
+            _o_
+            ar -> "" / _ # ) ('[VERB]' $classTag):"" ;
+}
+\end{Verbatim}
+
+\noindent
+If we call this function on the word \emph{amar}, with the \$classTag
+\verb![V3]!,
+
+
+\begin{Verbatim}
+$stem = $^stripRegInfinEnding(amar, '[V3]') ;
+\end{Verbatim}
+
+\noindent
+the result is
+an \fsm{} with the following path, ignoring alignment and epsilons.
+
+\begin{Verbatim}
+Upper:   amar[VERB][V3]
+Lower:   am
+\end{Verbatim}
+
+Because the conjugations are in groups of six, we can facilitate modeling each
+conjugation group by defining the following \verb!$^conj6()! function, which takes seven
+arguments, the last six being the six suffixes for a conjugation group.
+
+\begin{Verbatim}
+$^conj6($tags, $OnePerSg, $TwoPerSg, $ThreePerSg,
+               $OnePerPl, $TwoPerPl, $ThreePerPl) {
+    return $tags:"" ( ( '[1P]' '[SG]' ):$OnePerSg
+                    | ( '[2P]' '[SG]' ):$TwoPerSg
+                    | ( '[3P]' '[SG]' ):$ThreePerSg
+                    | ( '[1P]' '[PL]' ):$OnePerPl
+                    | ( '[2P]' '[PL]' ):$TwoPerPl
+                    | ( '[3P]' '[PL]' ):$ThreePerPl
+                    ) ;
+}
+\end{Verbatim}
+
+\noindent
+And we can then use \verb!$^conj6()! to define the regular suffixes for the first-conjugation
+verbs including \emph{amar}:
+
+\begin{Verbatim}
+$regArVerbSuffs = 		
+  ( $^conj6( '[PresIndic]', o, as, a, amos, áis, an )
+  | $^conj6( '[PretImperf]', aba, abas, aba,
+                             ábamos, abais, aban )
+  | $^conj6( '[PretPerf]',  é, aste, ó, 
+                            amos, asteis, aron )
+  | $^conj6( '[FutIndic]', aré, arás, ará, 
+                           aremos, aréis, arán )
+  | $^conj6( '[Cond]', aría, arías, aría, 
+                       aríamos, aríais, arían )
+  | $^conj6( '[PresSubj]',  e, es, e, emos, éis, en ) 
+  | $^conj6( '[ImperfSubj]' '[Var1]', ara, aras, ara, 
+                                      áramos, arais, aran )
+  | $^conj6( '[ImperfSubj]' '[Var2]', ase, ases, ase, 
+                                      ásemos, aseis, asen )
+  | $^conj6( '[FutSubj]', are, ares, are, 
+                          áremos, areis, aren )
+  | $^conj6( '[Imptv]', '[Defective]', a, e, emos, ad, en )
+  | '[Infin]':(ar)
+  | '[PresPart]':(ando)
+  | '[PastPart]':(ado)
+  ) ;
+\end{Verbatim}
+
+The first-person singular present indicative suffix path will look like this:
+
+\begin{Verbatim}
+Upper:   [PresIndic][1P][Sg]
+Lower:   o
+\end{Verbatim}
+
+\noindent
+When concatenated with the truncated infinitive, the full path (ignoring alignment and epsilons) looks like
+
+\begin{Verbatim}
+Upper:   amar[VERB][V3][PresIndic][1P][Sg]
+Lower:   amo
+\end{Verbatim}
+
+We can then build our first verb-conjugating \fsm{}, for first-conjugation verbs,  with
+
+
+\begin{Verbatim}
+$V3 = $^stripRegInfinEnding($V3CitationForms, '[V3]')
+      $regArVerbSuffs ;
+
+test $V3 ;
+\end{Verbatim}
+
+
+If we apply this \fsm{} in an upward direction to the string \texttt{amo}, meaning
+``I love,'' the output is the string \texttt{amar[VERB][V3][PresIndic][1P][Sg]},
+which we can read as the citation form \emph{amar}, which is a verb of
+class 3, in the present indicative first-person singular conjugation.
+And we can do the inverse, applying the same \fsm{} in a downward direction to
+the input \texttt{amar[VERB][V3][PresIndic][1P][Sg]}, and the result will be
+\texttt{amo}.  The \fsm{} thus \emph{transduces} from strings representing conjugated
+verbs to strings representing analyses of those verbs, and vice versa.
+
+Finally, we can define a function for testing that prints out all the conjugated forms for a
+verb, in a canonical order that can be compared to the usual published and
+online charts.
+
+
+\begin{Verbatim}
+^conj($fst, $infin) {
+    pr("\nPresent Indicative") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresIndic]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nPreterit Imperfect") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretImperf]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nPreterit Perfect") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PretPerf]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nFuture Indictive") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutIndic]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nConditional") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Cond]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nPresent Subjunctive") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresSubj]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nImperfect Subjunctive, Var 1") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var1]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nImperfect Subjunctive, Var 2") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[ImperfSubj]' '[Var2]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nFuture Subjunctive") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[1P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[FutSubj]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nImperative") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Imptv]' '[2P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Imptv]' '[3P]' '[SG]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Imptv]' '[1P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Imptv]' '[2P]' '[PL]' ) _o_ $fst)) ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Imptv]' '[3P]' '[PL]' ) _o_ $fst)) ;
+
+    pr("\nInfinitive") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[Infin]' ) _o_ $fst)) ;
+
+    pr("\nPresent Participle (Gerund)") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PresPart]' ) _o_ $fst)) ;
+
+    pr("\nPast Participle") ;
+    pr($^lowerside( ( $infin '[VERB]' . 
+                      '[PastPart]' ) _o_ $fst)) ;
+}
+\end{Verbatim}
+
+\noindent
+One can then simply call \verb!^conj($fst, $infin)! to test various verbs,
+printing out the entire conjugation paradigm.  (I note a bug---when printing
+many lines of output to the Kleene GUI, as in the  \verb!^conj($fst, $infin)!
+confunction, some of the lines may not be displayed, even though the
+forms are in the \fsm.  If the function is invoked again, the missing
+forms may appear.  I'll look into it.)
+
+
+\begin{Verbatim}
+^conj($V3, amar) ;
+^conj($V3, cortar) ;
+\end{Verbatim}
+
+\noindent
+The coverage can be expanded to other verbs, in the same first-conjugation group,
+by simply adding more citation forms to the definition of \verb!$V3CitationForms!.
+
+\subsubsection{Expanding the Spanish Verb Morphological Analyzer}
+
+In addition to the first conjugation, a large group consisting of regular
+\mbox{\emph{-ar}} verbs, 
+the second conjugation consists of regular \mbox{\emph{-er}} verbs, including \emph{beber} (``to drink''), and the third conjugation consists of
+regular \mbox{\emph{-ir}} verbs, including \emph{vivir} (``to live'').  Both my Larousse and Bescherelle conjugation guides identify a total
+of 90 verb-conjugation classes for Spanish, though their numbering systems differ, and even a
+single publisher may not use consistent numbering from one edition to another.  The 90 classes
+include a large number of irregular verbs with idiosyncratic conjugations.
+
+The \verb!spanverbs-0.9.4.0.kl! script is offered on the downloads page from
+\url{www.kleene-lang.org}.  It is work in progress and incomplete in several
+ways:
+
+\begin{enumerate}
+	\item
+It covers only about 2/3 of the 90 verb-conjugation classes.
+\item
+The definitions of the various ``CitationForms'' for each class are incomplete,
+but could be expanded easily.
+\item
+The grammar does not yet handle clitic pronouns.
+\end{enumerate}
+
+\noindent
+The script is in \init{utf}-8 and can be loaded from the Kleene \gui{} by
+invoking
+
+
+\begin{Verbatim}
+source "path/to/spanverbs-0.9.4.0.kl", "UTF-8" ;
+\end{Verbatim}
+
+\noindent
+from the pseudo-terminal, replacing ``path/to'' with the path to where
+you have stored the script on your file system.  The final result of the compilation is
+\verb!$spanverbs!, and it can be tested using the 
+\verb!^conj($spanverbs, infinitiveform)! function, e.g.
+
+
+\begin{Verbatim}
+^conj($spanverbs, hablar) ;
+\end{Verbatim}
+
+You can also test \verb!$spanverbs! in the usual way, invoking
+
+
+\begin{Verbatim}
+test $spanverbs ;
+\end{Verbatim}
+
+\noindent
+and then entering forms like \emph{canto}, \emph{cantas} and \emph{cantamos}
+in the lower-side field of the test window.
+
 
 \subsection{Spanish Nouns}
 
@@ -22,3 +546,4 @@ This section is currently empty.
 
 \section{Aymara Morphology}
 
+This section is currently empty.

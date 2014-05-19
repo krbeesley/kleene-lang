@@ -3186,9 +3186,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 			RuleSemanticParts rsempt = iter.next() ;
 
-			// temp debug
-			System.out.println("\nHandling a RuleSemanticParts, in compileRuleSemanticParts\n") ;
-
 			// Uppercase letters A and B used here for variables to facilitate 
 			// comparison with Hulden's rule-compilation examples.
 			
@@ -3224,11 +3221,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				// then this is a transducer rule, e.g.  a:b -> / ...
 				// transducer rules cannot be markup rules
 				ABTransducer = rsempt.getTransducerLhs() ;
-
-				// debug
-				System.out.println("\nThis is a transducer rule\n") ; 
-				System.out.println("\nABTransducer, from compileRuleSemanticParts\n") ;
-				lib.FstDump(ABTransducer) ;
 
 				// need one of these (A or B, depending on the arrow direction) for computing Constraints
 				A = hulden.CleanupSpecialSymbolsAction(lib.InputProjection(ABTransducer)) ;
@@ -3297,10 +3289,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				}
 			}
 
-			// temp debug
-			System.out.println("cp, from compileRuleSemanticParts") ;
-			lib.FstDump(cp) ;
-
 			cp.setFromSymtab(true) ;
 
 			// union this cp (one for each semantic rule) into the BaseUnionOfCPs
@@ -3313,18 +3301,12 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			//    .*  _  .*
 			// assigned
 
-			// temp debug
-			System.out.println("\nNumber of contexts: " + contexts.size()) ;
-
 			// iterate through the contexts for the current SemanticRuleParts
 			for (Iterator<RuleContextSemanticParts> rciter = contexts.iterator(); 
 				 rciter.hasNext(); 
 				) {
 
 				RuleContextSemanticParts rcsp = rciter.next() ;
-
-				// temp debug
-				System.out.println("\nHandling one context\n") ;
 
 				// CleanupSpecialSymbolsContext was called on the context
 				// parts when the RuleContextSemanticParts was created
@@ -3480,9 +3462,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 						// the following possibilities are mutually exclusive
 						if (matchType == RuleMatchType.MAX_L2R) {
-
-							// temp debug
-							// System.out.println("Handling MAX_L2R") ;
 
 							// need to add (union in) more constraints
 							if (arrowType == RuleArrowType.RIGHT) {
@@ -4051,9 +4030,6 @@ class RuleSemanticParts {
 			// will need to be extracted
 			transducerLhs.setFromSymtab(true) ;
 
-			// temp debug
-			System.out.println("transducerLhs (clean) in compileRuleInCurrentFrame()") ;
-			lib.FstDump(transducerLhs) ;
 			basicRuleSemanticParts.setTransducerLhs(transducerLhs) ;
 
 			//basicRuleSemanticParts.setTransducerLhs(
@@ -5702,9 +5678,6 @@ class RuleSemanticParts {
 		// 			or  rule_lhs and where_clauses
 		// if 3, then rule_lhs, rule_rhs, where_clauses
 		
-		// temp debug
-		System.out.println("\nInterpreter: rule_transducer_left_arrow_max\n") ; 
-	
 		// There will always be an ASTrule_lhs_transducer as the 0th child, 
 		// evaluate it	
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -5765,9 +5738,6 @@ class RuleSemanticParts {
 		// 			or  rule_lhs and where_clauses
 		// if 3, then rule_lhs, rule_rhs, where_clauses
 		
-		// temp debug
-		System.out.println("\nInterpreter: rule_transducer_left_arrow_max\n") ; 
-	
 		// There will always be an ASTrule_lhs_transducer as the 0th child, 
 		// evaluate it	
 		node.jjtGetChild(0).jjtAccept(this, data) ;
@@ -13058,7 +13028,6 @@ class RuleSemanticParts {
 	}
 
 	public Object visit(ASTdraw_statement node, Object data) {
-		// debug
 		// one daughter:  regexp
 
 		// KRB: does this make any sense outside of the GUI???

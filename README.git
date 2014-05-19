@@ -1,14 +1,15 @@
-README.git
+README.git  for the Kleene language
 
-If you want to run Kleene from OS X, the compiled binaries
-are probably sufficient.
+If you want to run Kleene from OS X, the compiled binaries,
+downloadable from www.kleene-lang.org, are probably sufficient.
 
 If you want to run Kleene from Linux (at least from Mint),
-then the compiled binary is probably sufficient.
+then the compiled binaries, downloadable from www.kleene-lang.org,
+are probably sufficient.
 
-If you want to compile Kleene from source, for some other
+If you really need to compile Kleene from source, e.g. for some other
 distribution of Linux, the process is currently a bit difficult 
-(too difficult for anyone but an expert).  See README.build
+(too difficult for anyone but an expert).  See below 
 
 Kleene-on-Windows is a project for the future.
 
@@ -30,4 +31,5 @@ This will create, under your projects/ directory, a subdirectory
 called kleene-lang/ that contains the Kleene sources.
 
 Then see README.build
+Then see README.install
 

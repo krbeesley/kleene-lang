@@ -32,7 +32,7 @@ include $(WINPORT_DIR)/os_type.mk   # set os_type to standard name for OS type
 # 0.9.1.0 as a "beta".  There is still work to do before KRB considers
 # Kleene to be 1.0.0.0.
 
-VERSION=0.9.3.5
+VERSION=0.9.4.0
 NAME=Kleene
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
@@ -149,6 +149,9 @@ ifeq ($(os_type),linux)
 			  $(LIBFULLNAME) \
               $(KLEENE_LANG_DIR)/LICENSE \
 			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README \
+			  $(KLEENE_LANG_DIR)/README.git \
+			  $(KLEENE_LANG_DIR)/README.build \
 			  $(KLEENE_LANG_DIR)/README.install \
 			  $(KLEENE_LANG_DIR)/README.version
 endif
@@ -204,6 +207,9 @@ ifeq ($(os_type),mac)
 			  $(LIBFULLNAME) \
               $(KLEENE_LANG_DIR)/LICENSE \
 			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README \
+			  $(KLEENE_LANG_DIR)/README.git \
+			  $(KLEENE_LANG_DIR)/README.build \
 			  $(KLEENE_LANG_DIR)/README.install \
 			  $(KLEENE_LANG_DIR)/README.version
 endif
@@ -260,6 +266,9 @@ ifeq ($(os_type),cygwin)
 			  $(LIBFULLNAME) \
               $(KLEENE_LANG_DIR)/LICENSE \
 			  $(KLEENE_LANG_DIR)/NOTICE \
+			  $(KLEENE_LANG_DIR)/README \
+			  $(KLEENE_LANG_DIR)/README.git \
+			  $(KLEENE_LANG_DIR)/README.build \
 			  $(KLEENE_LANG_DIR)/README.install_windows \
 			  $(KLEENE_LANG_DIR)/README.version
 endif

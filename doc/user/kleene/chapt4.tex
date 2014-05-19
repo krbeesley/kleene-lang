@@ -14,7 +14,7 @@ Kleene has its own rule syntax, designed to be as familiar and intuitive as poss
 rules are interpreted using algorithms invented by Dr.\@ M\r{a}ns Huldén, who has made them freely available for
 general use.\footnote{Earlier versions of Huldén's algorithms are laid
 out in his dissertation \citep{hulden:2009thesis}, and
-used in his \emph{FOMA} language (\url{http://foma.googlecode.com/});
+used in his Foma language (\url{http://foma.googlecode.com/});
 but Huldén generously supplied his latest algorithms and
 allowed them to be used in Kleene.}  In addition, he kindly supplied
 documentation, examples and patient consultation
@@ -24,15 +24,16 @@ Kleene offers an unusually broad range of alternation-rule types, inspired by th
 language \citep{beesley+karttunen:2003}.  The rule types include right-arrow (downward-oriented) and
 left-arrow (upward-oriented) rules, rules with multiple contexts, optional rules, rules constrained
 to maximal or minimal matches, epenthesis and markup rules.   Rules can be composed in a vertical
-derivation (a \emph{cascade}), as in xfst Replace Rules.  Thanks to the Huldén algorithms, Kleene rules can
+derivation (a \emph{cascade}), as in xfst Replace Rules.  Thanks to the
+new Huldén algorithms, Kleene rules can
 also be compiled in parallel, with unprecedented freedom; and rule contexts can denote two-level
 transducers as well as one-level acceptors.
 
 In the hands of experts, the various Kleene alternation-rule types will be powerful tools for
 modeling a wide variety of linguistic phenomena, but the mastery of the rich syntax and semantics of
-alternation rules will be a challenge for all learners.\footnote{The
+alternation rules will be a challenge for all learners.  The
 	parsing and interpretation of alternation rules were two of the most
-difficult challenges in the implementation of Kleene.}
+difficult challenges in the implementation of Kleene.
 
 \section{Mindtuning for Alternations}
 
@@ -83,7 +84,9 @@ used to compute the mappings between the levels.
 Before getting too formal, let's look at some simple, intuitive examples involving the
 mapping of standard
 orthographical words into strings representing pronunciations, a task that often faces students trying
-to learn how to pronounce words written in the standard orthography of a foreign language.  In Classical
+to learn how to pronounce words written in the standard orthography of a
+foreign language.  This is also a critical step in implementing
+text-to-speech systems.  In Classical
 Latin, for example, the orthographical \emph{c} always represented
 the /k/ phoneme, so the word written \emph{canis} was
 pronounced /ˈkanis/, and \emph{pacem} was pronounced
@@ -126,12 +129,21 @@ c -> k
 which is read (in various traditions) as ``c becomes k,'' or ``c is rewritten as k,'' or ``c is realized
 as k,'' or ``c
 maps to k.''  Here we will favor the ``realize'' and ``map'' terminologies, and more precisely we will
-talk about an upper-level \emph{c} being realized as, or mapping to, a lower-level \emph{k}.
+talk about an upper-level \emph{c} being realized as, or mapping to, a lower-level \emph{k}.  The syntax
+\texttt{c -> k} is a valid Kleene alternation rule, and the arrow can be typed either as a hyphen \texttt{-} followed
+by a right angle-bracket \texttt{>} or as →, the Unicode
+\acro{rightwards arrow},
+which has the code point value 0x2192.
+
+\begin{Verbatim}
+c → k
+\end{Verbatim}
+
 
 In Italian, one of the many modern descendants of Latin, the \emph{c},
 originally always representing /k/ in Latin, has become palatalized in the context before the vowels /i/ and
 /e/, and is now pronounced /ʧ/ in those environments, like the English
-<ch> in \emph{chin}.  Elsewhere, e.g.\@
+<ch> in \emph{chin} /ʧɪn/.  Elsewhere, e.g.\@
 before the vowels /a/, /o/ and /u/, the \emph{c} is still pronounced /k/,
 as it was in Latin.  Ignoring Italian accented vowels for the moment, we could
 describe these alternations as 
@@ -150,14 +162,16 @@ c -> k / _ (a | o | u)
 \noindent
 read as ``upper-level \emph{c} maps to lower-level \emph{k} in the context before \emph{a}, \emph{o} or \emph{u}.''
 Note that the rules have a left-hand-side and a right-hand-side, separated by a forward slash.  The underscore marks
-the location in the context where the alternation occurs.  For now we can type the rule arrow as a hyphen followed by a
-right angle bracket.\footnote{Kleene will accept either a hyphen
+the location in the context where the alternation occurs.  For now we
+will type the rule arrow as a hyphen followed by a
+right angle bracket.\footnote{The Kleene parser will accept either a hyphen
 followed by a right angle bracket, or the Unicode \acro{rightwards
 arrow} character, →, which has the code point value U+2192.  If you
 install the Kleene.kmap file (a Java input method), and select
 it via the KMAPime express input method in the Kleene \acro{gui}, then when you type a hyphen followed immediately by a
 right angle bracket, the two typed characters will be automatically
-intercepted and substituted with a \acro{rightwards arrow} (→).}
+intercepted and substituted with a \acro{rightwards arrow} (→).  A
+kleene\_utf-8.vim keymap file is also available for the gvim editor.}
 
 In Latin-American Spanish, another descendant of Latin, the orthographical \emph{c} maps to \emph{s} before /e/ and /i/, 
 
@@ -225,7 +239,8 @@ that includes International Phonetic Alphabet glyphs, but for now you can substi
 
 \begin{Verbatim}
 // Italian, 
-// using tS to represent the affricate represented by the ch in chin
+// using tS to represent the affricate represented by 
+//    the ch in chin
 test  c -> tS / _  (e|i) ;
 \end{Verbatim}
 
@@ -256,11 +271,12 @@ In the Italian and Spanish examples, there are actually two rules working togeth
 way to combine the rules together is via \emph{composition}, an
 operation for which the syntactic 
 operator is the Unicode \acro{ring operator}, \ringop{}, which
-has the code point value U+2218.  Few fonts supply a glyph for this
+has the code point value 0x2218.  Few fonts supply a glyph for this
 character, so for now, and at any time, you can use
 the \acro{ascii} equivalent \verb!_o_!, consisting of an
 underscore, followed by a lowercase \emph{o} letter, followed by another underscore.\footnote{If you use the
-Kleene.kmap input method, the typed \verb!_o_! sequence will be
+	Kleene.kmap input method in the \acro{gui}, or the kleene\_utf-8.vim
+	keymap in gvim, the typed \verb!_o_! sequence will be
 intercepted and replaced with the \acro{ring operator} \ringop{}.}
 Try entering the following derivation or ``cascade'' of rules and testing them using words like \emph{casa},
 \emph{cosa}, \emph{poco}, \emph{curioso}, \emph{ciudad}, \emph{cace} and \emph{cimento}.
@@ -740,7 +756,9 @@ And then inverting the result:\\
 
 
 \noindent 
-While all that inversion makes perfect sense in theory, many find it less than intuitive to write grammars that way.
+While all that inversion makes perfect sense in theory, and works
+perfectly well in practice,
+many find it less than intuitive to write grammars that way.
 Users will have to judge for themselves whether to use
 the formally unnecessary left-arrow rules.
 
@@ -887,7 +905,10 @@ where the intent is to surround each vowel in the output with the
 \acro{xml}-like symbols \verb!<v>! and \verb!</v>!.  The \verb!~~~!
 operator on the right side of the arrow is intended to represent the copy
 of whatever was matched in the input.  Applied downward,
-this rule will map \emph{unique} to \emph{<v>u</v>n<v>i</v>q<v>u</v><v>e</v>}.
+this rule will map \emph{unique} to 
+
+\noindent
+\emph{<v>u</v>n<v>i</v>q<v>u</v><v>e</v>}.
 
 Markup rules can have contexts.
 
@@ -896,7 +917,7 @@ Markup rules can have contexts.
 \end{Verbatim}
 
 Such markup rules are very similar to those in the Xerox \xfst{} language.  As we shall see, Kleene also offers transducer-style rules that perform
-markup in even more powerful ways.
+markup in even more flexible and powerful ways.
 
 \section{Two-Level Rule Contexts}
 
@@ -917,7 +938,8 @@ a -> b / (.*):b _2_
 
 \noindent
 is a rule with a two-level context that maps \texttt{baaa} to {bbbb}.  The
-\verb!_2_! syntax indicates that the context or contexts are to be interpreted as
+\verb!_2_! syntax, which can also be typed as ‗, the Unicode
+\acro{double low line},  indicates that the context or contexts are to be interpreted as
 having two levels.  Here the left context is \verb!.*! (the Universal Language) on the upper side and \verb!b! on the
 lower side.
 
@@ -1243,7 +1265,10 @@ Some examples will seem easier to encode one way or the other, and different dev
 will have differing conceptual capabilities and tastes.  Kleene allows rule sets to be
 encoded as derivations, in parallel, or in a mixture of the two approaches.
 
-Note that \verb!$^parallel()! is a special built-in function that requires that its arguments be in full rule syntax.  The following example, which
+Note that \verb!$^parallel()! is a special built-in
+function\footnote{\verb!$^parallel()! processes its arguments in
+a particular way and cannot be aliased.  It is thus similar to a Lisp
+special form.}  that requires that its arguments be in full rule syntax.  The following example, which
 tries to compile the rules separately into finite-state machines, and then pass
 the machines as arguments to \verb!$^parallel()! is syntactically and
 semantically
@@ -1311,9 +1336,9 @@ local to the rule.\footnote{The Kleene interpreter literally pushes to a new
 values of the local rule variables does not effect any variables outside the rule
 that happen to have the same names.}  Each local variable in the \texttt{where}-clause is
 followed by the ``element of'' operator, which can be the $\in$ character
-(Unicode \acro{element of}, U+2208) or the \acro{ascii} equivalent \verb!_E_!.  The
+(Unicode \acro{element of}, 0x2208) or the \acro{ascii} equivalent \verb!_E_!.  The
 syntax \verb!$@(...)! is the normal Kleene syntax for a literal anonymous list of
-finite-state-machine values.  After the $\in$ or \verb!_E_! can appear any Kleene
+finite-state-machine values (explained in chapter \ref{chapt:lists}).  After the $\in$ or \verb!_E_! can appear any Kleene
 expression whose value is a list of finite-state machines, including variables
 and even function calls that return such a list.
 
@@ -1331,7 +1356,7 @@ $r = $voiced -> $unvoiced / _#
 \noindent
 The following rule, which doubles all vowels, e.g.\@ mapping \emph{unido} to
 \emph{uuniidoo}, calls \verb!$@^getSigma()!, which is a pre-defined function that
-calculates the alphabet (the sigma) of its
+calculates the alphabet (the ``sigma'') of its \fsm{}
 argument and returns it as a list of finite-state machines.
 
 \begin{Verbatim}
@@ -1341,13 +1366,15 @@ $r = $vowel -> $vowel $vowel
 
 \subsubsection{The Caesar Cipher Example}
 
-Julius Caesar employed a simple-substitution cipher wherein each Latin letter was replaced by the letter three steps down
+Julius Caesar employed a simple-substitution cipher wherein each Latin
+letter was replaced by the letter three steps along
 in the alphabet, e.g.\@ A was replaced by D, B was replaced by E, C was replaced by F, etc.  At the end of the alphabet,
-the mapping ``wrapped around'' to the beginning so that X was replaced by A, Y by B and Z by C.  Like the abba example
+the mapping ``wrapped around'' to the beginning so that X was replaced
+by A, Y by B and Z by C.  Like the \emph{abba} example
 above, we intuitively just want all the letter substitutions to happen simultaneously, without mutual interference, and
 this is another classic example where parallel compilation is desirable.  The following script uses the common convention
 of treating the ``plaintext'' as consisting only of lowercase letters, and the ``ciphertext'' as consisting only of uppercase
-letters.  Arbitrarily, the script is written to ``generate'' (apply downwards) from a plaintext string to the
+letters.  Arbitrarily, the script is written to generate (apply downwards) from a plaintext string to the
 corresponding ciphertext strings.
 
 
@@ -1364,8 +1391,8 @@ $^encipher($plain) {
     return $^lowerside($plain _o_ $en) ;
 }
 
-print $^encipher("attack at dawn") ;
-// => DWWDFN DW GDZQ: 0.0
+pr $^encipher("attack at dawn") ;
+// => DWWDFN DW GDZQ
 \end{Verbatim}
 
 
@@ -1389,8 +1416,8 @@ $^decipher($cipher) {
     return $^lowerside($cipher _o_ $de) ;
 }
 
-print $^decipher("DWWDFN DW GDZQ") ;
-// => attack at dawn: 0:0
+pr $^decipher("DWWDFN DW GDZQ") ;
+// => attack at dawn
 \end{Verbatim}
 
 However, because the original \verb!$en!, defined as
@@ -1431,8 +1458,8 @@ $en = ~$^contains([A-Z])
 $^decipher($cipher) {
     return $^upperside($en _o_ $cipher) ;
 }
-print $^decipher("DWWDFN DW GDZQ") ;
-// =>  attack at dawn: 0:0
+pr $^decipher("DWWDFN DW GDZQ") ;
+// =>  attack at dawn
 \end{Verbatim}
 
 \noindent
@@ -1456,7 +1483,7 @@ $r = $foo -> $bar
 \end{Verbatim}
 
 \noindent
-the Cartesian product of the values contains the six pairs (a, y), (a, z), (b, y), (b, z), (c, y) and (c, z), and so
+the Cartesian product of the values contains the six ordered pairs (a, y), (a, z), (b, y), (b, z), (c, y) and (c, z), and so
 the single rule is equivalent to the following six rules compiled in parallel:
 
 \begin{Verbatim}
@@ -1560,7 +1587,8 @@ and the output being read off the upper side.\footnote{In Kleene, as in the Xero
 the ``output'' side.}
 
 \begin{alltt}
-	// a traditional right-arrow rule, with a default downward bias
+// a traditional right-arrow rule, with a default 
+//    downward bias
 // left-hand side / right-hand side
 \emph{upper} -> \emph{lower} / \emph{left} _ \emph{right}
 
@@ -1573,8 +1601,10 @@ In some cases, it can be more intuitive or convenient to express the mapping of 
 separate \emph{upper}
 and \emph{lower} expressions, but rather as a single combined transducer expression,
 e.g.\@ \emph{(upper):(lower)}.
-Such rules are known in Kleene as \emph{transducer-style} rules.  As we shall see, some rules with
-\texttt{where} clauses can be expressed more readably as transducer-style rules, and transducer-style rule provide a more
+Such rules are known in Kleene as \emph{left-hand-side transducer rules}
+or just \emph{transducer-style} rules.  As we shall see, some rules with
+\texttt{where} clauses can be expressed more readably as
+transducer-style rules, and transducer-style rules provide a more
 general way to express multiple insertions than traditional markup rules.  As we shall see, there are even
 some cases where a potentially useful mapping that is easily expressible in a transducer-style rule cannot be re-expressed as a rule
 with separate \emph{upper} and \emph{lower} expressions.
@@ -1681,10 +1711,10 @@ $max = (ab*):c {max} -> ;
 	// max optional
 
 // traditional
-$maxopt = ab* {max}->? c ;
+$maxopt = ab* {max} ->? c ;
 
 // equivalent transducer-style
-$maxopt = (ab*):c {max} -> ;
+$maxopt = (ab*):c {max} ->? ;
 
 	// min
 
@@ -1712,11 +1742,11 @@ $rule1 = a*b -> / left _ right ;
 
 // a transducer-style rule with a where clause
 $rule2 = $up:$low -> { where $up _E_ $@(a, b, c),
-	                         $low _E_ $@(x, y z) } ;
+                             $low _E_ $@(x, y z) } ;
 
 // a transducer-style rule with a context and a where clause
 $rule3 = $up:$low -> / _ # { where $up _E_ $@(b, d, g),
-	                               $low _E_ $@(p, t, k) } ;
+                                   $low _E_ $@(p, t, k) } ;
 \end{Verbatim}
 
 \subsubsection{Left-Arrow Transducer-Style Rules}
@@ -1769,7 +1799,7 @@ $opt = <-? a:b ;
 	// max 
 
 // traditional
-$max = c <- {max} -> ab* ;
+$max = c <- {max} ab* ;
 
 // equivalent transducer-style
 $max = <- {max} c:(ab*) ;
@@ -1808,11 +1838,14 @@ rule definitions for devoicing consonants at the end of a word, involving explic
 
 \begin{Verbatim}
 // explicit parallel rules
-$explicitPar = $^parallel( b -> p / _ #,  d -> t / _ #,  g -> k / _ # ) ;
+$explicitPar = $^parallel( b -> p / _ #,  
+                           d -> t / _ #,  
+						   g -> k / _ # ) ;
 
 // equivalent rule with a where clause
-$wherePar = $voiced -> $unvoiced / _ #  { where $voiced _E_ $@(b, d, g),
-		                                       $unvoiced _E_ $@(p, t, k) } ;
+$wherePar = $voiced -> $unvoiced / _ #  
+               { where $voiced _E_ $@(b, d, g),
+                       $unvoiced _E_ $@(p, t, k) } ;
 
 // equivalent transducer-style rule
 $transducerPar = b:p | d:t | g:k -> / _ # ;
@@ -1864,15 +1897,17 @@ The transducer-style equivalent rule does not use the \verb!~~~! operator, and i
 more readable.
 
 \begin{Verbatim}
-// equivalent transducer-style rule to surround vowels with <v> and </v>
-$transMarkup = "":'<v>' (a|e|i|o|u) "":</v>' -> ;
+// equivalent transducer-style rule to surround vowels 
+//    with <v> and </v>
+$transMarkup = "":'<v>' (a|e|i|o|u) "":'</v>' -> ;
 
 // equivalent
 $transMarkup = "":'<v>' [aeiou] "":'</v>' -> ;
 \end{Verbatim}
 
 \noindent
-Note that these rules will match a vowel, copy it to the output, insert ``from nothing'' a \verb!<v>!
+Note that these rules will match a vowel, copy it to the output, and 
+insert ``from nothing'' a \verb!<v>!
 on the left and a \verb!</v>! on the right.
 
 
@@ -1894,12 +1929,12 @@ $con = [ptkbdgszlrwy] ;
 // consonant(s)-vowel(s) sequence in <cv> and </cv>
 
 $generalMarkup = 
-  "":"<cv>" $con+ ("":"<v>" $vow "":"</v>")+ "":"</cv>" {max}-> ;
+  "":"<cv>" $con+ ("":'<v>' $vow "":'</v>')+ "":'</cv>' {max}-> ;
 
 // maps "stabile" to 
-//      "<cv>st<v>a</v></cv><cv>b<v>i</v></cv><cv>l<v>e</v></cv>"
+//   "<cv>st<v>a</v></cv><cv>b<v>i</v></cv><cv>l<v>e</v></cv>"
 // maps "wuuti" to 
-//      "<cv>w<v>u</v><v>u</v></cv><cv>t<v>i</v></cv>"
+//   "<cv>w<v>u</v><v>u</v></cv><cv>t<v>i</v></cv>"
 \end{Verbatim}
 
 \noindent
@@ -1907,7 +1942,7 @@ Such a rule cannot be re-expressed as a traditional epenthesis or markup rule.
 
 \subsubsection{Markup with Mapping}
 
-Whereas a traditional markup rule like
+Whereas a traditional Xerox-inspired markup rule like
 
 \begin{Verbatim}
 $markup = cat -> l ~~~ r ;
@@ -1927,6 +1962,9 @@ $generalMapAndMarkup = "":l  (cat):(feline) "":r -> ;
 
 \noindent
 Again, such a transducer-style rule cannot be re-expressed as a traditional markup rule.
+
+\subsubsection{More Transducer-Style Rules that Cannot be Expressed as
+Traditional Rules}
 
 The following example, from M\r{a}ns Huldén, copies a core expression, \verb!C*!, from the
 input to the output, but also matches expressions on the left and right and maps those

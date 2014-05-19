@@ -1,6 +1,9 @@
 
 		Kleene Version Notes
 
+2014-05-18
+	Commit of version 0.9.4.0
+
 2014-04-28
 	Added pr (print, without the weight)
 
@@ -32,8 +35,9 @@
 
 2013-11-07
 	Added #^log(#num) function (natural log)
-	Added #^p2c(#num) function (convert probability arg to cost value, 
+	Added #^prob2c(#num) function (convert probability arg to cost value, 
 		where cost of probability p is -log(p)
+	Added #^pct2c(#num) function (converts percent 0 to 100 to cost value
 	Added $^redup($lang, $sep="") function
 
 2013-06-17

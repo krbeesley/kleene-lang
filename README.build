@@ -1,12 +1,15 @@
+README.build for Kleene language
+
+
 2013-05-05
 2014-04-19 latest edit
 
-	Most of you should Just Relax:
+	DON'T PANIC
 
-You do NOT need to "build" Kleene from source if you are installing
-a pre-compiled binary.  If a pre-compiled binary will work for you
-(see README.install), all is relatively simple.  You do not need to
-read this file.
+You do NOT need to "build" Kleene from the source files if you are
+installing a pre-compiled binary.  If a pre-compiled binary will work for
+you (see README.install), all is relatively simple.  You do not need to
+read this README.build file.
 
 	Beware:
 

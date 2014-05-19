@@ -1,0 +1,13 @@
+README      for the Kleene language
+
+
+To install a pre-compiled binary release of Kleene, see
+
+	README.install
+
+To build/compile Kleene from the source files (you probably
+do NOT want to do this), see
+
+	README.git
+	README.build
+		

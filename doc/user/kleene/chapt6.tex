@@ -14,7 +14,7 @@ can be used to make a spelling corrector that returns a set of possible
 corrections ranked by likelihood, or even just the best (most likely)
 correction, for a misspelled word.
 
-One phenomenon that we need to model is the degree of dissimilarity between an
+The first phenomenon that we need to model is the degree of dissimilarity between an
 observed misspelled word and a correctly spelled possible correction.  For example, the misspelled
 word \emph{accomodation} is intuitively very similar to the correct word
 \emph{accommodation}, differing in only one missing letter.  Similarly,
@@ -26,12 +26,13 @@ in one changed letter. Increasing in dissimilarity, \emph{camoflague} differs fr
 \emph{guarantee} in
 two letters, and \emph{bizness} differs from \emph{business} in three letters.
 
-We can characterize the amount of dissimilarity between two words as the \emph{edit distance},
-a measure of the number of editing changes, or the amount of work, required to change one word into the
+We can quantify the amount of dissimilarity between two words as the \emph{edit distance},
+a count of the number of editing changes, or, perhaps a more sophisticated measure
+of the amount of work, required to change one word into the
 other.  The changes could include adding a letter, deleting a letter, or changing
 one letter into another letter.
 
-Weighted Kleene \fst{}s have weights that are ``costs,'' and
+Weighted Kleene \fst{}s have weights that are ``costs,'' under the Tropical Semiring, and
 the edit distance can be formalized in Kleene as the cost of
 transducing one word into another, assigning a cost to deleting a
 letter, a cost to adding a letter and a cost to changing one letter into
@@ -50,10 +51,10 @@ in isolation,
 if a set of possible corrections having the same edit distance includes a more common word and
 	some less
 common words, the more common word is more likely to be the best correction.  For
-example, the misspelled ``frm'' differs in only one letter from the possible
-corrections ``farm,'' ``firm'' and ``from,'' but ``from'' is far more common than
+example, the misspelled \emph{frm} differs in only one letter from the possible
+corrections \emph{farm}, \emph{firm} and \emph{from}, but \emph{from} is far more common than
 the alternatives and is---considered in isolation---more likely to be the intended
-word.  These intuitions will be encoded in a (unigram) \emph{language model}.
+word.  These intuitions will be encoded in a unigram \emph{language model}.
 
 We will build our weighted edit-modeling transducer from four main parts.  The first
 part is the identity mapping:
@@ -63,7 +64,7 @@ $ident = . <0.0> ;	// map any symbol to itself
 \end{Verbatim}
 
 \noindent
-Recall that . (dot) denotes any symbol or the transducer that maps any
+Recall that . (the dot, period or full stop) denotes any symbol or the transducer that maps any
 symbol to itself.  Such identity mappings are free, having no cost in
 our spell-checking example, so we assign the identity mapping a weight of 0:0.
 
@@ -71,7 +72,8 @@ The second part is
 
 \begin{Verbatim}
 $changecost = <7.0> ;
-$delete = .:"" $changecost ;  // map a symbol to the empty string
+$delete = .:"" $changecost ;  // map a symbol 
+                              // to the empty string
 \end{Verbatim}
 
 \noindent which denotes the transducer that maps any symbol, denoted as . (dot),
@@ -81,7 +83,8 @@ weight of 7.0 to such a deletion, a value that we can adjust later.
 The third part is
 
 \begin{Verbatim}
-$insert = "":. $changecost ;  // map the empty string to a symbol
+$insert = "":. $changecost ;  // map the empty string 
+                              // to a symbol
 \end{Verbatim}
 
 \noindent which denotes the transducer that maps the empty string downward to any
@@ -97,23 +100,23 @@ $swap = ( .:. - . ) $changecost ;
 
 \noindent
 Recall that \texttt{.:.} denotes the transducer that maps any symbol to any
-symbol, including itself.  Then \texttt{( .:. - . )} denotes the transducer
+symbol, including itself.  Then \texttt{(~.:.~- .~)} denotes the transducer
 that maps any symbol to any other symbol, \emph{not} including identity mappings.  We
 assign such letter swaps the cost of 7.0.
 
-Armed with these definitions, the model for transducing between a 
+Armed with these definitions, our first draft of the model for transducing between a 
 misspelled word and a properly spelled word, the \emph{edit model}, is a
-sequence of zero or more identity mappings, deletions, insertions or changes,
-i.e. in Kleene terms:
+sequence of zero or more identity mappings, deletions, insertions or swaps,
+in Kleene terms:
 
 \begin{Verbatim}
 $editModel = ( $ident | $delete | $insert | $swap )* ;
 \end{Verbatim}
 
-We also need a \emph{language model} that encodes the language (i.e.\@ the
+We also need a unigram \emph{language model} that encodes the language (i.e.\@ the
 set) of properly spelled words that will serve as possible corrections.  
 Initially, such a model can be constructed
-as a simple union of words,
+as a simple unweighted union of words,
 
 \begin{Verbatim}
 $langModel = a | back | bake | bee | carrot | deer | eye ;
@@ -124,7 +127,7 @@ $langModel = a | back | bake | bee | carrot | deer | eye ;
 extending it eventually to hundreds of thousands or even millions of words.  For the purposes
 of this example, we can simply search the web for posted wordlists, such as the
 ``Simpsons Frequency Dictionary,''\footnote{\url{http://pastebin.com/anKcMdvk}} which contains the 5000 most frequent words
-found in open subtitles from The Simpsons television series.  If we download this list, we can, with a
+found in open subtitles from \emph{The Simpsons} television series.  If we download this list, we can, with a
 little editing,\footnote{There are some apparently extraneous punctuation letters
 	in this list, and for Kleene regular expressions, some vertical bars (``pipes''), digits and punctuation
 letters need to be removed or literalized using double quotes or backslashes.} convert it into a useful test model.
@@ -137,7 +140,7 @@ $langModel = the | you | i | a | to | and | of | it  ... ;
 
 \noindent
 Then if the misspelled word is \emph{frm}, the language of possible corrections,
-\verb!$corr! is computed as
+\verb!$corr!, is computed as
 
 \begin{Verbatim}
 $corr = frm _o_ $editModel _o_ $langModel ;
@@ -155,7 +158,7 @@ At this point, we can start to use the weights (costs) to focus on the more
 likely corrections, given our edit model and language model.  In the OpenFst
 library, the function that prunes an \fsm{} to contain only the best paths (i.e.\@
 lowest cost, in the Tropical Semiring) is called ShortestPath.  That operation
-and terminology is exposed in the Kleene function \verb!$^shortestPath($fst, #nshortest=1)!.  For
+and terminology are exposed in the Kleene function \verb!$^shortestPath($fst, #num=1)!.  For
 example, we can limit \verb!$corr! to the best five corrections using
 
 \begin{Verbatim}
@@ -175,7 +178,8 @@ arm : 7.0
 
 \noindent
 Each of the five possible corrections has a weight of 7.0, indicating (in our
-current model) that just one edit was needed to change \emph{frm} into the correctly
+current model that assigns a weight of 7.0 to each change) that just one 
+edit was needed to change \emph{frm} into the correctly
 spelled word.  
 
 If we ask ShortestPath to return just one result,
@@ -192,7 +196,8 @@ arm : 7.0
 \end{Verbatim}
 
 \noindent
-it randomly gives us \emph{arm}, which is as close to \emph{frm} as the other possibilities,
+it randomly gives us \emph{arm}, which is as close to \emph{frm} as the
+other possibilities, given our edit model,
 but intuitively is not the mostly likely correction.  
 
 What's missing in this experiment so far is a modeling of the fact that some
@@ -201,7 +206,7 @@ misspelled word is considered in isolation, possible corrections that are more
 likely should have precedence over those that are less likely.  We
 know intuitively that \emph{from}, a common English function word, occurs more often than the
 alternatives \emph{farm}, \emph{firm}, \emph{fry} and \emph{arm},  and we can confirm this by looking at actual frequency counts.  Again, we will
-model likelihood using cost weights in the Tropical Semiring.
+model the likelihood of individual words in the language model using cost weights in the Tropical Semiring.
 
 
 The Simpsons word list, in fact, gives us some additional information that allows
@@ -229,7 +234,7 @@ Rank   Word                           Frequency
 
 \noindent
 The ``Frequency'' column shows the count of occurrences of each word from the
-corpus.  For example, the probability of a word being \emph{the}, i.e.\@ the probability of
+corpus.  For example, P(the), the probability of a word being \emph{the}, i.e.\@ the probability of
 selecting a word from the corpus at random, and having it be \emph{the}, is
 computed as the count of occurrences of \emph{the}, here 107946, divided by the
 total number of tokens in the corpus, i.e.\@
@@ -240,11 +245,11 @@ total number of tokens in the corpus, i.e.\@
 
 \noindent
 Disappointingly, the Simpsons wordlist doesn't tell us the TotalTokens,
-so we are left to do some semi-intelligent guessing.  In the Brown Corpus, the
+so we are left to do some informed guessing.  In the Brown Corpus, the
 most common word in English, 
 \emph{the}, is said to account for almost 7\% of the tokens.  For now, let's accept
 this number as being valid for the Simpsons corpus as well.  If 107946 instances of \emph{the}
-represent 7\% of the corpus, then the total number of tokens is a little over one and half
+represented 7\% of the corpus, then the total number of tokens would be a little over one and half
 million.
 
 \begin{Verbatim}
@@ -254,8 +259,8 @@ million.
 \end{Verbatim}
 
 \noindent
-Let's use the round number of 1,500,000.  The probability of \emph{the}, and some
-other common words, can then be estimated at
+For our example, let's use the round number of 1,500,000.  The probability of \emph{the}, and some
+other common words, can then be estimated as
 
 \begin{Verbatim}
 	P(the) = 107946 / 1,500,000 = 0.07196
@@ -271,7 +276,7 @@ other common words, can then be estimated at
 Note that as the frequency of occurrence decreases, the probability value also decreases.  
 As usual, if the probability of an event, such as the appearance of the word \emph{the} in
 running English text, is p,
-then the cost is computed as $-$log(p).
+then the cost, C(the), is computed as $-$log(p).
 
 \begin{Verbatim}
 	C(the) = -log(107946 / 1,500,000) = 2.63159
@@ -288,9 +293,9 @@ Note that as the frequencies/probabilities decrease, the costs \emph{in}crease.
 High probabilities correspond to low costs, and low probabilities correspond to
 high costs.
 
-These costs can now be included in an improved language model.  If we tediously precompute
+These costs can now be included in an improved \emph{weighted} language model.  If we tediously precompute
 the costs, we can simply list the cost for each word, using the usual
-angle-bracket syntax.
+angle-bracket syntax.  Here is the Kleene syntax:
 
 \begin{Verbatim}
 $langModel = 
@@ -303,7 +308,7 @@ $langModel =
 
 \noindent
 Alternatively, we can let Kleene convert the probabilities into costs using the
-\verb!#^prob2c()! function, which is pre-defined as 
+\verb!#^prob2c()! function, ``probability to cost,'' which is pre-defined as 
 
 \begin{Verbatim}
 #^prob2c(#prob) {
@@ -346,7 +351,7 @@ from : 12.295898
 \end{Verbatim}
 
 \noindent
-And we can see the top \emph{n} possible corrections by passing an optional numerical
+And we can see the \emph{n} best possible corrections by passing an optional numerical
 argument to \verb!$^shortestPath()!, e.g.\@ 10:
 
 \begin{Verbatim}
@@ -369,7 +374,11 @@ are : 18.52832
 him : 19.44336
 \end{Verbatim}
 
-After the language model is defined, the rest of the script is shown below,
+\noindent
+In the Tropical Semiring, as in golf, the lower scores are the better scores,
+and \verb!$^shortestPath()! chooses the path(s) with the lowest cost(s).
+
+After the weighted language model is defined, the rest of the final script is shown below,
 including the definition of the convenience 
 functions \verb!$^correct()!, which returns an \fsm{},
 and \verb!^correctp()!, which simply prints out the results.  Both functions have an
@@ -381,7 +390,7 @@ weight for each editing change.
 \begin{Verbatim}
 $ident = . ;        // identity mapping, no change
 
-//	Three kinds of changes
+//	Three kinds of change
 
 $delete = .:"" ;    // map any symbol to the empty string
 
@@ -431,22 +440,21 @@ $^correct($word, #num=1, #changecost = 7.0) {
 
 Once the script is loaded, one can simply call
 
-\begin{Verbatim}
-print $^correct(misspelledword) ;
-
-print $^correct(misspelledword, 5) ;
-
-print $^correct(misspelledword, 5, 8.0) ;
-\end{Verbatim}
+\begin{alltt}
+	print \verb!$^correct!(\emph{misspelledword}) ;
+	print \verb!$^correct!(\emph{misspelledword}, 5) ;
+	print \verb!$^correct!(\emph{misspelledword}, 5, 8.0) ;
+\end{alltt}
 
 \noindent
 or just
 
-\begin{Verbatim}
-^correctp(misspelledword) ;
+\begin{alltt}
+	\verb!^correctp!(\emph{misspelledword}) ;
+	\verb!^correctp!(\emph{misspelledword}, 5) ;
+	\verb!^correctp!(\emph{misspelledword}, 5, 8.0) ;
+\end{alltt}
 
-^correctp(misspelledword, 5) ;
-
-^correctp(misspelledword, 5, 8.0) ;
-\end{Verbatim}
-
+\noindent
+The full script, \verb!weightededitdistance.kl!, is available from the
+download page at \url{www.kleene-lang.org}.

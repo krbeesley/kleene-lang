@@ -920,17 +920,12 @@ public class Hulden {
 
 
 	public Fst CP(Fst X, Fst Y) {
-		// temp debug
 		Fst align2 = Align2(X, Y) ;
-		System.out.println("from Hulden CP, Align2(X,Y)") ;
-		lib.FstDump(align2) ; 
 
 		Fst resultFst = lib.Intersect3Fsts(
 
 				Tape1of3(lib.KleeneStar(ISyms())),
 
-				// temp debug
-				//Tape23of3(Align2(X, Y)),
 				Tape23of3(align2),
 				
 				lib.Union3Fsts(
@@ -968,9 +963,7 @@ public class Hulden {
 		int hardEpsilonSymVal = symmap.putsym(hardEpsilonSym) ;
 				// Use Flatten4Rule here instead of Align2
 		Fst flatBigram = lib.Flatten4Rule(T, hardEpsilonSymVal) ;
-		// temp debug
-		System.out.println("From Hulden CPflatten, flatBigram") ; 
-		lib.FstDump(flatBigram) ;
+
 		Fst resultFst = lib.Intersect3Fsts(
 				Tape1of3(lib.KleeneStar(ISyms())),
 				Tape23of3(flatBigram),

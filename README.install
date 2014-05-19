@@ -1,22 +1,25 @@
 
-				Kleene Compiled Binary Installation Notes
-						(Beta)
+				Kleene Pre-Compiled-Binary Installation Notes
 
 				Kleene for OS X and Linux
 
-				(see README.install_windows
-				for Windows installation--not
-				possible at this date)
+				(README.install_windows is intended
+				for Windows installation, but Kleene on
+				Windows is not available at this time)
 
-				2013-05-19
+				2014-05-18
+
+This README.install file explains how to install the pre-compiled
+binary releases of Kleene on OS X and Linux.  These binary releases
+are downloadable from www.kleene-lang.org
 
 CORRECTIONS, AND SUGGESTIONS TO MAKE THE INSTALLATION STEPS ACCURATE,
 COMPLETE AND CLEAR TO ALL POTENTIAL USERS, WOULD BE MUCH APPRECIATED.
 
 Kenneth R. Beesley
 SAP Labs
-ken.beesley@sap.com
-krbeesley@gmail.com
+ken DOTT beesley ATT sap DOTT com
+krbeesley ATT gmail DOTT com
 
 Kleene was released 4 May 2012 under the Apache License, Version 2, by
 SAP AG.  See the file named LICENSE.
@@ -32,60 +35,70 @@ dependencies and acknowledgments, see the file named NOTICE.
 	instructions are unclear, inaccurate or insufficient please contact
 	us to help us improve this document.
 
-Here we assume that you are installing a pre-compiled "binary release" of
-Kleene.  Check that you have the most recent Kleene release available,
-where higher numbers are more recent.  In what follows, we will refer
-generically to version W.X.Y.Z instead of 0.9.3.3, 0.9.3.4 or whatever.
+Here we assume that you are installing a pre-compiled "binary release"
+of Kleene, downloadable from www.kleene-lang.org.  Check that you have
+the most recent Kleene release available, where higher numbers are more
+recent.  In what follows, we will refer generically to version W.X.Y.Z
+instead of 0.9.3.5, 0.9.4.0 or whatever.
 
 
 1.  For Linux and OS X, pre-compiled Kleene releases are packaged as gzipped
-"tarballs" named kleene-<platform>-<version>.tar.gz, e.g.
+"tarballs" named on the template kleene-<platform>-<version>.tar.gz, e.g.
 
 kleene-linux-W.X.Y.Z.tar.gz
 kleene-mac-W.X.Y.Z.tar.gz
 
-In what follows, the gzipped tarball will be called the "release package."
+In what follows, the gzipped tarball will be called the "release tarball."
 Unless you build Kleene yourself from the source files, you will need to
 obtain a copy of the gzipped tarball, either from the Kleene website
-(www.kleene-lang.org), from Dropbox, or from some other mirror or source.
+(www.kleene-lang.org) or from some other mirror or source.
 
 2.  Pre-requisites:
 
-	a.  To continue with the installation, you must know how to open a
+	a.  To proceed with the installation, you must know how to launch a
 	terminal window in your operating system and perform basic "shell"
 	operations, such as moving about in the directory structure, moving
-	files, creating directories, editing your ~/.bashrc (or ~/.cshrc, or
-	~/.tschrc or whatever) file, etc.  If this means nothing to you, get
-	help from your local gurus and give them a copy of this README.install
-	file.
+	files, creating directories, creating links, editing your ~/.bashrc 
+	(or ~/.cshrc, or ~/.tcshrc or whatever) file, etc.  If this means nothing 
+	to you, get help from your local gurus and give them a copy of this
+	README.install file.
 
-	To see which shell you are running, enter
+	To see which shell you are running, launch a terminal and enter
 
 	$ echo $SHELL
 
-	at a terminal command-line prompt.  (In this and other examples below,
+	at a terminal's command-line prompt.  (In this and other examples below,
 	the dollar sign represents the command-line prompt, which may be very
-	different on your system.) The response will be something like
+	different on your system.  Do not type the dollar sign yourself.) 
+	The response will be something like
 
-	/bin/bash			(indicating that you're running the "bash" shell)
+	/bin/bash			(indicating that you're running the "bash" shell,
+						and you should have a .bashrc file in your
+						home directory)
 
 	or
 
-	/bin/tcsh			(indicating that you're running the "t shell")
+	/bin/tcsh			(indicating that you're running the "t shell", 
+						and you should have a .tcshrc file in your
+						home directory)
 
 	or
+	/bin/csh			(indicating that you're running the "c shell",
+						and you should have a .cshrc file in your
+						home directory)
 
-	/bin/csh			(indicating that you're running the "c shell")
+	If you're running some other shell, you will probably need to
+	modify the instructions below.
 
 	b.  You need to have Java version 1.5 or higher installed.  To check
-	your Java installation, from a Terminal command line enter the
-	following
+	the version of your Java installation, open a Terminal, and at the
+	command line enter the following
 
 	$ java -version
 
 	On my Mac, this currently returns
 
-	java version "1.6.0_45"
+	java version "1.8.0_05"
 
 	On my Linux system, this currently returns
 
@@ -102,17 +115,20 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	in your /Applications/ directory, open a web browser and surf to
 	http://www.graphviz.org/Download_macos.php and follow the installation
 	instructions there (for "mountain lion", "lion," "snowleopard" or "leopard"
-	as appropriate for your version of OS X).  As of 2014-04-17, there was
+	as appropriate for your version of OS X).  As of 2014-05-18, there was
 	not a version of GraphViz compiled especially for Mavericks, but the
-	"mountain lion" version is reputed to work on Mavericks.
-	When you download the .pkg file, e.g.  graphviz-2.32.0.pkg, double-click
+	"mountain lion" version is reputed to work on Mavericks (and seems
+	to work for me on Mavericks.)
+	When you download the .pkg file, e.g.  graphviz-2.38.0.pkg, double-click
 	it and follow the installer instructions.
 
 	If you are on OS X and managed to install a native version of OS X,
-	proceed to step 3 below.
+	you are done with this section.  Proceed directly to step 3 below.
 
-	If you are on Linux, or on OS X but for some reason cannot install a
-	"native" Graphviz for OS X, you will need to have a standard
+	*****
+
+	But if you are on Linux, or on OS X but for some reason cannot install a
+	"native" Graphviz for OS X, you will need to perform a standard
 	installation of GraphViz.  In particular, you will need the 'dot'
 	application of GraphViz.  To see if you already have it, enter
 
@@ -130,7 +146,8 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 
 	$ which dot
 
-	On my Mac, this returns 
+	If your installation was successful, it will return a path to the
+	'dot' application.  On my Mac, this returns 
 
 	/usr/local/bin/dot
 
@@ -143,32 +160,33 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 
 	d.  If you are running OS X, proceed directly to step 3 below.  If you
 	are running Linux, you will need to identify (or install) a suitable
-	PostScript or PDF viewer application on your system.
+	PostScript or PDF viewer application on your system.  For example,
 
 	If you are running Linux (Mint/RHEL 5), you should have the 'evince'
 	application.  Try
 
-	$ echo evince
+	$ which evince
 
-	and note the path (e.g. /usr/bin/evince).
+	and write down the path (e.g. /usr/bin/evince).
 
 	Else if you are running Linux (RHEL 5) with KDE, you should have
 	'kghostview' installed.  Try
 
-	$ echo kghostview
+	$ which kghostview
 
-	and note the path (e.g. /usr/bin/kghostview).
+	and write down the path (e.g. /usr/bin/kghostview).
 
 	Else if you are running Linux with Gnome, you should should have 'ggv'
 	or 'gpdf' installed.  Try
 
-	$ echo ggv
+	$ which ggv
 
 	or
 
-	$ echo gpdf
+	$ which gpdf
 
-	and note the path (e.g. /usr/bin/ggv).  You will need the path below.
+	and write down the path (e.g. /usr/bin/ggv).  You will need the path below.
+
 	(Corrections and suggestions would be appreciated.)
 
 3.  Installation Steps
@@ -182,9 +200,9 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	On Linux,
 		Both general and JNI shared libraries have the extension .so
 
-	a.  Move the Kleene release package to a convenient directory.  It
-	could be just about anywhere, but in the examples that follow, I assume
-	that you place it in a directory ~/kleene/, which on OS X would be
+	a.  Move the Kleene release tarball (the tar.gz file) to a convenient 
+	directory.  It could be just about anywhere, but in the examples that follow,
+	I assume that you place it in a directory ~/kleene/, which on OS X would be
 
 	/Users/<yourUserName>/kleene
 
@@ -203,44 +221,51 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	$ mkdir kleene
 
 	(Remember that you can cd wherever you want and make the "kleene"
-	directory there.  If you put it somewhere else, then adjust the path
-	in the instructions that follow.)
+	directory there.  If you put it somewhere other than ~/kleene, then 
+	adjust the paths as necessary in the instructions that follow.)
 
-	Move the release package to that directory.  E.g. if you have a Linux
-	system and the release package kleene-linux-W.X.Y.Z.tar.gz is currently
+	Move the release tarball to that directory.  E.g. if you have a Linux
+	system and the release tarball kleene-linux-W.X.Y.Z.tar.gz is currently
 	in ~/Desktop/, then do
 
-	$ mv  ~/Desktop/kleene-linux-W.X.Y.Z.tar.gz  ~/kleene
+	$ mv  ~/Desktop/kleene-linux-W.X.Y.Z.tar.gz  ~/kleene/
 
-	b.  cd to that directory
+	If you're on OS X, do the same for the kleene-mac-W.X.Y.Z.tar.gz package.
+
+	b.  Now cd to that directory
 
 	$ cd ~/kleene
 
-	c.  gunzip the release package:
+	c.  gunzip the release tarball (if your browser didn't already do
+	it):
 
 	$ gunzip *.gz
 	$ ls
 
 	You should now see a file named kleene-linux-W.X.Y.Z.tar or, on OS X,
-	kleene-mac-W.X.Y.Z.tar.  Now you "de-tar" that file:
+	kleene-mac-W.X.Y.Z.tar (with W, X, Y and Z substituted with real
+	digits).  Now extract or "de-tar" that file:
 
 	$ tar xvf *.tar
 	$ ls
 
 	You should now see a directory named kleene-linux-W.X.Y.Z or
 	kleene-mac-W.X.Y.Z (with real digits 0-9 for the W, X, Y and Z). For
-	convenience, create a "soft link" to this directory called 'current', e.g.
+	convenience in what follows, create a "soft link" to this directory 
+	called 'current', e.g.
 
 	$ ln -s kleene-linux-W.X.Y.Z  current
 	or
 	$ ln -s kleene-mac-W.X.Y.Z  current
+
+	substituting the real digits 0-9 for W, X, Y and Z.
 		
-	cd into that directory, e.g.
+	Now cd into that directory, e.g.
 
 	$ cd current
 
-	d.  Invoking 'ls', you should then see following files (substituting digits
-	for X and Y):
+	d.  Invoking 'ls', you should then see following files and directories
+	(substituting digits for X and Y):
 
 	$ ls
 
@@ -264,62 +289,33 @@ or	libicuuc.Y.Z.so			(for Linux)
 	LICENSE					(Apache License, Version 2)
 	NOTICE					(dependencies, and their licenses)
 	README.install			(this file)
-	README.version
+	README.version			(version notes)
 	dotkleene/				(see below)
 	lib/					(contains .jar files, Java library dependencies)
 
-	Kleene is written in Java, and the shared JNI library
-	(libkleeneopenfst) must be loaded by Kleene at runtime, to give the
-	Java code access to the C++ functions in OpenFst. To allow Java to
-	find it, you must set the environment variable LD_LIBRARY_PATH in
-	Linux, or DYLD_LIBRARY_PATH in OS X.  This library path must be set
-	to include the installation directory just created (shown as
-	~/kleene/current in the examples above).  If you have not installed
-	Kleene inside ~/kleene/current/, then modify the path in the examples 
-	below as appropriate.
-
-	There are two possible places to set LD_LIBRARY_PATH (or DYLD_LIBRARY_PATH):
-		1.  In your .bashrc, .cshrc or .tcshrc (or similar) file, OR
-		2.  In an alias that launches Kleene
-
-	We describe the first way here, and will describe the second way below when
-	we describe aliases for launching Kleene.
-
-		Setting the (DY)LD_LIBRARY_PATH inside your .bashrc (or .cshrc or tcshrc)
-		file
-
-	If you are running bash on Linux, then edit your ~/.bashrc file to include
-
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
-
-	Else if you are running cshell (or tcshell) on Linux, then edit your
-	~/.cshrc (or ~/.tcshrc) file to include
-
-	setenv LD_LIBRARY_PATH $LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
-
-	If you are running bash on OS X, then edit your ~/.bashrc file to include
-
-	export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
-
-	If you are running cshell or tcshell on OS X, then edit your ~/.cshrc or
-	~/.tcshrc file to include
-
-	setenv DYLD_LIBRARY_PATH $DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
-
-		The alternative method of setting this (DY)LC_LIBRARY_PATH, in an
-		alias, will be described below in the section "Launching Kleene from
-		Anywhere."
-
+	Note especially the Kleene.jar file, which contains the executable Java
+	code, and the libkleeneopenfst file, which contains the OpenFst library.
+	To launch Kleene (see below), the java applications will need to know
+	where to find these files.
 
 	e.  Setting your "preferences":
 
-	First copy the dotkleene directory to your home directory, renaming it
-	.kleene, e.g.
+	If you have a previous version of Kleene already installed, then you
+	already have a directory named
+
+	~/.kleene
+
+	Delete or rename this directory, e.g.
+
+	$ mv ~/.kleene ~/.kleene.prev
+
+	Then copy the new dotkleene directory from ~/kleene/current/ to your home directory, 
+	renaming it .kleene, i.e.
 
 	$ cd ~/kleene/current
 	$ cp -r dotkleene ~/.kleene
 
-	This .kleene directory contains preference files and a global startup
+	This ~/.kleene directory contains preference files and a global startup
 	script that is run automatically whenever Kleene is launched.  It also
 	contains a subdirectory where Kleene stores temporary files.
 
@@ -327,6 +323,9 @@ or	libicuuc.Y.Z.so			(for Linux)
 	(see above), you are done with preferences; skip the rest of this step 3
 	and proceed directly to step 4 below.
 
+	Else we need to do it the hard way.  The rest of step 3 is only
+	for Linux users and for OS X users who were not able to install a
+	native GraphViz.
 	[This step will be easier in future releases after I implement
 	preference-selection in the GUI.  But for now ...]  In a previous step,
 	you wrote down where 'dot' and (if you're running Linux) evince (for
@@ -450,50 +449,126 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	End of preference-editing for Linux.
 
-4.  Launching Kleene
+4.  Launching Kleene via a convenient alias (recommended)
 
-	Kleene should now be installed, and you shouldn't need to install again
-	until you upgrade to a new release.  To launch Kleene, now or in the future, 
-	just do the following:
+	If you've followed the instructions carefully, Kleene should now be installed, 
+	and you shouldn't need to install again until you upgrade to a new version.  
 
-	$ cd ~/kleene/current
-	$ java -jar Kleene.jar
+	I am currently of the opinion that the best way to launch Kleene is using
+	a simple alias that you define in your .bashrc, .tcshrc or .cshrc file.  
+	When launching, java needs to know where the Kleene.jar file is, and it needs
+	to know the directory where the JNI library (libkleeneopenfst) is found.
+	Here are the aliases.  Of course, if you have installed Kleene anywhere other
+	than ~/kleene/current/, then modify the paths as appropriate.
+	
+	If you are using bash on Linux, edit your .bashrc file to include
 
-	You should see the Kleene GUI appear, with a "pseudo-terminal" window
-	on the left, and a "symbol table" window on the right.  At the bottom
-	of the pseudo-terminal is a "command-line" field where you type input.  
+	alias kleene='LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+	If you are using bash on OS X, edit your .bashrc file to include
+
+	alias kleene='DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+
+
+	If you are using csh or tcsh on Linux, edit your .cshrc or .tcshrc file to include
+
+	alias kleene 'env LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+	If you are using csh or tcsh on OS X, edit your .cshrc or .tcshrc file to include
+
+	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+
+
+	Then save the .bashrc (or .tcshrc or .cshrc) file with the new alias, open a new terminal, 
+	and at the command line just enter
+	
+	$ kleene
+
+	The Kleene GUI application window should display on your screen,  with a 
+	"pseudo-terminal" window on the left, and a "symbol table" window on the right.  
+	At the bottom of the pseudo-terminal is a "command-line" field where you type input.  
 	Try typing the following on this line
 
-	$fsm = a*b+[c-g]{2} ;
+	$fsm = dog | cat | elephant ;
 
 	and then enter it by pressing the ENTER key.  If all is working well,
 	you should see an icon named "$fsm" appear in the symbol-table window.
 
 	Right-click on the icon to see various options, including 'draw' and
-	'delete'.  Try selecting 'draw'; you should see the network displayed on your
-	screen.  You can also double-click on the icon to cause the
-	finite-state machine to be displayed.  Alternatively, you can enter
+	'delete'.  Try selecting 'draw'; you should see the finite-state machine
+	displayed on your screen.  You can also double-click on the icon to cause 
+	the finite-state machine to be displayed.  Alternatively, you can manually
+	enter
 
 	draw $fsm ;
 
 	or just
 
+	draw dog | cat | elephant ;
+
+	Now try 
+
+	$fsm2 = a*b+[c-g]{2} ;
+	draw $fsm2 ;
+
+	or just
+
 	draw  a*b+[c-g]{2} ;
 
-	in the pseudo-terminal text-input field (at the bottom).
+	in the pseudo-terminal text-input field (at the bottom).  Again, the 
+	resulting FSM should be displayed on your screen.  See the User Manual
+	for more information.
 
-5.  Launching Kleene from Anywhere
+	
+5.  An alternative way to launch Kleene (not so recommended)
 
-	To facilitate launching Kleene, without having first to cd to the 
-	~/kleene/current directory, create a simple macro (in your .bashrc,
-	.cshrc or .tcshrc file) named 'kleene'.
+	Skip this step (go directly to step 6 below) if you have defined an alias as 
+	shown in step 4 above.
 
-	If you are using bash:
+	Instead of setting LD_LIBRARY_PATH or DYLD_LIBRARY_PATH in an alias as shown
+	in step 4 above, you can separately define the library path directly in your
+	.bashrc, .tcshrc or .cshrc file.  (The homebrew ('brew') application for
+	OS X doesn't like you to set the library path in this way, so the approach
+	in step 4 is probably preferable.)
+
+	Setting the (DY)LD_LIBRARY_PATH inside your .bashrc (or .cshrc or tcshrc) file
+	(modify the paths if you have not installed Kleene in ~/.kleene/current/):
+
+	If you are running bash on Linux, then edit your ~/.bashrc file to include
+
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
+
+	Else if you are running cshell (or tcshell) on Linux, then edit your
+	~/.cshrc (or ~/.tcshrc) file to include
+
+	setenv LD_LIBRARY_PATH $LD_LIBRARY_PATH:/home/<yourUserName>/kleene/current
+
+	If you are running bash on OS X, then edit your ~/.bashrc file to include
+
+	export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
+
+	If you are running cshell or tcshell on OS X, then edit your ~/.cshrc or
+	~/.tcshrc file to include
+
+	setenv DYLD_LIBRARY_PATH $DYLD_LIBRARY_PATH:/Users/<yourUserName>/kleene/current
+
+	Once LD_LIBRARY_PATH (for Linux) or DYLD_LIBRARY_PATH (for OS X) is set, then
+	to launch Kleene you can do the following:
+
+	$ cd ~/kleene/current
+	$ java -jar Kleene.jar
+
+	You should see the Kleene GUI window appear.
+
+	Of course, you can still define aliases, e.g.
+
+	If you are using bash, edit your .bashrc file to include
 
 	alias kleene='java -jar $HOME/kleene/current/Kleene.jar'
 
 
-	If you are using csh or tcsh:
+	If you are using csh or tcsh, edit your .cshrc or .tcshrc file to include
 
 	alias kleene 'java -jar $HOME/kleene/current/Kleene.jar'
 
@@ -502,42 +577,72 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	$ kleene
 
-	*****
+	to launch.
+
+	Again, the aliases shown in step 4, which set (DY)LD_LIBRARY_PATH just before
+	launching Kleene, are probably preferable.
 	
-	Setting (DY)LD_LIBRARY_PATH in your .bashrc (or .cshrc or .tcshrc) file
-	can be problematic--in particular, the OS X 'brew' program for updating
-	your various packages warns against setting it there.
+6.  Alias for setting the default file encoding for pre-Mavericks OS X systems.
 
-	So instead of setting the (DY)LD_LIBRARY_PATH environment variable
-	in your .bashrc (or .cshrc or .tcshrc) file, you can alternatively
-	set it in the alias that launches Kleene.  Effectively this sets 
-	(DY)LD_LIBRARY_PATH just before launching Kleene.
+	This section describes a fix for an encoding problem observed only on older
+	pre-Mavericks Macs.  Just skip this section if you're running Linux or 
+	Mavericks.
 
-	If you are using bash on Linux:
+	When reading Kleene scripts (pre-edited Kleene programs that you
+	edit and save to file), Kleene (which is written in Java) will 
+	default to treating them as being stored in the default encoding of
+	your operating system, as that default encoding is detected by Java.
 
-	alias kleene='LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+	To see the true current default encoding of your operating system, enter 
+	'locale' in a terminal:
 
-	If you are using bash on OS X:
+	$ locale
 
-	alias kleene='DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+	On my Macs, which I have set up with a default encoding of UTF-8, the
+	locale command returns
+
+	LANG="en_US.UTF-8"
+	LC_TYPE="en_US.UTF-8"
+	LC_MESSAGES="en_US.UTF-8"
+	LC_MONETARY="en_US.UTF-8"
+	LC_NUMERIC="en_US.UTF-8"
+	LC_TIME="en_US.UTF-8"
+	LC_ALL=
+
+	So I've set my system to UTF-8.
+	(You can change the default encoding of your operating system, but
+	before you do it, make sure that you know what you're doing.)
+
+	I obviously want Kleene (which is written in Java) to treat my
+	Kleene script files, by default, as UTF-8.
+
+	When Java interrogates the native operating-system encoding on my old
+	pre-Mavericks Mac, it _should_ find UTF-8; but (annoyingly) it finds
+	MacRoman.  It's as if someone decided that Mac users writing Java
+	programs on older Macs would never have the audacity to change from
+	the MacRoman encoding.  The problem lies somewhere in the Java versions
+	running on these older Macs.
+
+	So IF you're running Kleene on a pre-Mavericks Mac, and IF your
+	default operating-system encoding is UTF-8, you can force Java to
+	see the default encoding as UTF-8 by using the following alias to
+	launch Kleene:
+
+	If you are using bash on OS X, add the following to your .bashrc
+
+	alias kleene='DYLD_LIBRARY_PATH=$HOME/kleene/current java -Dfile.encoding=UTF-8 -jar $HOME/kleene/current/Kleene.jar'
 
 
+	If you are using csh or tcsh on OS X, add the following to your .tcshrc or .cshrc
 
-	If you are using csh or tcsh on Linux:
+	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -Dfile.encoding=UTF-8 -jar $HOME/kleene/current/Kleene.jar'
 
-	alias kleene 'env LD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
+	The key point of these aliases is that when java is launched, the file.encoding
+	is force-set to UTF-8.  Again, this is not necessary on Linux or Mavericks,
+	and its needed only if you find that Kleene/Java is not correctly interpreting
+	the default encoding of your system.
 
-	If you are using csh or tcsh on OS X:
-
-	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
-
-
-	Then, again, from a normal terminal command-line, you need only enter
-
-	$ kleene
-
-
-6.  Some things that might go wrong (especially with the current Linux port):
+7.  Some things that might go wrong (especially with the current Linux port):
 
 	a.  If 'draw' doesn't work:  Review the setting of preferences above
 	(involving editing of the .kleene/prefs/prefs.xml file.  Make sure,
@@ -545,12 +650,13 @@ or	libicuuc.Y.Z.so			(for Linux)
 	linux/user/dot/dotpath and linux/user/dot/viewer are correct for your
 	system.  (The defaults are likely to work on OS X.)
 
-	b.  If nothing is working, you will have to recompile Kleene from
-	source.
+	b.  If nothing is working, you will have to recompile Kleene from source.
+	See the files README.git and README.build to recompile Kleene from source,
+	and then see README.install (this file) for installing the results.
 
-7.  A sincere plea for help.  
+8.  A sincere plea for help.  
 
-I've tried to write this README.install file to be as exact and
+I've tried to write this README.install file to be as accurate and
 understandable as possible, but the binaries have been tested on very few
 machines.  Kleene is a one-man project now, and I have relatively little
 time and facilities for testing.  Please help me correct errors 
@@ -561,20 +667,23 @@ NOTES ***********************************************************************
 A.  ~/.kleene/global/predefined.kl file is a global start-up script that is
 run automatically whenever you launch Kleene.  In general it is a VERY BAD
 IDEA for users to try to edit this file; the definitions in this file are
-effectively part of the Kleene language, and any errors that you introduce
+effectively part of the Kleene language, and any errors that you might introduce
 will prevent Kleene from launching correctly. Rather than editing
 predefined.kl, users should edit and run their own separate startup files
 that augment or override, where desired or necessary, definitions made in
 this global predefined.kl script.
 
 To launch Kleene with your own start-up script, and then go into the
-interactive GUI, do
+interactive GUI, the basic example is
 
 $ java -jar Kleene.jar pathToYourStartupScript -gui
 
 By convention, Kleene scripts usually have a .kl suffix, e.g.
 
 $ java -jar Kleene.jar myKleeneStartup.kl -gui
+
+(See above alias examples for setting (DY)LD_LIBRARY_PATH and perhaps
+the file.encoding in your launch commands.)
 
 The built-in global script in ~/.kleene/global/predefined.kl will always be
 executed first, and any definitions in the user's own startup script will

@@ -4,9 +4,6 @@ doc/
 
 dotkleene/
 	See README.install
-	During installation, dotkleene should be copied to the user's home directory 
-		as .kleene, i.e.
-	$ cp -r dotkleene ~/.kleene
 
 kleene/
 	Kleene source code

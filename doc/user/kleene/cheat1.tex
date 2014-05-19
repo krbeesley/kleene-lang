@@ -1,4 +1,4 @@
-\chapter{Built-in \fsm{}-valued Functions}
+\chapter{Pre-defined \fsm{}-valued Functions}
 
 \section{Commonly Used Functions}
 
@@ -6,6 +6,7 @@
 \hline
 \verb!$^copy($fst)! \\
 \hline
+\verb!$^complement($fst)!\\
 \verb!$^reverse($fst)! \\
 \verb!$^invert($fst)!  \\
 \verb+$^invert!($fst)+  \\
@@ -13,8 +14,7 @@
 \verb+$^inputside!($fst)+  or \verb+$^inputProject!($fst)+  or \verb+$^upperside!($fst)+ \\
 \verb!$^outputside($fst)! or \verb!$^outputProject($fst)! or \verb!$^lowerside($fst)! \\
 \verb+$^outputside!($fst)+ or \verb+$^outputProject!($fst)+ or \verb+$^lowerside!($fst)+ \\
-\verb!$^shortestPath($fst, #nshortest=1)!\\
-\verb!$^randGen($fst, #npath=15, #max_length=50)!\\
+\verb!$^shortestPath($fst, #num=1)!\\
 \hline
 \verb!$^toString(#num)! \\
 \verb!$^implode($fst)! \\
@@ -22,13 +22,22 @@
 \hline
 \verb!$^readXml($filepath)! \\
 \hline
-\verb!$^rmWeight($fst)!\\
-\hline
 \verb!$^ignore($base, $fluff)! \\
 \verb!$^contains($fst)! \\
 \hline
 \verb!$^substSymbol($fst, $old, $new)!\\
 \verb/$^substSymbol!($fst, $old, $new)/\\
+\hline
+\end{tabular}
+
+\section{Less Used Functions}
+
+\begin{tabular}{|l|}
+\hline
+\verb!$^randGen($fst, #npath=15, #max_length=50)!\\
+\hline
+\verb!$^rmWeight($fst)!\\
+\verb+$^rmWeight!($fst)+\\
 \hline
 \verb!$^priority_union_input($net1, $net2)! \\
 \verb!$^priority_union_output($net1, $net2)! \\
@@ -41,7 +50,7 @@
 
 \begin{tabular}{|l|}
 \hline
-\verb!$^charForCpv(#num)! \\
+\verb!$^charForCpv(#num)! or \verb!$^cpv2char(#num)!\\
 \hline
 \verb!$^optimize($fst)! \\
 \verb/$^optimize!($fst)/ \\

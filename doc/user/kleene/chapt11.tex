@@ -40,7 +40,7 @@ Or, write scripts that take a Kleene \fsm{} and convert it into stand-alone
 executable code that has the same behavior as the runtime code.
 \end{itemize}
 
-At this point (May 2013), there is no runtime code available to load and run the \fsm{}s created
+At this time, there is no runtime code available to load and run the \fsm{}s created
 in Kleene.  Perhaps an interested developer would volunteer to write such code.  However, I (Ken
 Beesley) have written some experimental \init{xslt} scripts that take a ``state-oriented''
 \init{xml} file saved by Kleene and convert it into executable Java code (a Java package)
@@ -60,7 +60,7 @@ executable code in Java, and then give a high-level view of the requirements for
 
 \subsection{Stand-Alone Java Code Generation}
 
-At this time (May of 2013) there is an experimental project called \emph{fst2java} that takes
+There is an experimental project called \emph{fst2java} that takes
 a Kleene \fsm{}, stored to file in a \emph{state-oriented \init{xml} format}, and runs
 this \init{xml} file through a set of \init{xslt} scripts, ultimately generating a Java package
 that implements the \fsm{} as executable Java code.  This generated code performs \emph{complete
@@ -269,9 +269,9 @@ You could be a little fancier and write
 
 \begin{Verbatim}
 if (#^isIBounded($Fst))
-    print "OK.  It's input bounded." ;
+    pr "OK.  It's input bounded." ;
 else
-    print "DANGER: There are input epsilon cycles." ;
+    pr "DANGER: There are input epsilon cycles." ;
 }
 \end{Verbatim}
 
@@ -317,7 +317,7 @@ Java code that simulates the application of the original \fsm{}.
 \subsubsection{Step Five:  Generating the Java Package using fst2java}
 
 Now \texttt{cd} to the fst2java directory (downloadable from
-\url{www.kleene-lang.org}, which contains four \xslt{} scripts that
+\url{www.kleene-lang.org}), which contains four \xslt{} scripts that
 convert the \fsm{} from one form of \xml{} to another form of \xml{}, plus one
 final \xslt{} script, named \texttt{generate\_java.xsl}, that takes the final \xml{}
 file and generates from it the Java code as a Java package.\footnote{A Java package is a set of related Java files residing in
@@ -541,9 +541,9 @@ We also test the \fsm{} for input-side boundedness
 
 \begin{Verbatim}
 if (#^isIBounded($StoZrule))
-    print "All is OK" ;
+    pr "All is OK" ;
 else
-    print "Problem: input epsilon cycle(s)" ;
+    pr "Problem: input epsilon cycle(s)" ;
 \end{Verbatim}
 
 \noindent

@@ -1,5 +1,6 @@
 \chapter{Lists}
 
+\label{chapt:lists}
 
 \section{Lists of \fsm{}s and Numbers}
 
@@ -83,11 +84,11 @@ following pre-defined functions.  Note that index counting starts at 0
 \noindent
 \begin{tabular}{|l|l|}
 \hline
-\verb!$^head($@list)! & Returns the zeroth FSM element of the argument list\\
+\verb!$^head($@list)! & Returns the zeroth \fsm{} element of the argument list\\
 \hline
-\verb!$^getLast($@list)! & Returns the last FSM element of the argument list\\
+\verb!$^getLast($@list)! & Returns the last \fsm{} element of the argument list\\
 \hline
-\verb!$^get($@list, #n)! & Returns the nth FSM element of the argument list\\
+\verb!$^get($@list, #n)! & Returns the nth \fsm{} element of the argument list\\
 \hline
 \end{tabular}
 
@@ -130,13 +131,13 @@ elements of the argument list.  These operations are non-destructive.
 \noindent
 \begin{tabular}{|l|p{4.5cm}|}
 \hline
-\verb!$@^copy($@list)! & Returns a shallow copy of the argument FSM-list\\
+\verb!$@^copy($@list)! & Returns a shallow copy of the argument \fsm{}-list\\
 \hline
 \verb!$@^tail($@list)! & Returns a new list containing all but the first element of the
-argument FSM-list\\
+argument \fsm{}-list\\
 \hline
 \verb!$@^getSlice($@list, #n, #r:#s, ...)! & Returns a new list containing the
-indicated elements of the argument FSM-list\\
+indicated elements of the argument \fsm{}-list\\
 \hline
 \end{tabular}
 
@@ -188,13 +189,14 @@ Kleene, destructive function names are marked with a final \verb+!+.
 \noindent
 \begin{tabular}{|l|p{6cm}|}
 \hline
-\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a FSM-list\\
+\verb+$^pop!($@list)+ & Removes and returns the zeroth element of a
+\fsm{}-list\\
 \hline
 \verb+$^removeLast!($@list)+ & Removes and returns the last element of a
-FSM-list\\
+\fsm{}-list\\
 \hline
 \verb+$^remove!($@list, #n)+ & Removes and returns the nth element of a
-FSM-list\\
+\fsm{}-list\\
 \hline
 \end{tabular}
 
@@ -225,14 +227,15 @@ the list, and returning the changed list.
 \noindent
 \begin{tabular}{|l|p{6.5cm}|}
 \hline
-\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the FSM-list, and return the
+\verb+$@^push!($fst, $@list)+ & Push \verb!$fst! on the front of the
+\fsm{}-list, and return the
 modified list\\
 \hline
-\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the FSM-list, and return the modified
+\verb+$@^add!($@list, $fst)+ & Add \verb!$fst! on the end of the \fsm{}-list, and return the modified
 list\\
 \hline
 \verb+$@^addAt!($@list, #n, $fst)+ & Add/insert \verb!$fst! at the indicated index of
-the FSM-list, and return the
+the \fsm{}-list, and return the
 modified list\\
 \hline
 \end{tabular}
@@ -397,9 +400,9 @@ arguments can be anonymous.  Note that the \verb!#@^map(#^mon, #@list)! function
 // #@outlist will be $@(1, 4, 9, 16)
 \end{Verbatim}
 
-\subsection{Functions Returning the Sigma of an \fsm{}}
+\subsection{Functions Returning the Alphabet (Sigma) of an \fsm{}}
 
-The \verb+$@^getSigma($fst)+ function returns the sigma of the argument
+The \verb+$@^getSigma($fst)+ function returns the alphabet (the sigma) of the argument
 \fsm{} as a list of \fsm{}s, each one consisting of a start state and a final
 state, linked by one arc labeled with a symbol from the sigma.  Special symbols
 used only internally in Kleene are excluded from the sigma.

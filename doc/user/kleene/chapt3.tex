@@ -37,6 +37,10 @@ effectively of highest precedence.
 \hline
 \verb!a b c!  & simple alphabetic symbols\\
 \hline
+\verb!\uHHHH! & \init{bmp} symbol specified by code point value\\
+\hline
+\verb!\uHHHHHHHH! & supplementary symbol specified by code point value\\
+\hline
 . & (dot) matches any symbol\\
 \hline
 \verb!\* \+ \? \. \'! & literalized special characters\\
@@ -66,8 +70,8 @@ multi-character symbol name contains a straight single quote
 Symbols with multi-character names are most often used as tags, e.g.\@
 \verb!'[Noun]'!, \verb!'[Verb]'!, \verb!'[Adj]'!, \verb!'[Sg]'!,
 \verb!'[Pl]'!, \verb!'[1P]'!, \verb!'[2P]'!, \verb!'[3P]'!,
-\verb!'[Masc]'! and \verb!'[Fem]'!, that are used to convey categorial,
-featural or other grammatical information.  In general, any sequence of
+\verb!'[Masc]'! and \verb!'[Fem]'!, that convey categorial,
+featural or other grammatical information to a human reader.  In general, any sequence of
 \init{bmp} characters can be delimited in single quotes and used as a
 single multi-character symbol.  However, it is highly recommended that
 the names contain punctuation symbols; that is, it is almost always a
@@ -102,7 +106,7 @@ inherently delimited, making them also of highest precedence.
 \hline
 \verb!"dog" "+" "AT&T"! & double-quoted literalized concatenations of symbols\\
 \hline
-\verb!<0.5> <0.01> <0.36>! &  weights\\
+\verb!<0.5> <0.01> <0.36> <1.0>! &  weights\\
 \hline
 \verb!$^myfunction!(\textit{args} \ldots) & call to a function returning
 an \fsm{}\\
@@ -121,7 +125,7 @@ like \verb!abc!.  A prefixed
 \verb!$! marks a variable name with a finite-state-machine value; a prefixed
 \verb!$^! marks the
 name of a function that returns a finite-state-machine value; and a prefixed \verb!$@! marks the name of
-a list of machines.
+a list of machines (see chapter \ref{chapt:lists}.
 
 \vspace{0.5cm} 
 
@@ -171,19 +175,19 @@ programmers.
 \textbf{Syntax} & \textbf{Code Point Value} & \textbf{Character Name} \\
 \hline
 \hline
-\textbackslash{}n & \textbackslash{}u000A & \charname{line feed}
+\textbackslash{}n & 0xA & \charname{line feed}
 (\charname{lf}) or
 ``newline''\\
 \hline
-\textbackslash{}r & \textbackslash{}u000D & \charname{carriage return}
+\textbackslash{}r & 0xD & \charname{carriage return}
 (\charname{cr})\\
 \hline
-\textbackslash{}t & \textbackslash{}u0009 & \charname{character tabulation} or
+\textbackslash{}t & 0x9 & \charname{character tabulation} or
 ``tab''\\
 \hline
-\textbackslash{}b & \textbackslash{}u0008 & \charname{backspace} \\
+\textbackslash{}b & 0x8 & \charname{backspace} \\
 \hline
-\textbackslash{}f & \textbackslash{}u000C & \charname{form feed}
+\textbackslash{}f & 0xC & \charname{form feed}
 (\charname{ff}) \\
 
 \hline
@@ -312,13 +316,41 @@ and parsed by Kleene, it is converted, one way or another, into Unicode.  This
 is standard behavior for Java programs, which handle text internally as
 String objects, which are always Unicode strings.}
 
+Kleene also provides a function \verb!$^charForCpv(#num)!, aliased as \verb!$^cpv2char(#num)!, which takes an arbitrarily
+complex arithmetic expression (see chapter \ref{chapt:arithmeticexpressions}) as its argument
+and returns a character symbol.  There is also a function \verb!#^getIntCpv($char)!, aliased as
+\verb!$^char2cpv($char)!, that takes a one-symbol regular expression and returns the code point value as a
+number.  The following expressions are equivalent:
+
+
+\begin{Verbatim}
+$fsm = a b c ;
+$fsm = a b \u0063 ;
+$fsm = a b $^charForCpv(0x63) ;
+$fsm = a b $^charForCpv(99) ;   // decimal 99 = hexadecimal 0x63
+$fsm = a b $^cpv2char(0x63) ;
+$fsm = a b $^cpv2char(99) ;
+
+$fsm = a b $^cpv2char(0x62 + 1) ;
+$fsm = a b $^cpv2char(98 + 1) ;
+$fsm = a b $^cpv2char(#^char2cpv(a) + 1) ;
+\end{Verbatim}
+
+\noindent
+Note that the argument to \verb!$^cpv2char(#num)! is an arbitrarily complex 
+\emph{arithmetic} expression, not a regular expression;
+and in an arithmetic expression, the plus sign \verb!+! denotes simple arithmetic addition, not one or more
+iterations like the Kleene-plus in a regular expression.
+
+
 \subsection{Weights}
 
 \subsubsection{The Tropical Semiring}  
 
 Kleene can be used to build finite-state machines that are weighted or unweighted.
 The current implementation of weights is limited to the
-Tropical Semiring, which is the default semiring of the OpenFst library.
+Tropical Semiring, which is the default semiring of the OpenFst library, and no doubt
+the most useful semiring for linguistic applications.
 In the Tropical Semiring
 
 \begin{itemize}
@@ -356,7 +388,7 @@ the Tropical Semiring are non-negative, and if the user tries to
 denote negative weights straightforwardly as, for example, \@ \texttt{<-0.1>}, this
 creates a problem for the Kleene tokenizer, which recognizes the
 sequence \texttt{<-} as a left arrow, used in alternation rules, which
-will be presented below.
+will be presented in chapter \ref{chapt:alternationrules}.
 The workarounds for this problem, in the rare cases where negative
 weights might be required,
 are to
@@ -382,20 +414,24 @@ together, precision is lost.  In the Tropical Semiring, where the weights are co
 extension operation is addition, the precision problem is avoided.  Also, computers traditionally
 performed addition more efficiently than multiplication, but this may not be true in modern computers.} but programmers are much more likely to think in terms of
 probabilities (0.0 to 1.0) or percentages (0 to 100).  Kleene supports functions that return arithmetic
-values (see \ref{chapt:arithmeticexpressions}), including \verb!#^prob2c(#num)!, which takes a probability
+values (see chapter \ref{chapt:arithmeticexpressions}), including \verb!#^prob2c(#num)!, which takes a probability
 argument (0.0. to 1.0) and returns the cost, and \verb!#^pct2c(#num)!, which takes a percentage argument
 (0 to 100) and returns the cost.  These functions can be used inside the angle brackets, e.g.
 
 
 \begin{Verbatim}
-$fst = c  ( a <#^prob2c(.5)> | u <#^prob2c(.4)> | o <#^prob2c(.1)> ) t ;
+$fst = c  ( a <#^prob2c(.5)> 
+          | u <#^prob2c(.4)> 
+          | o <#^prob2c(.1)> ) t ;
 \end{Verbatim}
 
 \noindent
 or
 
 \begin{Verbatim}
-$fst = c  ( a <#^pct2c(50)> | u <#^pct2c(40)> | o <#^pct2c(10)> ) t ;
+$fst = c  
+       ( a <#^pct2c(50)> | u <#^pct2c(40)> | o <#^pct2c(10)> ) 
+       t ;
 \end{Verbatim}
 
 \noindent
@@ -578,7 +614,7 @@ consisting of the strings \emph{dog}, \emph{cat}, \emph{zebra},
 \emph{octopus} and \emph{frog}.  (The \fsm{} could also be viewed and used as an
 identity transducer that maps each of these words to itself.)  A reference to an
 unbound variable inside a regular expression
-raises a runtime exception (from which interactive Kleene can recover).
+raises a runtime exception, from which interactive Kleene can recover.
 
 Because finite-state machines can get very large, copying is avoided.
 The following sequence of assignment statements results in \verb!$var2! being an alias, bound to
@@ -586,7 +622,8 @@ the same \fsm{} object as \verb!$var1!.
 
 \begin{Verbatim}
 $var1 = a*b+[A-Za-z0-9]{3} ;
-$var2 = $var1 ;	 // $var2 and $var1 are now bound to the same FST
+$var2 = $var1 ; // $var2 and $var1 are now bound 
+                //   to the same FST
 \end{Verbatim}
 
 \subsection{Pre-defined Functions}
@@ -647,9 +684,11 @@ $new = $^lowerside($orig) ;
 \end{Verbatim}
 
 \noindent
-leaves \verb!$orig! intact while setting \verb!$new! to an \fsm{}
+leaves \verb!$orig! intact while setting \verb!$new! to a new \fsm{}
 that encodes the language consisting only of the string
-\emph{chien}.  The following destructive functions, which operate on
+\emph{chien}.  
+
+The following \emph{destructive} functions, which operate on
 an \fsm{} in place, have also been defined:
 
 \begin{description}
@@ -686,36 +725,10 @@ While Unicode code point values are integers, and Kleene does handle basic
 arithmetic expressions involving integers and floating-point numbers (see chapter
 \ref{chapt:arithmeticexpressions}), it is important to understand
 that Kleene makes a clear distinction between regular expressions and arithmetic expressions.
-A Unicode character like \texttt{b}, though it has an integer code point value of hexadecimal 0062, is
+A Unicode character like \texttt{b}, though it has an integer code point value of hexadecimal 62, is
 not, for Kleene, the same as the integer value.  We have already presented the \verb!\u0062! notation,
 which is a regular expression and denotes the Unicode character \texttt{b}.  In contrast, in Kleene arithmetic
-expressions, hexadecimal 62 is denoted as \texttt(0x62).  
-
-\subsubsection{Characters, Code Point Values and Integers}
-
-In some rare cases, it may be useful to take an arithmetic value, expressed in an arbitrarily
-complex arithmetic expression, and turn it into the Unicode character having that value as its code point
-value.
-Thus the \verb!$^charForCpv(#num)! function takes an arithmetic expression as its
-argument, interprets it as an integer code point value (converting a
-float value, if necessary, to an integer), and returns the
-corresponding Unicode character.  The following expressions all result
-in equivalent \fst{}s.
-
-\begin{Verbatim}
-$fsm = b ;
-$fsm = \u0062 ;		// hex 0062 is the code point value for b
-			// \u0062 is the character with hex code point
-			// value 62
-$fsm = $^charForCpv(0x62) ;	// 0x62 is the hex number, not a character
-$fam = $^charForCpv(98) ;   // decimal 98 == hex 0x62
-$fsm = $^charForCpv(97 + 1) ; // arithmetic expression with plus
-$fsm = $^charForCpv(#^getIntCpv(a) + 1) ;
-	// get the (integer) code point value of the character 'a'
-	// add one, yielding the code point value for the character 'b'
-	// convert that code point value to the character 'b'
-\end{Verbatim}
-
+expressions, hexadecimal 62 is denoted as \texttt{0x62}.  
 
 \subsection{User-defined Function Syntax}
 
@@ -737,7 +750,7 @@ parameters are marked as being of type \fsm{} by their \verb!$! sigils.  Functio
 in Kleene are always
 prefixed with the \verb!^! prefix, and the \verb!$^! prefix, as in \verb!$^myunion!, marks this as a function
 that
-returns an \fsm{}.  Once defined, our new function can be called just like a pre-defined Kleene function:
+returns an \fsm{} value.  Once defined, our new function can be called just like a pre-defined Kleene function:
 
 \begin{Verbatim}
 $foo = dog|cat|rat ;
@@ -763,7 +776,7 @@ itself a regular expression and can appear anywhere a regular expression is lega
 
 \begin{Verbatim}
 $newfsm = $^myunion(worm | dog | rabbit | fox, 
-              $^myunion(skunk, $^myunion(cat, hippopotamus)) ) ;
+          $^myunion(skunk, $^myunion(cat, hippopotamus)) ) ;
 \end{Verbatim}
 
 \subsubsection{Practical Example}
@@ -799,7 +812,8 @@ Such function \emph{definitions} are equivalent to the following function
 \emph{assignments}, which have just a function variable on the left-hand side, followed by an equal sign
 and an \emph{anonymous function} on the right-hand side, which most users will find less
 friendly.\footnote{Lisp and Python programmers
-will recognize anonymous functions as ``lambda'' functions.}  
+will recognize anonymous functions as ``lambda'' functions.  Anonymous functions are important in the Scala
+and Clojure languages, and have recently been added to Java 8.}  
 
 \begin{Verbatim}
 $^priority_union_input = $^($q, $r) {
@@ -827,11 +841,12 @@ $^($q, $r) { return $q | ($r _o_ ~$^outputside($q)) ; }
 
 
 \noindent
-look just like function definitions, but they begin with the \verb!$^! sigil \emph{without any
-following function name}. So an anonymous function is one that simply has no name.  The \verb!$^! sigil, as always in Kleene,
+look just like function definitions, but they begin with the \verb!$^! sigil followed directly
+by the parameter list. So an anonymous function in Kleene is one that has a function sigil but 
+no name.  The \verb!$^! sigil, as always in Kleene,
 indicates that these functions return an \fsm{}, and the
 parameter list, here \verb!($q, $r)!, indicates that the functions take two \fsm{} arguments.  We will find
-uses for anonymous functions later, but for now we will restrict ourselves to the friendlier function
+uses for anonymous functions later, but for now we will restrict ourselves to the arguably friendlier function
 definitions.
 
 Priority union can be useful in morphology to override regular but incorrect
@@ -1002,16 +1017,17 @@ $^myfunc($a, $b, $c = abc, $d = xyz) {
 \end{Verbatim}
 
 \noindent
-In the parameter list, required parameters must precede optional parameters.
-A call to \verb!$^myfunc()! must include at least the first two parameters---the \emph{required} parameters.
-If a call to \verb!$^myfunc()! does not supply values for the \emph{optional}
+In the parameter list, any required parameters must precede any optional parameters.
+A call to \verb!$^myfunc()! must include at least two arguments to bind to
+the first two parameters---the \emph{required} parameters.
+If a call to \verb!$^myfunc()! does not supply arguments for the \emph{optional}
 parameters, here \verb!$c! and \verb!$d!, they are bound to the default values indicated
 in the function definition.
 
 A function call may contain \emph{positional} and/or \emph{named}
-arguments, where positional arguments must precede named arguments.  A
+arguments, where any positional arguments must precede any named arguments.  A
 named argument is of the form \emph{paramName}~=~\emph{value}.
-The following call contains two positional arguments and one named
+The following function call contains two positional arguments and one named
 argument:
 
 \begin{Verbatim}
@@ -1118,7 +1134,10 @@ into an \fsm{} via a call to the built-in function
 \noindent
 which takes one production
 name as its argument and treats it as the starting production of the whole
-grammar.  The following example models a fragment of Esperanto noun morphotactics:
+grammar.\footnote{Because it requires a special type of argument, \verb!$^start()!
+is a wired-in function that cannot be aliased.  It is thus similar to what is called
+a \emph{special form} in Lisp.}
+The following example models a fragment of Esperanto noun morphotactics:
 
 \begin{Verbatim}
 $>Root = ( kat | hund | elefant | dom ) ( $>Root | $>AugDim ) ;
@@ -1143,7 +1162,7 @@ After a production is parsed into an
 \init{ast}, and before it is evaluated and stored in the symbol table, the
 \init{ast} is sent a message to accept a visitor object\footnote{This
 visitor is of type
-OpenFstRrKleeneVisitor.} that ensures that
+RrKleeneVisitor.} that ensures that
 all references to productions are genuinely right-linear.  In the simplest cases,
 a right-linear reference is visually on the far right-hand side of the
 expression, as with \verb!$>Foo! in the following example:
@@ -1153,7 +1172,15 @@ $>Production = a b c $>Foo ;
 \end{Verbatim}
 
 \noindent
-In more complicated examples, multiple right-linear references can be unioned 
+The following production is illegal because the reference to \verb!$>Foo! is not right-linear.
+
+\begin{Verbatim}
+$>Production = a b c $>Foo d ;
+\end{Verbatim}
+
+
+\noindent
+In more complicated examples, multiple legal right-linear references can be unioned 
 at the end of the expression:
 
 \begin{Verbatim}
@@ -1177,11 +1204,16 @@ at production parse-time.
 The built-in \verb!$^start()! function takes the identifier of a single
 production as its argument, and treats the start state of this production as the
 start state of the resulting \fsm{}.  The overall implied grammar is the set
-including the
+of productions including the
 starting production, any productions referred to by the starting
 production, and, 
 recursively, any productions referred to by the referred-to productions.
-The call to \verb!$^start()! fails if any referred-to production in the
+The productions of the implied grammar
+can also refer to normal \fsm{}-valued variables and
+normal \fsm{}-valued function calls that must be defined at the time when
+\verb!$^start()! is called.
+The call to \verb!$^start()! fails if any referred-to production, variable
+or function in the
 implied grammar is
 not yet defined.
 
@@ -1260,7 +1292,7 @@ value, again in the local symbol table.
 
 \subsection{Stand-alone Code Blocks}
 
-Kleene provides stand-alone code blocks, grouping a set of statements
+Kleene supports stand-alone code blocks, grouping a set of statements
 that are to be evaluated in a new frame, which means in a new scope.
 In the following example, a new frame/scope is allocated for the
 stand-alone block, and the \verb!$foo! at point B is local to the block

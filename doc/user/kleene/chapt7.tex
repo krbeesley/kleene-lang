@@ -72,7 +72,7 @@ what \verb!$^redup()! itself does:
 \begin{Verbatim}
 $lang = foo | bar | bas ;
 $r = $^redup($lang, \-) ;
-print $r ;
+pr $r ;
 \end{Verbatim}
 
 \noindent
@@ -360,7 +360,7 @@ As Kiparsky describes it, if the second vowel of the stem is not /a/---
  possibilities, as shown [above].
 \end{quote}
 
-M\r{a}ns Huldén wrote a \acro{foma} script to handle the Javanese examples, as
+M\r{a}ns Huldén wrote a Foma script to handle the Javanese examples, as
 just described, and here, with his permission, is his script translated into Kleene syntax:
 
 \begin{Verbatim}
@@ -399,7 +399,7 @@ $Rule1 =
 // To handle the "three different possibilities" 
 // seen in "djaran"
 // KRB:  Is -> || a two-level restriction expression?
-// KRB:  Need fixed here for FOMA-to-Kleene
+// KRB:  Need fixed here for Foma-to-Kleene
 $Rule2 =  
   $parallel(
     a:[o|a] [C|V]*   %- C*  a:ɛ C*  a:ɛ -> || .#. C*  _ ?* ,

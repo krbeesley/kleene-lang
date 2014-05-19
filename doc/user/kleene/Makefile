@@ -1,7 +1,7 @@
 # Makefile for Kleene user manual
 
 TARGET=kleene
-VERSION=0.9.3.5
+VERSION=0.9.4.0
 
 default: $(TARGET).pdf
 
@@ -20,7 +20,7 @@ open: $(TARGET).pdf
 	open $(TARGET).pdf
 
 release: $(TARGET).pdf
-	cp $(TARGET).pdf $(TARGET)$(VERSION).pdf
+	cp $(TARGET).pdf $(TARGET)-$(VERSION).pdf
 
 clean:  
 	rm -f *.aux $(TARGET).bbl $(TARGET).blg $(TARGET).toc $(TARGET).dvi $(TARGET).ent $(TARGET).log $(TARGET).ps $(TARGET).pdf $(TARGET)$(SMALL).ps  *.cb *.cb2 *~

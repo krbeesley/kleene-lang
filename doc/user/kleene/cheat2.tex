@@ -1,6 +1,6 @@
-\chapter{Built-in List Functions}
+\chapter{Pre-defined List Functions}
 
-\section{Built-in Functions for \fsm{} Lists}
+\section{Pre-defined Functions for \fsm{} Lists}
 
 \begin{tabular}{|l|}
 \hline
@@ -20,18 +20,19 @@
 \verb+$@^add!($@list, $fst)+ \\
 \verb+$@^addAt!($@list, #n, $fst)+ \\
 \hline
-\verb!$@^set($@list, #n, $fst)! \\
+\verb+$@^set!($@list, #n, $fst)+ \\
 \hline
 \verb!#^size($@list)! \\
 \verb!$@^getSigma($fst)! \\
 \hline
 \verb!$^reduceLeft($^bin, $@list)! \\
+\verb!$^foldLeft($^bin, $@list, $init)! \\
 \hline
 \verb!$@^map($^mon, $@list)! \\
 \hline
 \end{tabular}
 
-\section{Built-in Functions for Number Lists}
+\section{Pre-defined Functions for Number Lists}
 
 \begin{tabular}{|l|}
 \hline
@@ -51,12 +52,13 @@
 \verb+#@^add!(#@list, #num)+ \\
 \verb+#@^addAt!(#@list, #n, #num)+ \\
 \hline
-\verb!#@^set(#@list, #n, #num)! \\
+\verb+#@^set!(#@list, #n, #num)+ \\
 \hline
 \verb!#^size(#@list)! \\
 \verb!#@^getSigma($fst)! \\
 \hline
 \verb!#^reduceLeft(#^bin, #@list)! \\
+\verb!#^foldLeft(#^bin, #@list, #init)! \\
 \hline
 \verb!#@^map(#^mon, #@list)! \\
 \hline

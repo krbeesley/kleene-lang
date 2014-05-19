@@ -20,7 +20,7 @@ writing, such pre-compiled binaries are available for
 \item
 Apple OS X, and
 \item
-Linux
+Linux, compiled on Mint
 \end{itemize}
 
 \noindent
@@ -34,23 +34,23 @@ launch a terminal application, move around the directory structure,
 copy files, edit files, etc.  If this means nothing to you, seek the
 help of an expert.
 
-The precompiled binaries have names like \texttt{kleene-mac-0.9.3.5.tar.gz} and
-\texttt{kleene-linux-0.9.3.5.tar.gz}; these are sometimes called \emph{tarballs}.  More recent
+The precompiled binaries have names like \texttt{kleene-mac-0.9.4.0.tar.gz} and
+\texttt{kleene-linux-0.9.4.0.tar.gz}; these are sometimes called \emph{tarballs}.  More recent
 versions will have higher numbers.  Once downloaded, the tarball should be moved
 to a convenient location of your choice, e.g.\@ into directory 
 \texttt{\~{}/kleene/}, and then
 ``unpacked'' with the command
 
 \begin{Verbatim}
-$ gunzip kleene-mac-0.9.3.5.tar.gz
+$ gunzip kleene-mac-0.9.4.0.tar.gz
 \end{Verbatim}
 
 \noindent
-This should produce a file named kleene-mac-0.9.3.5.tar,\footnote{Sometimes 
+This should produce a file named kleene-mac-0.9.4.0.tar,\footnote{Sometimes 
 your web browser will \texttt{gunzip} the file for you.} and then ``untar'' that file with
 
 \begin{Verbatim}
-$ tar xvf kleene-mac-0.9.3.5.tar
+$ tar xvf kleene-mac-0.9.4.0.tar
 \end{Verbatim}
 
 \noindent
@@ -86,7 +86,7 @@ tarball file for use by others.
 
 Once you have followed all the instructions in \texttt{README.install},
 you should be able to cd to the directory where the \texttt{Kleene.jar}
-file is installed and then invoke 
+file is installed, e.g.\@ \texttt{\~{}/kleene/}, and then invoke 
 
 \begin{Verbatim}
 $ java -jar Kleene.jar
@@ -108,14 +108,17 @@ which looks like this:
 
 The look-and-feel will be a little different on OS X and Linux.  The
 application window, which almost fills the screen, can be minimized using
-the buttons at the top.  Inside the application window, there is a
+the buttons at the top, and all the windows can be adjusted in size by
+mouse-clicking on the lower-right corner.
+Inside the application window, there is a
 pseudo-terminal window\footnote{It is called a \emph{pseudo} terminal
 because it allows you to type commands, and view responses, in a
 terminal-like window, but it lacks a history memory and other useful
 features of a traditional command-line terminal application.  It is hoped
 that this pseudo-terminal can be improved in the future.}  on the left,
 and a symbol-table window, initially empty, on the right.  At the very
-bottom of the pseudo-terminal window, there is an active one-line text
+bottom of the pseudo-terminal window, there is an active one-line
+text-entry
 field where you can enter commands to program (and learn) Kleene
 interactively.  
 
@@ -206,9 +209,11 @@ understand an \fsm{} in OpenFst terms, as having \texttt{Input}:\texttt{Output}
 labels.  At other times, where the bi-directionality of \fsm{}s is
 relevant, I will talk about \texttt{Upper}:\texttt{Lower} labels. 
 
-The ``sides'' or ``levels'' of an \fsm{} are technically known as \emph{projections}, and we will 
-refer to the input and output projections when thinking in OpenFst terms, and we will
-refer to the upper and lower projections when thinking in Xerox terms.
+The ``sides'' or ``levels'' of an \fsm{} are technically known as
+\emph{projections}, and we will refer to the input and output projections when
+thinking in OpenFst terms, and we will refer to the upper and lower projections
+when thinking in Xerox terms.  Transducers can theoretically have any number of
+projections, but most implementations, including OpenFst, are limited to two.
 
 \subsection{Compile regular expressions into \fsm{}s}
 
@@ -228,7 +233,9 @@ a statement can continue over multiple lines.
 Many programmers will already have experience with programming languages, such as Perl,
 Python and Java, that support a kind of regular expressions to
 perform various useful tasks, including pattern matching and tokenization.  While these
-Perl-like regular expressions are often very useful, they are not always \emph{regular}
+Perl-like regular expressions are often very useful, they are not always
+\emph{regular}\footnote{\emph{Regular} is a technical term, and sometimes the equivalent term
+\emph{rational} is also used.}
 in the mathematical sense, and so they don't have all the attractive properties of truly
 regular expressions.\footnote{For a thorough presentation of ``regular'' expressions as
 they appear in common programming languages and operating-system utilities, see the book \emph{Mastering Regular Expressions} by
@@ -279,7 +286,7 @@ language that it encodes.
 This same \fsm{} can be viewed as an \emph{identity transducer} that maps the string
 ``d'' to ``d,'' i.e.\@ maps ``d'' to itself.  In OpenFst, the labels on the arcs are always
 two-level, \texttt{input}:\texttt{output}, or, in the Xerox visualization,
-\texttt{upper}:\texttt{lower}.  An \fsm{} like that above is interpreted either as an acceptor
+\texttt{upper}:\texttt{lower}.  An \fsm{} like that shown above is interpreted either as an acceptor
 or as an identity transducer, depending on what is needed by an operation.
 
 In the Kleene \acro{gui}, you can actually test an \fsm{}, to see what it accepts and rejects, by entering
@@ -343,7 +350,7 @@ draw dog ;
 \end{Verbatim}
 
 The \fsm{} that encodes this language, consisting
-of the one string ``dog,'' has four states and tree arcs.
+of the one string ``dog,'' has four states and three arcs.
 
 \begin{center}
 \includegraphics{images/dog.pdf}
@@ -422,20 +429,30 @@ test $fsm ;
 \noindent
 you will find that it accept the four strings, and no others.
 
-When the \fsm{} is an acceptor, the \texttt{print} command will list the strings:
+When the \fsm{} is an acceptor, the \texttt{print} command will list the strings with their
+weights.  If you don't want to see the weight, use the \texttt{pr} command.
 
 \begin{Verbatim}
 print $fsm ;
-// outputs:  dog cat bird horse
+dog : 0.0
+cat : 0.0
+bird : 0.0
+horse : 0.0
+
 print Hello ;
-// outputs:  Hello
-print apple | orange | banana| fig | cherry ;
-// outputs:  apple orange banana fig cherry
+Hello : 0.0
+
+pr apple | orange | banana| fig | cherry ;
+apple
+orange
+banana
+fig
+cherry
 \end{Verbatim}
 
 \noindent
-Note that a language is a set of strings, and in a set, the order is
-insignificant.  \fsm{}s may be constructed, and words encoded by the \fsm{}
+Note that a language is a set of strings, and in a set, the order of its elements 
+undefined.  \fsm{}s may be constructed, and words encoded by the \fsm{}
 may be printed, in orders that you didn't expect.
 
 In general, spaces and other whitespace characters are ignored in Kleene regular
@@ -446,7 +463,7 @@ special characters, is to precede them with the backslash character \textbacksla
 \begin{Verbatim}
 // This is a comment:
 // Printing a string with a literal space
-print Hello\ world ;
+pr Hello\ world ;
 // outputs:  Hello world (as a single string)
 \end{Verbatim}
 
@@ -454,21 +471,22 @@ print Hello\ world ;
 Another equivalent way to literalize a space is to put it inside double quotes:
 
 \begin{Verbatim}
-print Hello " " world ;
+pr Hello " " world ;
 // or
-print "Hello world" ;
+pr "Hello world" ;
 draw "Hello world" ;
 \end{Verbatim}
 
 Kleene regular expressions, like Perl regular expressions, can also use parentheses for
-grouping, a postfixed asterisk * meaning zero or more, a postfixed plus-sign +,
+grouping.  A postfixed asterisk * meaning zero or more, a postfixed plus-sign +,
 meaning one or more, and a postfixed question mark ? indicating that the preceding
-expression is optional.  The following example encodes the words ``dog,'' ``cat'' and
+expression is optional, are also as in Perl regular expressions.
+The following example encodes the words ``dog,'' ``cat'' and
 ``horse,'' each with an optional \texttt{s} on the end, for a total of six strings.
 
 \begin{Verbatim}
 $fsm = ( dog | cat | horse ) s? ;
-print $fsm ;
+pr $fsm ;
 // outputs:  dog dogs cat cats horse horses
 \end{Verbatim}
 
@@ -483,7 +501,7 @@ $fsm = a*b+(c|d|e|f)g? ;
 \end{Verbatim}
 
 \noindent
-This language is infinite in size but still regular, and it is
+This language described by this expression is infinite in size but still regular, and it is
 encoded in a compact \fsm{}.
 
 
@@ -527,15 +545,24 @@ Regular languages can be subtracted from each other:
 \begin{Verbatim}
 $lang = (dog | cat | elephant | apple | orange) - 
            (banana | apple | orange) ;
-print $lang ;
+pr $lang ;
 // outputs: dog cat elephant
+assert #^equivalent($lang, dog | cat | elephant) ;
 \end{Verbatim}
 
 \noindent
-Here, the resulting \fsm{} encodes the language consisting of the strings ``dog,'' ``cat'' and ``elephant.''
+Here, the resulting \fsm{} encodes the language consisting of 
+the strings ``dog,'' ``cat'' and ``elephant.''
 It is \emph{not} necessary to put spaces around the vertical-bar operator |.
 As already stated, white space is ignored in Kleene regular expressions
 unless it is explicitly literalized.
+
+The \texttt{assert} command, in this case, tests the equivalence
+of the \fsm{} \verb!$lang! and the expected result.  The \texttt{assert}
+command and the \verb!#^equivalent()! function will be explained below in more detail.
+For now, it is sufficient to understand that the \texttt{assert} command will
+throw an exception if the boolean condition is false, and will do nothing if the
+boolean condition is true.
 
 Regular languages can also be intersected, resulting in a new language
 containing all and only the strings they have in common.
@@ -545,8 +572,9 @@ The operator for intersection is \&.
 $commonAnimals = 
    (dog | cat | elephant | whale | ant | bird | reindeer) & 
    ( cat | horse | reindeer | snail | whale ) ; 
-print $animals ;
+pr $animals ;
 // outputs: cat whale reindeer
+assert #^equivalent($animals, cat | whale | reindeer) ;
 \end{Verbatim}
 
 The . (dot) represents \emph{any} symbol, so the \fsm{} resulting from the
@@ -603,7 +631,7 @@ $EmptyStringLang = "" ;
 
 \subsection{Optimization of \fsm{}s}
 
-When \fsm{}s are built in Kleene, they are automatically \emph{optimized}, which involves a
+When \fsm{}s are built in Kleene, they are (where possible) automatically \emph{optimized}, which involves a
 combination of determinization, minimization and epsilon-removal.  The epsilon, which can be
 denoted as \verb!""! in regular expressions, is the empty
 (zero-length) string, and epsilon-removal involves the
@@ -735,7 +763,10 @@ collectively as \emph{optimization}---are vital.  Luckily, Kleene
 automatically optimizes all \fsm{}s by default, and the average Kleene
 programmer never has to worry about it.\footnote{Expert users may occasionally
 want to turn off one or more of the optimization processes, and Kleene provides
-a way to do this.  See Appendix \ref{app:optimize}.} 
+a way to do this.  See Appendix \ref{app:optimize}.}
+
+The optimization---especially the determinization---of weighted \fsm{}s
+and of \fsm{}s with cycles is a challenge still under study.
 
 \subsection{Using Defined Variables}
 
@@ -746,7 +777,7 @@ expressions, e.g.
 $fsm1 = dog | cat | elephant ;
 $fsm2 = horse | pig | sheep ;
 $fsm = $fsm1 | $fsm2 ;
-print $fsm ;
+pr $fsm ;
 // outputs: dog cat elephant horse pig sheep
 \end{Verbatim}
 
@@ -827,7 +858,35 @@ character is somehow divided into the two \init{bmp} surrogate characters used t
 the single supplementary character in the UTF-16 encoding.  This behavior needs to be
 reviewed in the context of Kleene.}
 
+Kleene makes a fundamental distinction between \emph{symbols}, such as
+alphabetic characters, and numbers.  Symbols appear in regular
+expressions, while numbers appear in arithmetic expressions (see chapter
+\ref{chapt:arithmeticexpressions}).  Although alphabetic symbols are
+stored in \fsm{}s using their Unicode Code Point value, which is an
+integer, you should not confuse alphabetic symbols and numbers in Kleene
+expressions.  For example, the Kleene expression \verb!\u0065! denotes
+the symbol \emph{e}, which has the Unicode code point value 0x65 (i.e.\@
+hexadecimal 65).  You can include \verb!\u0065! in a regular expression
+just like any letter
 
+
+\begin{Verbatim}
+$fsm1 = b e t ;
+$fsm2 = b \u0065 t ;	// equivalent
+assert(#^equivalent($fsm1, $fsm2) ;
+\end{Verbatim}
+
+\noindent
+But in these regular expressions you cannot replace \verb!\u0065! with 
+the integer expression 0x65 or its decimal equivalent 101.  The
+following two expressions are illegal and cause exceptions to be thrown.
+
+
+\begin{Verbatim}
+// illegal regular expressions
+$fsm = b 0x65 t ;  // ILLEGAL
+$fsm = b 101 t ;   // ILLEGAL
+\end{Verbatim}
 
 \subsubsection{Multi-character Symbols}
 
@@ -856,7 +915,8 @@ expression,
 
 
 \begin{Verbatim}
-// a multi-character symbol without punctuation, NOT recommended
+// a multi-character symbol without punctuation, 
+// NOT recommended
 $myfsm = 'noun' ;
 print $myfsm ;
 // outputs: noun
@@ -1004,7 +1064,7 @@ More generally, : is the \emph{cross-product} operator that takes two operands t
 both denote regular languages (not regular relations).  It creates a regular relation with the
 left operand as the input projection, and the right operand as the output projection.
 Often the cross-product operator is used to map
-individual strings, as in this example.
+individual strings, as in this Kleene example.
 
 
 \begin{Verbatim}
@@ -1031,6 +1091,23 @@ contains the six ordered pairs (dog, animal), (dog, mammal), (cat, animal), (cat
 mammal), (rat, animal) and (rat, mammal).  Note that a relation is a set of ordered string
 pairs, and the order of the string pairs is not significant.
 
+Note that the cross-product operator : has higher precedence than concatenation, so  the example
+
+\begin{Verbatim}
+$foo = abcd:ef ;
+\end{Verbatim}
+
+\noindent
+is equivalent to
+
+\begin{Verbatim}
+	$foo = abc(d:e)f ;
+\end{Verbatim}
+
+\noindent
+Parentheses can be used to force whatever groupings are desired.
+
+
 \subsubsection{Applying Transducers}
 
 In the OpenFst visualization, an \fst{} is \emph{applied} to an input string by
@@ -1044,10 +1121,11 @@ The output string can be different from the input string, and thus
 the \fst{} can \emph{transduce} or \emph{map} from one kind of string to another kind of string.  To return to the
 previous noun example, if an ordered pair (dog, dogs) is interpreted as (\emph{inputString},
 \emph{outputString}),
-then the \fst{} that encodes the regular relation { (dog, dogs), (cat, cats), (elephant,
-elephants), (woman, women), (deer, deer)} would provide a transduction or \emph{mapping}
+then the \fst{} that encodes the regular relation \{ (dog, dogs), (cat, cats), (elephant,
+elephants), (woman, women), (deer, deer) \} would provide a transduction or \emph{mapping}
 from singular nouns like ``dog,'' ``cat'' and ``woman'' to their \emph{related} plural forms ``dogs,''
-``cats'' and ``women,'' respectively.  Relations relate words to other words. 
+``cats'' and ``women,'' respectively.  Relations relate words (strings of symbols) to other
+words (strings of symbols). 
 Looked at in the other direction,
 the same \fst{} provides a mapping from plural forms to their
 related singular forms.
@@ -1093,10 +1171,13 @@ of an input string against ``input'' symbols on a path, outputting the correspon
 direction,'' matching the symbols of the input string against upper-side labels, and
 outputting strings of lower-side labels.  Xerox
 researchers also talk about \emph{analysis} or ``application in an upward direction,'' matching the symbols of
-the input string against lower-side symbols, and outputting strings of upper-side symbols.  
+the input string against lower-side symbols, and outputting strings of upper-side symbols. 
+The \texttt{test} facility in the Kleene \acro{gui} reflects the Xerox/\acro{parc}
+visualization of bidirectional \fst{}s.
 
 The following transducer, which includes multi-character symbols,
-models the formation of regular English plurals more elegantly, and illustrates the Xerox
+models the formation of regular English plurals more elegantly, and
+reflects the Xerox
 visualization.
 
 \begin{Verbatim}
@@ -1235,6 +1316,17 @@ A \& B  &  A - (B - A)\\
 \hline
 \end{tabular}
 
+\subsubsection{Closure Properties of Weighted \fsm{}s}
+
+Weights in \fsm{}s complicate the closure properties, and each operation
+may have its own restrictions on which of its operands can be weighted.
+Whenever the Kleene interpreter tries to combine two \fsm{} operands, it
+first consults a LibraryChecker 
+class that ``knows'' the mathematical requirements and
+the limitations of the algorithms supplied in the OpenFst library.  If
+any attempted operation is illegal, the interpreter will throw an
+exception and print out a (hopefully) useful message.
+
 \subsubsection{Playing with \fst{}s}
 
 A regular relation, encoded as an \fst{}, is a relation between two regular languages,
@@ -1246,11 +1338,11 @@ and \verb!$^outputProj()!.
 \begin{Verbatim}
 $fst = (dog|cat|rat):(animal|mammal) ;
 $inputLang = $^inputProj($fst) ;
-print $inputLang ;
+pr $inputLang ;
 // outputs: dog cat rat
 
 $outputLang = $^outputProj($fst) ;
-print $outputLang ;
+pr $outputLang ;
 // outputs: animal mammal
 \end{Verbatim}
 
@@ -1309,6 +1401,7 @@ For finite (very finite) acceptors, you can print out the words in the regular l
 \begin{Verbatim}
 $acc = (dog|cat|rat) s? ;
 print $acc ;
+pr $acc ;
 \end{Verbatim}
 
 \noindent
@@ -1336,11 +1429,19 @@ randInput $fsm ;
 \end{Verbatim}
 
 \noindent
-and \texttt{randOutput} will print out a random list of the output (lower-side) strings:
+Currently, the commands \texttt{randUpper}, \texttt{rinput} and
+\texttt{rupper} are synonyms of \texttt{randInput}.
+
+
+Similarly, the \texttt{randOutput} will print out a random list of the output (lower-side) strings:
 
 \begin{Verbatim}
 randOutput $fsm ;
 \end{Verbatim}
+
+\noindent
+Currently, the commands \texttt{randLower}, \texttt{routput} and
+\texttt{rlower} are synonyms of \texttt{randOutput}.
 
 \section{Applications}
 

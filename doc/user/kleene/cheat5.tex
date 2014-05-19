@@ -1,4 +1,6 @@
-\chapter{Built-in Arithmetic-valued Functions}
+\chapter{Pre-defined Arithmetic-valued Functions}
+
+\section{General}
 
 \begin{tabular}{|l|}
 \hline
@@ -16,7 +18,39 @@
 \verb!#^double(#num)! or \verb!#^float(#num)! \\
 \verb!#^rint(#num)! \\
 \hline 
-\verb!#^getIntCpv($fst)! \\
+\verb!#^getIntCpv($fst)! or \verb!#^char2cpv($fst)!\\
+\hline
+\verb!#^log(#num)!\\
+\verb!#^prob2c(#prob)!\\
+\verb!#^pct2c(#pct)!\\
+\hline
+\end{tabular}
+
+\section{Boolean}
+
+\begin{tabular}{|p{13cm}|}
+\hline
+\verb!#^isAcceptor($fst)!\\
+\verb!#^isTransducer($fst)!\\
+\verb!#^isCyclic($fst)!\\
+\verb!#^isEpsilonFree($fst)!\\
+\verb!#^isIBounded($fst)! or \verb!#^isUBounded($fst)!\\
+\verb!#^isOBounded($fst)! or \verb!#^isLBounded($fst)!\\
+\verb!#^isIDeterministic($fst)! or \verb!#^isUDeterministic($fst)!\\
+\verb!#^isODeterministic($fst)! or \verb!#^isLDeterministic($fst)!\\
+\hline
+\verb!#^isEmptyLanguage($fst)!\\
+\verb!#^isEmptyStringLanguage($fst)!\\
+\verb!#^containsEmptyString($fst)!\\
+\verb!#^isString($fst)! or \verb!#^isSingleStringLanguage($fst)!\\
+\verb!#^isUniversalLanguage($fst)! (not reliable yet)\\
+\hline
+\verb!#^containsOther($fst)!\\
+\verb!#^isWeighted($fst)!\\
+\verb!#^isRtn($fst)! or \verb!#^isRTN($fst)!\\
+\hline
+\verb!#^equivalent($one, @two, #delta=#kDeltaFromOpenFst)!\\
+\verb!#^randEquivalent($one, $two, #delta=#kDeltaFromOpenFst,! \verb!#seed=60, #path_length=60)!\\
 \hline
 \end{tabular}
 
