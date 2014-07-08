@@ -816,9 +816,6 @@ public class OpenFstLibraryWrapper
 			resultFst = promoteSigmaOther(resultFst, subFst) ;
 			subFst = promoteSigmaOther(subFst, resultFst) ;
 
-			System.out.println("subnetworksFst from symtab: " +
-			subnetworksFst.getFromSymtab()) ;  
-
 			Fst prefixedSub = Concat3Fsts(	
 										subnetworksFst,
 										OneArcFst(symmap.putsym(prefix + dep)),
@@ -1256,9 +1253,6 @@ public class OpenFstLibraryWrapper
 													symmap.getint(otherIdSym), 
 													symmap.getint(otherNonIdSym)) ;
 				} else if (isTrivialRtnRefCrossproduct(a, b)) {
-					System.out.println("TrivialRtnRefXProduct") ;  
-					// i.e. if user wrote something like '$foo':'$foo'
-					// allow it (avoiding the crossproduct operation)
 					resultFst = a ;
 				} else {
 					throw new FstPropertyException("In SapRtnConventions, crossproduct A:B is illegal when A contains references to subnets, and B is not the empty string language.") ;
@@ -1822,10 +1816,6 @@ public class OpenFstLibraryWrapper
 	}
 
 	public Fst ShortestPath(Fst a, int nshortest) {
-		System.out.println("Call to wrapper's ShortestPath") ;
-		System.out.println("isSapRtnConventions: " + isSapRtnConventions()) ;
-		System.out.println("getIsRtn: " + a.getIsRtn()) ;
-
 		checker.ShortestPath(a) ;
 
 		Fst resultFst = new Fst(shortestPathNative(a.getFstPtr(), nshortest)) ;
@@ -1940,17 +1930,6 @@ public class OpenFstLibraryWrapper
 		constrain.getSigma().add(leftDelimCpv) ;
 		for (int i = 0; i < cpvArray.length; i++)
 			constrain.getSigma().add(cpvArray[i]) ;
-		// KRB: debug
-		/*
-		FstDump(constrain) ;
-		HashSet<Integer> debugSigma = constrain.getSigma() ;
-		Iterator<Integer> debugIter = debugSigma.iterator() ;
-		System.out.println("\nSigma: " ) ;
-		while (debugIter.hasNext()) {
-			System.out.print(" " + debugIter.next().intValue()) ;
-		}
-		*/
-
 		Fst consume =      new Fst(eqConsumeSymbolFstNative(        other_id, leftDelimCpv, cpvArray)) ;
 		// now set the sigma for consume (leftDelimCpv, and everything in cpvArray; not epsilon or rightDelimCpv)
 		// and contains other
@@ -1970,13 +1949,9 @@ public class OpenFstLibraryWrapper
 		// Compose the three Fsts together to make constrainConsume fst (Hulden's "Move" Fst)
 		Fst constrainConsume = Compose3Fsts(constrain, consume, deleteDelims) ;
 
-		System.out.println("leftDelimCpv: " + Integer.toHexString(leftDelimCpv)) ;
-		System.out.println("rightDelimCpv: " + Integer.toHexString(rightDelimCpv)) ;
-
 		// Now repeatedly compose this constrainConsume under fst until the constraints are complete
 		// (no more redup-delimiter characters on the output/lower side of the fst)
 		while (Arrays.binarySearch(outputCpvArray, leftDelimCpv) >= 0) {
-			System.out.println("\nIn while loop. outputCpvArray.length is: " + outputCpvArray.length + " ") ;
 			fst = Compose(fst, constrainConsume) ;
 
 			outputCpvArray = GetOutputLabels(fst) ;

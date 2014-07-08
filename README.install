@@ -7,7 +7,7 @@
 				for Windows installation, but Kleene on
 				Windows is not available at this time)
 
-				2014-05-18
+				2014-07-07
 
 This README.install file explains how to install the pre-compiled
 binary releases of Kleene on OS X and Linux.  These binary releases
@@ -50,7 +50,7 @@ kleene-mac-W.X.Y.Z.tar.gz
 
 In what follows, the gzipped tarball will be called the "release tarball."
 Unless you build Kleene yourself from the source files, you will need to
-obtain a copy of the gzipped tarball, either from the Kleene website
+obtain a copy of the gzipped release tarball, either from the Kleene website
 (www.kleene-lang.org) or from some other mirror or source.
 
 2.  Pre-requisites:
@@ -87,24 +87,28 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 						and you should have a .cshrc file in your
 						home directory)
 
+	The path names may vary.
+	
 	If you're running some other shell, you will probably need to
 	modify the instructions below.
 
-	b.  You need to have Java version 1.5 or higher installed.  To check
+	b.  You need to have Java version 1.6 or higher installed.  To check
 	the version of your Java installation, open a Terminal, and at the
 	command line enter the following
 
 	$ java -version
 
-	On my Mac, this currently returns
+	On my older Mac laptop, on which the OS X release is compiled, this 
+	currently returns
 
-	java version "1.8.0_05"
+	java version "1.6.0_65"
 
-	On my Linux system, this currently returns
+	On my Linux Mint system, on which the Linux release is compiled, this 
+	currently returns
 
-	java version "1.7.0_21"
+	java version "1.6.0_31"
 
-	Install or update Java if necessary on your system to get version 1.5
+	Install or update Java if necessary on your system to get version 1.6
 	or higher.
 
 	c.  To allow Kleene to draw finite-state networks on your screen:
@@ -118,8 +122,8 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	as appropriate for your version of OS X).  As of 2014-05-18, there was
 	not a version of GraphViz compiled especially for Mavericks, but the
 	"mountain lion" version is reputed to work on Mavericks (and seems
-	to work for me on Mavericks.)
-	When you download the .pkg file, e.g.  graphviz-2.38.0.pkg, double-click
+	to work perfectly for me on Mavericks.)
+	When you download the .pkg file, e.g. graphviz-2.38.0.pkg, double-click
 	it and follow the installer instructions.
 
 	If you are on OS X and managed to install a native version of OS X,
@@ -142,7 +146,8 @@ obtain a copy of the gzipped tarball, either from the Kleene website
 	Otherwise, surf to http://www.graphvix.org/Download.php and follow
 	the installation instructions there.
 
-	Once you have installed GraphViz, from a Terminal command line, enter
+	Once you have installed GraphViz, launch a new Terminal and at the
+	command line enter
 
 	$ which dot
 
@@ -452,7 +457,7 @@ or	libicuuc.Y.Z.so			(for Linux)
 4.  Launching Kleene via a convenient alias (recommended)
 
 	If you've followed the instructions carefully, Kleene should now be installed, 
-	and you shouldn't need to install again until you upgrade to a new version.  
+	and you shouldn't need to install it again until you upgrade to a new version.  
 
 	I am currently of the opinion that the best way to launch Kleene is using
 	a simple alias that you define in your .bashrc, .tcshrc or .cshrc file.  
@@ -480,7 +485,7 @@ or	libicuuc.Y.Z.so			(for Linux)
 	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -jar $HOME/kleene/current/Kleene.jar'
 
 
-	Then save the .bashrc (or .tcshrc or .cshrc) file with the new alias, open a new terminal, 
+	Then save the .bashrc (or .tcshrc or .cshrc) file with the new alias, launch a new terminal, 
 	and at the command line just enter
 	
 	$ kleene
@@ -577,7 +582,7 @@ or	libicuuc.Y.Z.so			(for Linux)
 
 	$ kleene
 
-	to launch.
+	to launch Kleene.
 
 	Again, the aliases shown in step 4, which set (DY)LD_LIBRARY_PATH just before
 	launching Kleene, are probably preferable.
@@ -613,11 +618,11 @@ or	libicuuc.Y.Z.so			(for Linux)
 	(You can change the default encoding of your operating system, but
 	before you do it, make sure that you know what you're doing.)
 
-	I obviously want Kleene (which is written in Java) to treat my
+	In my case, I obviously want Kleene (which is written in Java) to treat my
 	Kleene script files, by default, as UTF-8.
 
 	When Java interrogates the native operating-system encoding on my old
-	pre-Mavericks Mac, it _should_ find UTF-8; but (annoyingly) it finds
+	pre-Mavericks Mac, it _should_ find UTF-8; but (very annoyingly) it finds
 	MacRoman.  It's as if someone decided that Mac users writing Java
 	programs on older Macs would never have the audacity to change from
 	the MacRoman encoding.  The problem lies somewhere in the Java versions
@@ -638,7 +643,7 @@ or	libicuuc.Y.Z.so			(for Linux)
 	alias kleene 'env DYLD_LIBRARY_PATH=$HOME/kleene/current java -Dfile.encoding=UTF-8 -jar $HOME/kleene/current/Kleene.jar'
 
 	The key point of these aliases is that when java is launched, the file.encoding
-	is force-set to UTF-8.  Again, this is not necessary on Linux or Mavericks,
+	is set by brute force to UTF-8.  Again, this is not necessary on Linux or Mavericks,
 	and its needed only if you find that Kleene/Java is not correctly interpreting
 	the default encoding of your system.
 

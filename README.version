@@ -1,6 +1,13 @@
 
 		Kleene Version Notes
 
+2014-07-07
+	Commit of version 0.9.4.1
+
+2014-07-07	Fixed a small bug in the GUI: calls to append
+	text to the History pane of the PseudoTerminal widget
+	are now always executed in the Event Dispatch Thread
+
 2014-05-18
 	Commit of version 0.9.4.0
 

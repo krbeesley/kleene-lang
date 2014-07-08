@@ -321,16 +321,31 @@ public class PseudoTerminalInternalFrame extends JInternalFrame {
 		return menuBar ;
     }
 
+	// If appendToHistory is called from inside the GUI, the call will already
+	// be in the Event Dispatch Thread; but this method can
+	// also be called from _outside_ the Event Dispatch Thread,
+	// in particular when a Kleene statement is parsed and
+	// evaluated by the Interpreter, and the Interpreter posts
+	// its results to the History pane.  That's when one needs
+	// to call SwingUtilities.invokeLater, which performs the posting
+	// operation in the Event Dispatch Thread.  If you don't do
+	// this, then postings can be mysteriously lost in non-reproducible
+	// ways.
     public void appendToHistory(String s) {
-		historyArea.append(s + newline) ;
+		final String str = s ;
+		if (SwingUtilities.isEventDispatchThread()) {
+			historyArea.append(str + newline) ;
+		} else {
+			SwingUtilities.invokeLater(new Runnable() {
+				public void run() {
+					historyArea.append(str + newline) ;
+				}
+			});
+		}
     }
 
     public void clear() {
 		historyArea.setText("") ;
-    }
-
-    public void append(String str) {
-		historyArea.append(str) ;
     }
 
     public JTextField getInputField() {
