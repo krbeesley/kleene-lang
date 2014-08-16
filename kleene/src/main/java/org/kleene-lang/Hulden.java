@@ -258,7 +258,9 @@ public class Hulden {
 					lib.OneArcFst(idMarkerSym),
 					lib.OneArcFst(hardEpsilonSym)
 					// do not include ruleWordBoundarySym here,
-					// needs to be left in contexts
+					// needs to be left in contexts, at least
+					// in cases where the contexts explicitly
+					// include #
 		) ;
 	}
 

@@ -587,12 +587,20 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				leftContext = lib.CopyFst(leftContext) ;
 			}
 			leftContext.getSigma().add(symmap.putsym(hulden.restDelimSym)) ;
+			
+			// KRB:  this didn't work to solve the a -> b / . _ c # problem,
+			// where ac was getting mapped to bc.  If this is included, the
+			// rule's upper side doesn't include ac at all.
+			//leftContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		}
 		if (rightContext.getContainsOther()) {
 			if (rightContext.getFromSymtab()) {
 				rightContext = lib.CopyFst(rightContext) ;
 			}
 			rightContext.getSigma().add(symmap.putsym(hulden.restDelimSym)) ;
+
+			// KRB:  see comment above
+			//rightContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		}
 
 		// each individual context in a restriction expression gets
