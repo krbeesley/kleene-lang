@@ -475,11 +475,20 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		}
 	}
 
+	Fst correctSigmaOther(Fst fst) {
+		lib.CorrectSigmaOtherInPlace(fst) ;
+		// OTHER should never match the # used in rules KRB ruleany
+		if (fst.getContainsOther()) {
+			fst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		}
+		return fst ;
+	}
+
 	// KRB change 2012-10-16, 17
 	Fst interpRestrictionExp(Fst lhs, Fst rhs, boolean forAlternationRule) {
 		// When compiling stand-alone restriction expressions like
 		// a => L _ R
-		// then if fst Two below contains .#. (the ruleWordBoundarySymbol), 
+		// then if fst Two below contains .#. (the ruleWordBoundarySym), 
 		// then you need 
 		// to compute Three as shown below, as the complement of Two relative to
 		// .#. \.#.* .#.
@@ -1079,7 +1088,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			throw e ;
 		}
 
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
+		
 
 		return fst ;
 	}
@@ -2986,7 +2996,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// and should leave an Fst node on the stack
 		Fst fst = (Fst) stack.peek() ;
 
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
 		return data ;
     }
     public Object visit(ASTcomposed_exp node, Object data) {
@@ -6968,6 +6978,10 @@ class RuleSemanticParts {
 		Fst positiveFst = (Fst)stack.pop() ;
 
 		Fst resultFst = lib.Complement(positiveFst) ;
+
+		// the result should never match the # used in rules KRB ruleany
+		resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+
 		
 		stack.push(resultFst) ;
 		return data ;
@@ -7262,6 +7276,9 @@ class RuleSemanticParts {
 
 		Fst resultFst = lib.Difference(lib.SigmaFst(), charUnionFst) ;
 
+		// the result should never match the # used in rules KRB ruleany
+		resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+
 		stack.push(resultFst) ;
 		return data ;
     }
@@ -7532,7 +7549,7 @@ class RuleSemanticParts {
 		int otherNonIdSymVal = symmap.putsym(lib.otherNonIdSym) ;
 
 		lib.FlattenInPlace(fst, hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
 		stack.push(fst) ;
 		return data ;
 	}
@@ -7553,7 +7570,7 @@ class RuleSemanticParts {
 		int otherNonIdSymVal = symmap.putsym(lib.otherNonIdSym) ;
 
 		lib.FlattenInPlace(fst, hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
 		stack.push(fst) ;
 		return data ;
 	}
@@ -7572,7 +7589,7 @@ class RuleSemanticParts {
 
 		//lib.Flatten4RuleInPlace(fst, hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
 		lib.Flatten4RuleInPlace(fst, hardEpsilonSymVal) ;
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
 		stack.push(fst) ;
 		return data ;
 	}
@@ -7594,7 +7611,7 @@ class RuleSemanticParts {
 
 		//lib.Flatten4RuleInPlace(fst, hardEpsilonSymVal, otherIdSymVal, otherNonIdSymVal) ;
 		lib.Flatten4RuleInPlace(fst, hardEpsilonSymVal) ;
-		lib.CorrectSigmaOtherInPlace(fst) ;
+		correctSigmaOther(fst) ;
 		stack.push(fst) ;
 		return data ;
 	}
@@ -11045,14 +11062,19 @@ class RuleSemanticParts {
     }
     public Object visit(ASTany node, Object data) {
 		// syntax is just  .   (dot)
-		stack.push(lib.SigmaFst()) ;
+		Fst anyFst = lib.SigmaFst() ;
+		// The # symbol used in rules should never be matched by . (any) KRB ruleany
+		anyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		stack.push(anyFst) ;
 		return data ;
     }
 	public Object visit(ASTany_any node, Object data) {
 		// syntax is just  .:. (perhaps with whitespace), tokenized
 		//   as a single token (may contain whitespace)
-
-		stack.push(lib.SigmaSigmaFst()) ;
+		Fst anyAnyFst = lib.SigmaSigmaFst() ;
+		// The # symbol used in rules should never be matches by .:. KRB ruleany
+		anyAnyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		stack.push(anyAnyFst) ;
 		return data ;
 	}
 	public Object visit(ASTepsilon node, Object data) {

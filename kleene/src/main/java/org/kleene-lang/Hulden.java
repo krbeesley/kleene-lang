@@ -77,6 +77,8 @@ public class Hulden {
 	public String hardEpsilonSym   = "**@0@" ;  // following Hulden's notation
 
 	// N.B. needs to be considered in the promotion of OTHER
+	// (the latest thinking is that it should never be matched
+	// by OTHER)
 	// See also the tokenization of WORD_BOUNDARY in Kleene.jjt
 	public  String ruleWordBoundarySym = "**@#@" ; // again following Hulden's notation
 
