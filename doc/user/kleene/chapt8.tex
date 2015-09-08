@@ -298,43 +298,43 @@ function will not be fully reliable until a ``compact sigma'' function is implem
 
 \subsection{Assert and Require Statements}
 
-The \verb!assert(#numexp, $regexp)! statement has a required arithmetic first
+The \verb!assert #numexp, $regexp ;! statement has a required arithmetic first
 argument, which is analyzed as a boolean, and an optional second
 regular-expression argument, which must denote a single-string language.  If
 the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
 statement.  But if the first argument analyzes as false, a runtime exception is thrown and
 the single-string second argument, if present, is used as the exception
-message.  The \verb!assert(#numexp, $regexp)! statement is typically used
+message.  The \verb!assert #numexp, $regexp ;! statement is typically used
 for testing.
 
 \begin{Verbatim}[fontsize=\small]
 $fst = a - a ;
-assert(#^isEmptyLanguage($fst), 
-        "Should denote the empty language.") ;
+assert #^isEmptyLanguage($fst), 
+        "Should denote the empty language." ;
 
 $fst2 = a* ;
-assert(#^containsEmptyString($fst2), 
-        "Should contain the empty string.") ;
+assert #^containsEmptyString($fst2), 
+        "Should contain the empty string." ;
 \end{Verbatim}
 
-In complete parallel, the \verb!require(#numexp, $regexp)! statement also has a required arithmetic first
+In complete parallel, the \verb!require #numexp, $regexp ;! statement also has a required arithmetic first
 argument, which is analyzed as a boolean, and an optional second
 regular-expression argument, which must denote a single-string language.  If
 the first argument analyzes as true, Kleene takes no further action and control simply passes to the next
 statement.  But if the first argument analyzes as false, a runtime exception is thrown and
 the single-string second argument, if present, is used as the exception
-message.  The \verb!require(#numexp, $regexp)! statement is typically used
+message.  The \verb!require #numexp, $regexp ;! statement is typically used
 in user-defined functions to impose semantic restrictions on the
-arguments.\footnote{The need for separate \verb!assert(#numexp, $regexp)!
-and \verb!require(#numexp, $regexp)! arguments could be debated.  One
+arguments.\footnote{The need for separate \verb!assert #numexp, $regexp;!
+and \verb!require #numexp, $regexp ;! arguments could be debated.  One
 possibility would be to implement a global switch that would cause all
-\verb!assert(#numexp, $regexp)! statements, but not 
-\verb!require(#numexp, $regexp)! statements, to be ignored at runtime.}
+\verb!assert #numexp, $regexp ;! statements, but not 
+\verb!require #numexp, $regexp ;! statements, to be ignored at runtime.}
 
 \begin{Verbatim}[fontsize=\small]
 #^myIntersect($a, $b) {
-	require(#^isAcceptor($a) && #^isAcceptor($b), 
-    "The arguments to #^myIntersect must denote an acceptor.") ;
+	require #^isAcceptor($a) && #^isAcceptor($b), 
+    "The arguments to #^myIntersect must denote an acceptor." ;
 
 	return $a & $b ;
 }

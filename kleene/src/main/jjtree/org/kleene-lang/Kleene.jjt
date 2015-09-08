@@ -667,7 +667,10 @@ public class Kleene {
 		return false ;
 	}
 
-	// used in semantic LOOKAHEAD for the expression() production
+	// used in semantic LOOKAHEAD for the expression() production,
+	// 	especially in argument lists to a function.  Args can be
+	//	regular expressions or arithmetic expressions, so lookahead
+	//	is needed before committing the parser.
 	boolean mustBeRegexp() {
 		int i ;
 		// skip over any LPAREN tokens 
@@ -694,6 +697,13 @@ public class Kleene {
 			||	t.kind == NET_FUNC_ID_BEFORE_ARGLIST	// keep this here; the tokenizer
 														// has already determined that it's
 														// followed by a left paren
+			// for left-arrow transducer-style rules
+			||	t.kind == LEFT_RULE_ARROW
+			||	t.kind == LEFT_RULE_ARROW_OPT
+			||	t.kind == LEFT_RULE_ARROW_MAX
+			|| 	t.kind == LEFT_RULE_ARROW_OPT_MAX
+			||	t.kind == LEFT_RULE_ARROW_MIN
+			||	t.kind == LEFT_RULE_ARROW_OPT_MIN
 
 			// built-in functions followed by a left paren, i.e.
 			// there is some kind of arg list following.
@@ -5658,28 +5668,100 @@ void concatenation_exp(): {}
   ( complement_exp() ( LOOKAHEAD(1) complement_exp() )* ) #concatenation_exp(>1)
 }
 
+// **************************************************************
+// START EXPERIMENTAL : and *, +, {4}, etc. have equal precedence
+// so that a*:b parses as (a*):b and a*:b* compiles as ((a*):b)*
+// xfst and FOMA do it this way.  Lauri tells me that * and + used
+// to have higher precedence than crossproduct in xfst, but that Pasi
+// Tapanainen pointed out that people used to Two-Level Morphology
+// thought of a:b as being a single letter in the alphabet.  
+// With twolc pretty dead (except in Scandinavia and Finland), it's
+// probably time to let this argument go.
+
 // prefix operator
 // even numbers of tildes cancel out, e.g.  ~~a
+// void complement_exp():
+// { boolean b = false ; }
+// {
+//   // any even number of tildes cancels out, right in the syntax
+// //  ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* crossproduct_exp() #complement_exp(b)
+//   ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* iterated_exp() #complement_exp(b)
+// }
+
+// // postfix iteration operators, * + ? {4} etc., make a left-branching tree
+// // don't allow a** etc???
+
+// void iterated_exp(): {}
+// {
+//    primary_regexp()
+//                 (  LOOKAHEAD(1) (  <ASTERISK_OP>        #kleene_star(1)
+//                                 |  <PLUS_SIGN_OP>       #kleene_plus(1)
+//                                 |  <QUESTION_MARK>      #optional(1)
+//		                   	     |  iteration_exp()      #iterated_exp(2)
+//								 |  <CROSSPRODUCT_OP> primary_regexp() #crossproduct_exp(2)
+//                                 )
+//		         )*
+//}
+//
+//// N.B. iteration_exp is not in the precedence hierarchy
+//// e.g.  {2} or {2,4} or { 2, } or (I've thought about this)
+//// {,4}, which is equivalent to {0,4}
+//void iteration_exp(): {}
+//{
+//  <LCURLY> ( numexp() ( <COMMA_OP> ( numexp()  <RCURLY>  #iteration_low_high(2)
+//                                   | <RCURLY>            #iteration_low(1)
+//                                   )
+//                      | <RCURLY>                         #iteration_exact(1)
+//                      )
+//           | <COMMA_OP> numexp() <RCURLY>                #iteration_high(1)
+//           )
+//}
+
+// END EXPERIMENTAL PRECEDENCE * and : have the same precedence
+// ****************************
+
+
+
+// ************************************************
+// START EXPERIMENTAL PRECEDENCE * higher than :
+// Make * and other iteration operators higher precedence than : (crossproduct)
+// so that a*:b parses as (a*):b and a*:b* parses as (a*):(b*)
+
+// prefix complement operator ~
+// even numbers of tildes cancel out, e.g.  ~~z is equiv to z
 void complement_exp():
 { boolean b = false ; }
 {
   // any even number of tildes cancels out, right in the syntax
-  ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* iterated_exp() #complement_exp(b)
+  ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* crossproduct_exp() #complement_exp(b)
 }
+
+// 2015-02-12 made crossproduct lower precedence than the postfixed
+// iteration operators to allow compilation of
+// $r = a*:b ;	// previously this didn't compile, while (a*):b did
+// and
+// $s = a*:b* ;
+
+void crossproduct_exp(): {}
+{
+    ( iterated_exp() ( LOOKAHEAD(1) <CROSSPRODUCT_OP> iterated_exp())? ) #crossproduct_exp(>1)
+}
+
 
 // postfix operators, make a left-branching tree
 // don't allow a** etc???
 
 void iterated_exp(): {}
 {
-  crossproduct_exp() (  LOOKAHEAD(1) ( <ASTERISK_OP>    #kleene_star(1)
-                                               |  <PLUS_SIGN_OP>  #kleene_plus(1)
-                                               |  <QUESTION_MARK> #optional(1)
-		                   	                   |  iteration_exp() #iterated_exp(2)
-                                               )
-		                       )*
+  primary_regexp() (  LOOKAHEAD(1) (  <ASTERISK_OP>   #kleene_star(1)
+                                   |  <PLUS_SIGN_OP>  #kleene_plus(1)
+                                   |  <QUESTION_MARK> #optional(1)
+		                   	       |  iteration_exp() #iterated_exp(2)
+                                   )
+		           )*
 }
 
+// N.B. iteration_exp is not in the precedence hierarchy
 // e.g.  {2} or {2,4} or { 2, } or (I've thought about this)
 // {,4}, which is equivalent to {0,4}
 void iteration_exp(): {}
@@ -5693,10 +5775,58 @@ void iteration_exp(): {}
            )
 }
 
-void crossproduct_exp(): {}
-{
-    ( primary_regexp() ( LOOKAHEAD(1) <CROSSPRODUCT_OP> primary_regexp())? ) #crossproduct_exp(>1)
-}
+// END EXPERIMENTAL PRECEDENCE * higher than :
+// *******************************************************
+
+
+// *******************************************************
+// START ORIGINAL PRECEDENCE : higher than *, +, {4}, etc.
+// caused problem, a*:b didn't compile
+// see just above for alternatives
+
+// prefix operator
+// even numbers of tildes cancel out, e.g.  ~~a
+//void complement_exp():
+//{ boolean b = false ; }
+//{
+//  // any even number of tildes cancels out, right in the syntax
+//  ( ( <TILDE_OP> | <TILDE_OP_ASCII> ) { b = !b ; } )* iterated_exp() #complement_exp(b)
+//}
+//
+//// postfix operators, make a left-branching tree
+//// don't allow a** etc???
+//
+//void iterated_exp(): {}
+//{
+//  crossproduct_exp() (  LOOKAHEAD(1) (  <ASTERISK_OP>   #kleene_star(1)
+//                                     |  <PLUS_SIGN_OP>  #kleene_plus(1)
+//                                     |  <QUESTION_MARK> #optional(1)
+//		                   	           |  iteration_exp() #iterated_exp(2)
+//                                     )
+//		             )*
+//}
+//
+//// N.B. iteration_exp is not in the precedence hierarchy
+//// e.g.  {2} or {2,4} or { 2, } or (I've thought about this)
+//// {,4}, which is equivalent to {0,4}
+//void iteration_exp(): {}
+//{
+//  <LCURLY> ( numexp() ( <COMMA_OP> ( numexp()  <RCURLY>  #iteration_low_high(2)
+//                                   | <RCURLY>            #iteration_low(1)
+//                                   )
+//                      | <RCURLY>                         #iteration_exact(1)
+//                      )
+//           | <COMMA_OP> numexp() <RCURLY>                #iteration_high(1)
+//           )
+//}
+//
+//void crossproduct_exp(): {}
+//{
+//    ( primary_regexp() ( LOOKAHEAD(1) <CROSSPRODUCT_OP> primary_regexp())? ) #crossproduct_exp(>1)
+//}
+
+// END ORIGINAL PRECEDENCE : higher than *, +, {4}, etc.
+// *****************************************************
 
 //******************** primary regexp *********************************
 
@@ -5712,8 +5842,8 @@ void primary_regexp():
 | LOOKAHEAD({ getToken(1).kind == RRPROD_ID && parsing_rrprod_def == true })
   rrprod_id()
 
-| any()                       // "dot" (.) match any char
-| any_any()					  //  .:.
+| any()                       // "dot" (.) match any char, or map any char to itself
+| any_any()					  //  .:.  map any char to any char
 | <LPAREN> regexp() <RPAREN>
 | double_quoted_string()
 | epsilon()                   // U+03F5 GREEK LUNATE EPSILON SYMBOL

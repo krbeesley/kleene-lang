@@ -328,9 +328,9 @@ public class PseudoTerminalInternalFrame extends JInternalFrame {
 	// evaluated by the Interpreter, and the Interpreter posts
 	// its results to the History pane.  That's when one needs
 	// to call SwingUtilities.invokeLater, which performs the posting
-	// operation in the Event Dispatch Thread.  If you don't do
-	// this, then postings can be mysteriously lost in non-reproducible
-	// ways.
+	// operation in the Event Dispatch Thread (event dispatch thread).  
+	// If you don't do this, then postings can be mysteriously lost in 
+	// non-reproducible ways.
     public void appendToHistory(String s) {
 		final String str = s ;
 		if (SwingUtilities.isEventDispatchThread()) {

@@ -24,6 +24,6 @@
 public interface KleeneGuiConstants {
 	public static final String VERSION_NUMBER = "0.9.4.2" ;
 
-	public static final String COPYRIGHT_YEAR_RANGE = "2006-2014" ;
+	public static final String COPYRIGHT_YEAR_RANGE = "2006-2015" ;
 }
 

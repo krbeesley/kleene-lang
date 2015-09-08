@@ -16,7 +16,7 @@ WINPORT_DIR=$(CURDIR)/../../winport
 include $(WINPORT_DIR)/os_type.mk
 
 # the basename of the icu library
-ICU4C_BASENAME=icu4c-51_1
+ICU4C_BASENAME=icu4c-54_1
 ICU4C_ARCHIVE=$(ICU4C_BASENAME)-src.tgz
 
 # the compiled libraries get stored in ./icu/src/lib

@@ -5,7 +5,7 @@
 \Kleene{} is a programming language for building and manipulating
 finite-state machines (\fsm{}s), and these finite-state machines can be
 used as tokenizers, spelling checkers, spelling correctors,
-morphological analyzer/generators, shallow parsers, speech generators
+morphological analyzer\slash{}generators, shallow parsers, speech generators
 and speech recognizers.
 Applications implemented using finite-state machines are mathematically
 beautiful, unusually modifiable and re-usable, and typically more
@@ -21,7 +21,7 @@ firmly in the tradition of the \init{at\&t} Lextools
 \citep{roark+sproat:2007},\footnote{\url{http://serrano.ai.uiuc.edu/catms/}}
 the \init{sfst-pl} language
 \citep{schmid:2005},\footnote{\url{http://www.ims.uni-stuttgart.de/projekte/gramotron/SOFTWARE/SFST.html}}
-The \init{hfst}
+the \init{hfst}
 software,\footnote{\url{http://www.ling.helsinki.fi/kieliteknologia/tutkimus/hfst/}}
 the Xerox/\acro{parc} finite-state toolkit
 \citep{beesley+karttunen:2003};\footnote{\url{http://www.fsmbook.com}}
@@ -35,7 +35,7 @@ low-level finite-state libraries.
 specify finite-state machines, including acceptors that encode
 regular languages and two-projection transducers that encode regular
 relations, using both regular expressions and right-linear
-phrase-structure grammars. The \fsm{}s can be weighted, under the
+phrase-structure grammars. The \fsm{}s can be weighted under the
 Tropical Semiring, or unweighted.  The language supports variables, 
 user-defined functions and a rich set of alternation-rule notations, 
 plus familiar control structures such as \verb!if-elsif-else!
@@ -82,6 +82,7 @@ regular languages, and invented the metalanguage of regular expressions, which i
 commonly pronounced /kliːn/, like the English word \emph{clean}, 
 or /ˈkliːni/, but Kleene himself reportedly pronounced it
 /ˈkleɪni/.\footnote{\url{http://en.wikipedia.org/wiki/Stephen_Cole_Kleene}}
+Feel free to pronounce it any way you like.
 
 \section{Possible Applications}
 
@@ -155,6 +156,10 @@ A \emph{regular language} is a set of strings that can be encoded as a
 finite-state acceptor.  A \emph{regular relation}
 is a set of ordered string pairs that can be
 encoded as a two-projection (or ``two-tape'') finite-state transducer.
+In some traditions, the term \emph{rational} is used instead of
+\emph{regular}.
+
+
 Theoretically, transducers can have any number of projections, but most
 practical implementations---including the
 Xerox/\acro{parc}, \init{at\&t}, \init{sfst} and OpenFst implementations---have been limited to two.  Kleene can be used to build finite-state acceptors
@@ -176,13 +181,16 @@ ambiguous; but some are well established and almost unavoidable in the field.  I
 Where it is important to distinguish a finite-state machine as an acceptor, it will be
 called an acceptor, without abbreviation.
 
-Complicating the terminological issue is the fact that OpenFst finite-state machines are always two-projection
-transducers in their structure; each arc in an OpenFst finite-state machine has an ``input
+Complicating the terminological issue is the fact that OpenFst
+finite-state machines are always two-projection transducers in their
+underlying computer-memory structure; each arc in an OpenFst finite-state machine has an ``input
 label'' and an associated ``output label.''  In the OpenFst
 implementation of finite-state machines, an acceptor is just a special
-case of a transducer, which can also be considered an \emph{identity transducer}, wherein each input label is equal to
-its associated output label.  These structural issues, and the terminology, will be
-discussed again in more detail below in a section on how finite-state machines are
-implemented and visualized in various traditions.
+case of a transducer wherein each input label is equal to its associated
+output label.  Such an acceptor can also be viewed and used as an
+\emph{identity transducer}.  These structural issues, and the
+terminology, will be discussed again in more detail below in a section
+on how finite-state machines are implemented and visualized in various
+traditions.
 
 

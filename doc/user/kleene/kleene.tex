@@ -21,7 +21,8 @@
 							% implements smart quotes and turns ---
 							% into a dash, etc.)
 %\defaultfontfeatures{Mapping=tex-text} 	% for all subsequent fonts
-\setmainfont[Mapping=tex-text]{Charis SIL}
+% need Renderer=ICU to get small caps
+\setmainfont[Mapping=tex-text,Renderer=ICU]{Charis SIL}
 \setsansfont[Mapping=tex-text]{Charis SIL}
 
 %\usepackage[letterpaper,layoutwidth=6in,layoutheight=9in,top=5.0pc,textheight=43.60pc,inner=4.0pc,textwidth=27pc,twoside=true,showcrop=true]{geometry}
@@ -89,6 +90,10 @@
 						%    impossible
 						% \cprotect\footnote{}
 
+\usepackage{textcomp}
+% provides \textlangle{} and \textrangle{}
+% rather flat angle brackets
+
 \usepackage[outerbars]{changebar}
 % supports \cbstart and \cbend, also the changebar environment
 % N.B. that changebars don't seem to work well over page breaks
@@ -151,7 +156,9 @@
 \newcommand{\noodle}{\ensuremath{\sim}}
 
 % an acronym, strictly speaking, is pronounced as one word: NASA
-\providecommand{\acro}{}\renewcommand{\acro}{\textsc}
+%\providecommand{\acro}{}\renewcommand{\acro}{\textsc}
+\providecommand\acro[1]{}
+\renewcommand\acro[1]{\textsc{#1}}
 % an initialism is pronounced as a string of letters: CIA, FBI, CDC,
 % USA, AST
 \providecommand{\init}{}\renewcommand{\init}{\MakeUppercase}
@@ -160,6 +167,7 @@
 \newcommand{\ditto}{''}
 \newcommand{\gloss}[1]{`#1'}
 \newcommand{\Kleene}{Kleene}
+\newcommand{\kleene}{Kleene}
 \newcommand{\fsm}{\init{fsm}}
 \newcommand{\fst}{\init{fst}}
 \newcommand{\xml}{\init{xml}}
@@ -193,10 +201,15 @@
 %\newcommand{\CPP}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
 %\def\CPP{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
 % KRB variant of \CPP follows
-\def\CPP{{C\nolinebreak[4]\hspace{-.09em}\raisebox{.3ex}{\footnotesize\bf
-+}\nolinebreak\hspace{-.25em}\raisebox{.3ex}{\footnotesize\bf +}}}
+\newcommand{\CPP}{C\nolinebreak[4]\hspace{-.09em}\raisebox{.3ex}{\footnotesize\bf
++}\nolinebreak\hspace{-.25em}\raisebox{.3ex}{\footnotesize\bf +}}
+
+%\newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
+%\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
 
 \setlength{\headheight}{15pt}	% kills an error msg from fancyhdr
+
+\hyphenation{token-izer token-izers}
 
 \title{The Kleene Language\\
 for Weighted Finite-State Programming:\\
@@ -212,7 +225,7 @@ North Salt Lake\\
 Utah 84054, USA\\
 \texttt{ken.beesley@sap.com}}
 
-\date{13 December 2014}
+\date{September 2015}
 
 
 \begin{document}
@@ -225,7 +238,7 @@ Utah 84054, USA\\
 \null\vfill
 \thispagestyle{empty}
 \begin{center}
-Copyright \copyright{} 2014 SAP AG.\\
+Copyright \copyright{} 2015 SAP AG.\\
 Released under the Apache License, Version 2.\\
 \url{http://www.apache.org/licenses/LICENSE-2.0.html}
 \end{center}
@@ -247,11 +260,12 @@ in speech synthesis and speech recognition.
 \Kleene{} allows programmers to define, build, manipulate and test 
 finite-state machines using regular expressions
 and right-linear phrase-structure grammars; and Kleene supports variables,
-rule-like expressions, user-defined 
+rule-like expressions, built-in functions, user-defined 
 functions and familiar programming-language control
 syntax.  The \fsm{}s can include acceptors and two-projection
-transducers, either weighted under the Tropical Semiring or unweighted.
-If this makes no sense, the purpose of the book is to explain it.
+transducers, which can be weighted under the Tropical Semiring or unweighted.
+If this makes no sense to you right now, the purpose of the book is to
+explain it all.
 
 Pre-edited \Kleene{} scripts can be run from the command line, and a
 graphical user interface is provided for interactive learning, programming
@@ -266,8 +280,8 @@ Kleene runs on OS X and Linux, requiring Java version 1.6 or higher.
 This book assumes only superficial familiarity with regular languages,
 regular relations and finite-state machines.
 
-While readers need not have any experience with finite-state
-programming, those who have no programming experience at all, e.g.\@ in a language
+While readers need not have any previous experience with finite-state
+programming, those who have no programming experience at all, e.g., in a language
 like Java, \CPP{}, Perl, Python, Ruby, etc., will find it difficult.
 
 \subsection*{Implementation}

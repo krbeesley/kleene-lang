@@ -478,13 +478,14 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	Fst correctSigmaOther(Fst fst) {
 		lib.CorrectSigmaOtherInPlace(fst) ;
 		// OTHER should never match the # used in rules KRB ruleany
-		if (fst.getContainsOther()) {
-			fst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
-		}
+		// Rethink:  2015-01-18 perhaps the OTHER in a _rule_ FST should
+		// never match the #
+		//if (fst.getContainsOther()) {
+		//	fst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		//}
 		return fst ;
 	}
 
-	// KRB change 2012-10-16, 17
 	Fst interpRestrictionExp(Fst lhs, Fst rhs, boolean forAlternationRule) {
 		// When compiling stand-alone restriction expressions like
 		// a => L _ R
@@ -545,8 +546,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		Fst Three = null ;
 
-		// KRB 2012-10-16, 17
-
 		if (forAlternationRule) {
 			// don't need to treat the ruleWordBoundarySym as special, because this
 			// is taken care of by the "Base" fst that is also computed when
@@ -578,6 +577,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// KRB:  changed to OptimizeInPlaceForce from OptimizeInPlace
 		lib.OptimizeInPlaceForce(Three) ;
 
+		// KRB:  consider if # should be excluded from OTHER, as in rule FSTs.
+		// I think not, but keep it in mind.
+
 		return Three ;
 	}
 
@@ -596,20 +598,12 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				leftContext = lib.CopyFst(leftContext) ;
 			}
 			leftContext.getSigma().add(symmap.putsym(hulden.restDelimSym)) ;
-			
-			// KRB:  this didn't work to solve the a -> b / . _ c # problem,
-			// where ac was getting mapped to bc.  If this is included, the
-			// rule's upper side doesn't include ac at all.
-			//leftContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		}
 		if (rightContext.getContainsOther()) {
 			if (rightContext.getFromSymtab()) {
 				rightContext = lib.CopyFst(rightContext) ;
 			}
 			rightContext.getSigma().add(symmap.putsym(hulden.restDelimSym)) ;
-
-			// KRB:  see comment above
-			//rightContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		}
 
 		// each individual context in a restriction expression gets
@@ -631,8 +625,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	Fst newNotWordBoundStarFst() {
 		// Hulden \.#.*
 		Fst notWordBoundStar = lib.UniversalLanguageFst() ;
-		// now add the ruleWordBoundarySym to the sigma, so that OTHER here doesn't
-		// cover it
+		// now add the ruleWordBoundarySym to the sigma, 
+		// so that OTHER here doesn't cover it
 		notWordBoundStar.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		return notWordBoundStar ;
 	}
@@ -3092,7 +3086,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 	}
     public Object visit(ASTrule_lhs_transducer node, Object data) {
 		// rule LHS written as a transducer, e.g. the a:b in
-		// a:b -> / left _ right
+		// a:b -> / left _ right or the a*:b in a*:b -> / l _ r
 		// these transducer rules cannot be Markup rules
 		
 		// create a new RuleSyntacticParts to hold the LHS AST
@@ -3149,6 +3143,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 	Fst compileRuleSemanticParts(ArrayList<RuleSemanticParts> listOfSemanticParts) {
 
+		// KRB: debug
+		//System.out.println("\nEntering compileRuleSemanticParts()\n") ;
+		//System.out.println("\nNumber of RuleSemanticParts: " + listOfSemanticParts.size()) ;
+
+
 		// The listOfSemanticParts contains potentially multiple RuleSemanticParts 
 		// objects, which are to be compiled in parallel.  The information in the
 		// possible multiple RuleSemanticParts is used to define three finite-state
@@ -3178,8 +3177,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 		// Rule compilation involves the calculation of a language restriction,
 		// which may have multiple context parts (one for each individual context
 		// in all the parallel rules).  To accomplish this for a set of parallel
-		// rules, each context L _ R is interpreted as [L x \x* x R], 
-		// where x is a special restriction delimiter.  These networks, 
+		// rules, each context L _ R is interpreted as [L x \x* x R], where x is
+		// a special restriction delimiter used only internally.  These networks, 
 		// one for each context, get unioned together, and then at the end
 		// the resulting unionOfContexts is surrounded with \x*, i.e. 
 		// [\x* unionOfContexts \x*]
@@ -3197,10 +3196,13 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 		Fst Constraints = lib.UniversalLanguageFst() ;
 
-		// iterate through the list of RuleSemanticParts objects, which need to be
+		// iterate through the list of RuleSemanticParts objects that need to be
 		// compiled in parallel
 		for (Iterator<RuleSemanticParts> iter = listOfSemanticParts.iterator(); 
 			 iter.hasNext() ; ) {
+
+			// KRB: debug
+			//System.out.println("Loop start for one RuleSemanticPart") ;
 
 			RuleSemanticParts rsempt = iter.next() ;
 
@@ -3212,15 +3214,16 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			Fst A = null ;	// upper LHS
 			Fst B = null ;	// lower LHS
 
-			Fst ABTransducer = null ;  // for transducer rules only
+			Fst ABTransducer = null ;  // used only for transducer rules
 
-			// Symbols X, Y and Z are used for markup rules (X is the "input" 
+			// Symbols X, Y and Z are used only for markup rules (X is the "input" 
 			// expression, which could be upper or lower
 			// 	depending on the rule arrow direction; Y is always the left insertion,
 			// 	Z is always the right insertion) either
 			// X -> Y ... Z
 			// or
 			// Y ... Z <- X
+			// Used for Markup Rules
 			Fst X = null ;	// input side (upper or lower)
 			Fst Y = null ;	// leftMarkupInsertion
 			Fst Z = null ;	// rightMarkupInsertion
@@ -3233,14 +3236,28 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			//							RuleMatchType.ALL, .MAX_L2R, .MIN_L2R, .MAX_R2L, .MIN_R2L
 			RuleMapType mapType = rsempt.getMapType() ;
 			//							RuleMapType.MAP or .MARKUP
-			boolean epenthesis = rsempt.getEpenthesis() ;
+			boolean epenthesis = rsempt.getEpenthesis() ;  // true iff epenthesis
 
 			if (rsempt.getTransducerLhs() != null) {
-				// then this is a transducer rule, e.g.  a:b -> / ...
+
+				// KRB: debug
+				//System.out.println("This is a transducer-style rule, point A.") ;
+
+				// Then this is a transducer rule, e.g.  a:b -> / ...
 				// transducer rules cannot be markup rules
 				ABTransducer = rsempt.getTransducerLhs() ;
+				ABTransducer.setFromSymtab(true) ;  // protect it when extracting projections
 
-				// need one of these (A or B, depending on the arrow direction) for computing Constraints
+				// KRB: debug
+				//System.out.println("Dumping ABTransducer at point A") ;
+				//lib.FstDump(ABTransducer) ;
+
+				// Separate the LHS, currently a transducer, into separate input and output
+				// 	projections
+
+				// The algorithm needs one of these (A or B, depending on the arrow direction) 
+				// for computing Constraints, but the cp (crossproduct) is computed directly
+				// from the ABTransducer
 				A = hulden.CleanupSpecialSymbolsAction(lib.InputProjection(ABTransducer)) ;
 				A.setFromSymtab(true) ;
 				B = hulden.CleanupSpecialSymbolsAction(lib.OutputProjection(ABTransducer)) ;
@@ -3249,6 +3266,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			} else if (mapType == RuleMapType.MARKUP) {
 				// markup rules like a -> IL ... IR  / ...
 				// (transducer rules cannot be markup rules)
+				//
+				// Set X, Y and Z here
 
 				// set X (input, upper or lower), Y (left insertion) and Z (right insertion)
 				// Note that CleanupSpecialSymbolsAction was called on all these parts when
@@ -3273,6 +3292,8 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				// straightforward mapping rule like  A -> B
 				// Note that CleanupSpecialSymbolsAction was called on both these
 				// parts when the RuleSemanticParts was created
+				//
+				// Set A and B here (two acceptors)
 
 				// straightforward MAP rule
 				A = rsempt.getUpperLhs() ;
@@ -3287,13 +3308,19 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			
 			if (ABTransducer != null) {
 				// then it's a transducer rule;
-				// just "flatten" the transducer provided in the syntax
+				// just "flatten" the transducer specified in the syntax
 				cp = hulden.CPflatten(ABTransducer) ;
 
+				// KRB: debug
+				//System.out.println("dumping the ASTransducer at point B") ;
+				//lib.FstDump(ABTransducer) ;
+				//System.out.println("dumping the flattened cp transducer at point Bprime") ;
+				//lib.FstDump(cp) ;
 
 			} else if (mapType == RuleMapType.MAP) {
 				// It's a straightforward mapping rule, compute hulden.CP()
 				cp = hulden.CP(A, B) ;
+
 			} else {
 				// It's a Markup Rule--use a different CPMarkup
 				if (arrowType == RuleArrowType.RIGHT) {
@@ -3317,12 +3344,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 			ArrayList<RuleContextSemanticParts> contexts = rsempt.getContexts() ;
 			// a rule written without a context will have the universal context
 			//    .*  _  .*
-			// assigned
+			// assigned automatically
 
 			// iterate through the contexts for the current SemanticRuleParts
 			for (Iterator<RuleContextSemanticParts> rciter = contexts.iterator(); 
-				 rciter.hasNext(); 
-				) {
+				 rciter.hasNext(); ) {
 
 				RuleContextSemanticParts rcsp = rciter.next() ;
 
@@ -3345,10 +3371,11 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				if (rightLowerContext != null)
 					rightLowerContext.setFromSymtab(true) ;
 
+				// initialize
 				Fst finalLeftContext = lib.EmptyStringLanguageFst() ;
 				Fst finalRightContext = lib.EmptyStringLanguageFst() ;
-				// left as the empty string language for missing two-level
-				// contexts
+				// these will be left as the empty string language for missing 
+				// two-level contexts
 
 				if (leftUpperContext != null) {
 					if (leftLowerContext != null) {
@@ -3392,6 +3419,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 				// the right context is just the empty string language
 
 				if (epenthesis) {
+					// The rule is explicitly marked as an epenthesis rule
 					// then add an extra constraint for epenthesis
 					if (arrowType == RuleArrowType.RIGHT) {
 						finalLeftContext = hulden.EPContextL_RIGHT_ARROW(finalLeftContext) ;
@@ -3399,11 +3427,26 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						finalRightContext = hulden.EPContextR_RIGHT_ARROW(finalRightContext) ;
 						finalRightContext.setFromSymtab(true) ;
 					} else {
+						// Left-arrow rule
 						finalLeftContext = hulden.EPContextL_LEFT_ARROW(finalLeftContext) ;
 						finalLeftContext.setFromSymtab(true) ;
 						finalRightContext = hulden.EPContextR_LEFT_ARROW(finalRightContext) ;
 						finalRightContext.setFromSymtab(true) ;
 					}
+				}
+
+				// KRB don't let OTHER in a rule context match #, the word boundary, unless
+				// it is an epenthesis rule, in which case an example like "" -> b
+				// with implied context "" -> b / .* _ .* , the context needs to match #
+				// to that ""->b applied down to aaa yields bababa
+				//
+				if (!epenthesis) {
+				if (finalLeftContext.getContainsOther()) {
+					finalLeftContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+				}
+				if (finalRightContext.getContainsOther()) {
+					finalRightContext.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+				}
 				}
 
 				Fst leftRestrictionContext  = finalLeftContext ;
@@ -3417,7 +3460,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 																rightRestrictionContext
 															);
 
-				// Union this restContextFst into the "unionOfContext" used to compute
+				// Union this restContextFst into the "unionOfContexts" used to compute
 				// the "Context" Fst in Hulden's algorithm.
 				// UnionIntoFirstInPlace() is destructive of the first argument, as desired here
 				unionOfContexts = lib.UnionIntoFirstInPlace(unionOfContexts, 
@@ -3432,13 +3475,16 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						|| matchType == RuleMatchType.MIN_L2R
 						|| matchType == RuleMatchType.MAX_R2L
 						|| matchType == RuleMatchType.MIN_R2L ) {
-					// Then need to compute constraint(s) for the current context.
+					// Then we need to compute constraint(s) for the current context.
 					// Multiple constraints are unioned together, so start with
 					// the empty language.
 					Fst constraintsForOneContext = lib.EmptyLanguageFst() ;
 
 					if (epenthesis) {
 						// this is an epenthesis rule
+						// KRB: debug
+						//System.out.println("This is an epenthesis rule") ;
+
 						constraintsForOneContext = lib.EmptyStringLanguageFst() ;
 
 						// KRB
@@ -3447,6 +3493,9 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						// Catch rules like a* {min} -> b  during interpretation?
 					} else {
 						// not an epenthesis rule
+					
+						// KRB: debug
+						//System.out.println("This is NOT an epenthesis rule.") ;
 
 						// First need to compute the "difference", which
 						// is A-0 or B-0 in Hulden's examples, e.g.
@@ -3461,6 +3510,7 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 							// for a left-arrow rule, the B (or X for a markup rule) is the input
 							inputFst = (mapType == RuleMapType.MAP) ? B : X ;
 						}
+
 						Fst difference = lib.Difference(inputFst,
 														lib.EmptyStringLanguageFst()) ;
 						difference.setFromSymtab(true) ;
@@ -3481,15 +3531,22 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 						// the following possibilities are mutually exclusive
 						if (matchType == RuleMatchType.MAX_L2R) {
 
+
 							// need to add (union in) more constraints
 							if (arrowType == RuleArrowType.RIGHT) {
+								// KRB: debug
+								//System.out.println("Union in constraints for right arrow MAX_L2R; point Z") ;
+
 								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-																		hulden.LongestRightArrow(difference),
+																		hulden.NotLongestRightArrow(difference),
 																		hulden.LeftmostRightArrow(difference)
 																		) ;
 							} else {
+								// KRB: debug
+								//System.out.println("Union in constraints for left arrow MAX_L2R; point Z2") ;
+
 								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-																		hulden.LongestLeftArrow(difference),
+																		hulden.NotLongestLeftArrow(difference),
 																		hulden.LeftmostLeftArrow(difference)
 																		) ;
 							}
@@ -3507,20 +3564,22 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 																	) ;
 							}
 						} else if (matchType == RuleMatchType.MAX_R2L) {
+							// not implemented yet
 							// need to add (union in) more constraints
 							if (arrowType == RuleArrowType.RIGHT) {
 								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-																		hulden.LongestRightArrow(difference),
+																		hulden.NotLongestRightArrow(difference),
 						 												hulden.RightmostRightArrow(difference)
 						 											) ;
 							} else {
 								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
-																		hulden.LongestLeftArrow(difference),
+																		hulden.NotLongestLeftArrow(difference),
 						 												hulden.RightmostLeftArrow(difference)
 						 											) ;
 							}
 
 						} else if (matchType == RuleMatchType.MIN_R2L) {
+							// not implemented yet
 							// need to add (union in) more constraints
 							if (arrowType == RuleArrowType.RIGHT) {
 								constraintsForOneContext = lib.Union3Fsts(constraintsForOneContext,
@@ -3533,7 +3592,6 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 																		hulden.RightmostLeftArrow(difference)
 																	) ;
 							}
-
 						}
 					}
 
@@ -3548,9 +3606,12 @@ public class InterpreterKleeneVisitor implements KleeneVisitor {
 
 					// and intersect this constraint into the total Constraints
 					Constraints = lib.Intersect(Constraints, notContain) ;
-				}	// end block adding a constraint for a context
-			}	// end loop through contexts
-		}	// end loop through semantic rules
+				}	// end of block adding a constraint for a context
+			}	// end of loop through contexts
+		}	// end of loop through RuleSemanticParts
+
+		// KRB: debug
+		//System.out.println("End of loop through RuleSemanticParts") ;
 
 		Fst Outside = lib.Concat3Fsts(	
 									lib.OneArcFst(hulden.outsideMarkerSym),
@@ -4042,16 +4103,12 @@ class RuleSemanticParts {
 			rsynp.getLhsTransducer().jjtGetChild(0).jjtAccept(this, data) ;
 			// leaves an Fst on the stack
 			transducerLhs = (Fst) stack.pop() ;
-
 			transducerLhs = hulden.CleanupSpecialSymbolsAction(transducerLhs) ;
 			// .setFromSymtab because, for an oblig rule, the upper or lower language
 			// will need to be extracted
 			transducerLhs.setFromSymtab(true) ;
 
 			basicRuleSemanticParts.setTransducerLhs(transducerLhs) ;
-
-			//basicRuleSemanticParts.setTransducerLhs(
-			//		hulden.CleanupSpecialSymbolsAction(transducerLhs)) ;
 
 		} else {
 			// this is a mapping rule (with separately specified upperLhs and LowerLhs),
@@ -4080,16 +4137,19 @@ class RuleSemanticParts {
 
 		basicRuleSemanticParts.setContexts(compileRuleSyntacticContexts(rsynp, data)) ;
 
-		// check for epenthesis in the rule
+		// check for epenthesis in the rule, need to decide which
+		// is the "input" side:  upper for a right-arrow rule,
+		// and lower for a left-arrow rule
 
 		Fst inputFst ;
 
 		if (arrowType == RuleArrowType.RIGHT) {
 			// the input side is the upper side for a right-arrow rule
 			if (transducerLhs != null) {
-				// this is a transducer rule
+				// this is a transducer rule like a:b -> / l _ r
 				inputFst = lib.InputProjection(transducerLhs) ;
 			} else {
+				// this is a normal mapping rule like a -> b / l _ r
 				inputFst = upperLhs ;
 			}
 		} else {
@@ -4104,6 +4164,9 @@ class RuleSemanticParts {
 
 		if (lib.ContainsEmptyString(inputFst)) {  // if the input expression can match the empty string
 
+			// KRB: debug
+			//System.out.println("Input exp contains the empty string") ;
+
 			// for now, at least, disallow epsilon in the input for transducer rules
 			//if ( transducerLhs != null) {
 			//	throw new RuleSemanticException("The input expression in the transducer rule can match the empty string") ;
@@ -4115,50 +4178,55 @@ class RuleSemanticParts {
 				||  (matchType == RuleMatchType.MAX_R2L)
 				||  (matchType == RuleMatchType.MIN_R2L)
 				) {
-				throw new RuleSemanticException("The input expression to the {max} or {min} rule can match the empty string.") ;
+				throw new RuleSemanticException("The input expression to the {max} or {min} rule can match the empty string.  Report your intentions to the developer.") ;
 			}
 
 			// either compile the rule as an epenthesis rule, OR
 			// extract out the epenthesis as a separate rule to be compiled in parallel
 
 			if (lib.IsEmptyStringLanguage(inputFst)) {
-				// then this rule is a straightforward epenthesis rule
+				// then this rule is a straightforward epenthesis rule like "" -> b
 				basicRuleSemanticParts.setEpenthesis(true) ;
 			} else {
 				// this is a rule like  a* -> b, where the input side
 				// 		can match the empty string, and more
-				// or it's a transducer rule like  (a*:b) | c:d | e:f -> /
+				// or it's a transducer rule like  a*:b -> /
+				// or (a*:b) | c:d | e:f -> /
 				//
 				// For non-transducer rule
 				// Modify the rule to be (a* - "") -> b
 				// and
 				// create a new parallel RuleSemanticParts for the epenthesis
 				// rule  "" -> b
-				//
-				// For transducer rules, 
 				
-
+				// For transducer rules, 
 				// create a new "parallel" epenthesis rule that has only the empty string language on the input side
 				// start with a copy of the basic rule;  mark it explicitly as an epenthesis rule
 
 				RuleSemanticParts epenthesisRuleSemanticParts = new RuleSemanticParts(basicRuleSemanticParts) ;
 				epenthesisRuleSemanticParts.setEpenthesis(true) ;
 
+				// for TRANSDUCER RULES
 				if (transducerLhs != null) {
 					Fst newTransducerLhs ;		// new (modified) LHS for the basic transducer rule
 					// remove the epsilon from the basic transducer LHS, using _composition_
 					if (arrowType == RuleArrowType.RIGHT) {
-						// the epsilon is on the upper side; compose the complement of the empty-string language on the upper side
+						// the epsilon is on the upper side; 
+						// compose the complement of the empty-string language on the upper side
 						newTransducerLhs = hulden.CleanupSpecialSymbolsAction(lib.Compose(lib.Complement(lib.EmptyStringLanguageFst()), transducerLhs)) ;
 					} else {
-						// the epsilon is on the lower side
+						// the epsilon is on the lower side;
+						// compose the complement of the empty-string language on the lower side
 						newTransducerLhs = hulden.CleanupSpecialSymbolsAction(lib.Compose(transducerLhs, lib.Complement(lib.EmptyStringLanguageFst()))) ;
 					}
-					basicRuleSemanticParts.setTransducerLhs(newTransducerLhs) ;	// the epenthesis is removed from the basic rule
+					basicRuleSemanticParts.setTransducerLhs(newTransducerLhs) ;	
+					// the epenthesis is now removed from the input side of the basic rule
 
 					if (arrowType == RuleArrowType.RIGHT) {
+						// in the epenthesisRuleSemanticParts, make the upper side the empty-string language
 						epenthesisRuleSemanticParts.setTransducerLhs(hulden.CleanupSpecialSymbolsAction(lib.Compose(lib.EmptyStringLanguageFst(), transducerLhs))) ;
 					} else {
+						// in the epenthesisRuleSemanticParts, make the lower side the empty-string language
 						epenthesisRuleSemanticParts.setTransducerLhs(hulden.CleanupSpecialSymbolsAction(lib.Compose(transducerLhs, lib.EmptyStringLanguageFst()))) ;
 					}
 
@@ -5687,7 +5755,7 @@ class RuleSemanticParts {
 		return data ;
 	}
 	public Object visit(ASTrule_transducer_left_arrow_max_l2r_oblig node, Object data) {
-		// <transducer> {max} <- /
+		// <- {max} <transducer>  /
 
 		int daughterCount = node.jjtGetNumChildren() ;
 		// if 1, then rule_lhs only
@@ -5707,7 +5775,7 @@ class RuleSemanticParts {
 		rsynpt.setObligType(RuleObligType.OBLIG) ;
 		rsynpt.setMatchType(RuleMatchType.MAX_L2R) ;
 
-		// Collect the parts from the rest of the AST, if any, starting
+		// Collect the rule parts from the rest of the AST, if any, starting
 		// at Child(1).
 		// There might be an ASTrule_rhs and/or an ASTwhere_clauses
 		for (int i = 1; i < daughterCount; i++) {
@@ -6435,7 +6503,6 @@ class RuleSemanticParts {
 		// etc.
 
 		Fst rhs = (Fst)stack.pop() ; 
-		// KRB change 2012-10-16
 		Fst resultFst = interpRestrictionExp(lhs, rhs, false) ;
 		// false here means that this restriction is NOT part of the compilation
 		// of an alternation rule.  Rather it is for a stand-alone 
@@ -6980,7 +7047,8 @@ class RuleSemanticParts {
 		Fst resultFst = lib.Complement(positiveFst) ;
 
 		// the result should never match the # used in rules KRB ruleany
-		resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		// Rethink:  2015-01-18 the other in a _rule_ FST should not match #
+		//resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 
 		
 		stack.push(resultFst) ;
@@ -7277,7 +7345,8 @@ class RuleSemanticParts {
 		Fst resultFst = lib.Difference(lib.SigmaFst(), charUnionFst) ;
 
 		// the result should never match the # used in rules KRB ruleany
-		resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		// Rethink:  2015-01-18 the OTHER in a _rule_ FST should never match #
+		//resultFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 
 		stack.push(resultFst) ;
 		return data ;
@@ -11064,7 +11133,8 @@ class RuleSemanticParts {
 		// syntax is just  .   (dot)
 		Fst anyFst = lib.SigmaFst() ;
 		// The # symbol used in rules should never be matched by . (any) KRB ruleany
-		anyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		// Rethink: 2015-01-18 the OTHER in a _rule_ FST should not match #
+		//anyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		stack.push(anyFst) ;
 		return data ;
     }
@@ -11073,7 +11143,8 @@ class RuleSemanticParts {
 		//   as a single token (may contain whitespace)
 		Fst anyAnyFst = lib.SigmaSigmaFst() ;
 		// The # symbol used in rules should never be matches by .:. KRB ruleany
-		anyAnyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
+		// Rethink: 2015-01-18 the OTHER in a _rule_ FST should not match #
+		//anyAnyFst.getSigma().add(symmap.putsym(hulden.ruleWordBoundarySym)) ;
 		stack.push(anyAnyFst) ;
 		return data ;
 	}
@@ -11649,9 +11720,20 @@ class RuleSemanticParts {
 			if (foundFrame == mainFrame) {
 				// Returns the Frame where a real key-object entry was
 				// removed, else null
-				// if the GUI is active, remove the icon from the GUI symtab window
+				// if the GUI is active, remove the icon from the 
+				// GUI symtab window
+				final String fimg = img ;
 				if (((InterpData)data).getInGUI()) {
-					removeFromGUISymtab(img, data) ;
+					if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+						removeFromGUISymtab(fimg, data) ;
+
+					} else {
+						javax.swing.SwingUtilities.invokeLater(new Runnable() {
+							public void run() {
+								removeFromGUISymtab(fimg, data) ;
+							}
+						});
+					}
 				}
 			}
 		}
@@ -11688,11 +11770,29 @@ class RuleSemanticParts {
 
 				if (foundFrame == mainFrame) {
 					if (inGUI) {
-						removeFromGUISymtab(key, data) ;
+						if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+							removeFromGUISymtab(key, data) ;
+
+						} else {
+							javax.swing.SwingUtilities.invokeLater(new Runnable() {
+								public void run() {
+									removeFromGUISymtab(key, data) ;
+								}
+							});
+						}
 					}
 				}
 				if (inGUI) {
-					terminal.appendToHistory("// Deleting " + key) ;
+					final PseudoTerminalInternalFrame fterminal = terminal ;
+					if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+						fterminal.appendToHistory("// Deleting " + key) ;
+					} else {
+						javax.swing.SwingUtilities.invokeLater(new Runnable() {
+							public void run() {
+								fterminal.appendToHistory("// Deleting " + key) ;
+							}
+						});
+					}
 				}
 			}
 		}

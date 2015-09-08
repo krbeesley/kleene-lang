@@ -60,6 +60,7 @@ public class Hulden {
 
 	// Define the special-symbol names only here, in case they need to be changed.
 	// Do not strew such strings all through the code.
+	// Note that these "Sym" variables are Strings, not Fsts
 
 	public String IOpenAndCloseSym = "**@I[]@" ;
 	public String IOpenSym         = "**@I[@" ;
@@ -78,7 +79,7 @@ public class Hulden {
 
 	// N.B. needs to be considered in the promotion of OTHER
 	// (the latest thinking is that it should never be matched
-	// by OTHER)
+	// by OTHER, at least not in alternation rules)
 	// See also the tokenization of WORD_BOUNDARY in Kleene.jjt
 	public  String ruleWordBoundarySym = "**@#@" ; // again following Hulden's notation
 
@@ -126,6 +127,12 @@ public class Hulden {
 						lib.KleeneStar(lib.Concat(
 											lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
 											lib.KleeneStar(lib.Crossproduct(
+															// lib.OneArcFst() has several
+															// possibilities.  lib.Epsilon
+															// is 0, the wired-in CPV for
+															// OpenFst epsilon; one could
+															// also call lib.OneArcFst(hardEpsilonSym)
+															// bec. it can take a String as well.
 															lib.OneArcFst(lib.Epsilon),
 															fluff)
 														)
@@ -206,7 +213,6 @@ public class Hulden {
 					) ;
 	}
 
-
 	// Hulden
 	// define SpecialSymbols ISyms|"@O@"|"@ID@"|"@0@"|"@#@" ;
 	// N.B. distinguish @O@, with letter 'O' from @0@, with zero
@@ -219,6 +225,14 @@ public class Hulden {
 					lib.OneArcFst(hardEpsilonSym),
 					lib.OneArcFst(ruleWordBoundarySym)
 		) ;
+	}
+
+	// RealSig()  (Hulden's "R")
+	private Fst RealSig() {
+		return lib.Difference(
+				lib.OneArcFst(lib.otherIdSym),
+				SpecialSymbolsAction()
+			) ;
 	}
 
 	// if the "parts" of a rule,  A -> B / L _ R contain OTHER,
@@ -506,7 +520,7 @@ public class Hulden {
 	// ***********************************************************************
 
 	// Hulden:  Lower() means: a string on tape 3, ignoring possible (hard) epsilons
-	// (@0@), and taking into account that a symbol on tape 3 may actually be
+	// (@0@) on tape 3, and taking into account that a symbol on tape 3 may actually be
 	// represented as @ID@, in which case we peek at the symbol on tape 2 in the
 	// same location
 
@@ -519,11 +533,12 @@ public class Hulden {
 	// Hulden:
 	// define Lower(X) [X .o.	[ 0:"@O@"	?			0:"@ID@"  # 'O' for outside
 	//							| 0:ISyms	0:Tape2Sig	?
-	//							| 0:ISyms	?			"@ID@
+	//							| 0:ISyms	?			"@ID@"     # error? should be 0:"@ID@" ???
 	//							| 0:ISyms	0:Tape2Sig	0:"@0@"		# hard epsilon
 	//							]*
 	//					].l ;   # take the lowerside
 
+	/*
 	public Fst Lower(Fst X) {
 		Fst temp = lib.KleeneStar(
 						lib.Union4Fsts(
@@ -546,7 +561,14 @@ public class Hulden {
 													lib.OneArcFst(lib.Epsilon),
 													ISyms()),
 									lib.OneArcFst(lib.otherIdSym),
-									lib.OneArcFst(idMarkerSym)
+
+									// KRB 2015-08-20 orig 0:Isyms  ?  "@ID@"
+									//lib.OneArcFst(idMarkerSym)
+									// I'm guessing it should have been
+									// 						0:ISyms ? 0:"@ID@"
+									// i.e.
+
+									lib.OneArcFst(lib.Epsilon, idMarkerSym)
 							),
 							lib.Concat3Fsts(
 									lib.Crossproduct(
@@ -561,6 +583,56 @@ public class Hulden {
 					) ;
 		return lib.OutputProjection(lib.Compose(X, temp)) ;
 	}
+*/
+
+	// 2015-08-24 New Definition of Lower() from Mans Hulden
+	//
+	//	Lower(X) [ X .o.
+	//			   	[
+	//			   		0:"@O@" [R | "@#@"] 0:"@ID@" 
+	//			   	|	0:ISyms [0:["@0@" | R]] R
+	//			   	|	0:ISyms 0:R 0:"@0@" ]*
+	//			   	]*
+	//			 ].l ;
+			 
+	public Fst Lower(Fst X) {
+		Fst temp = lib.KleeneStar(
+						lib.Union3Fsts(
+							lib.Concat3Fsts(
+									lib.OneArcFst(lib.Epsilon, outsideMarkerSym),
+									lib.Union(
+											RealSig(),
+											lib.OneArcFst(ruleWordBoundarySym)
+									),
+									lib.OneArcFst(lib.Epsilon, idMarkerSym)
+							),
+							lib.Concat3Fsts(
+									lib.Crossproduct(
+													lib.OneArcFst(lib.Epsilon),
+													ISyms()),
+									lib.Crossproduct(
+													lib.OneArcFst(lib.Epsilon),
+													lib.Union(
+															lib.OneArcFst(hardEpsilonSym),
+															RealSig())
+													),
+									RealSig()
+							),
+							lib.Concat3Fsts(
+									lib.Crossproduct(
+													lib.OneArcFst(lib.Epsilon),
+													ISyms()),
+									lib.Crossproduct(
+													lib.OneArcFst(lib.Epsilon),
+													RealSig()),
+									lib.OneArcFst(lib.Epsilon, hardEpsilonSym)
+							)
+						) 
+					) ;
+		return lib.OutputProjection(lib.Compose(X, temp)) ;
+	}
+	
+
 
 	// Hulden:  the part of the definition that says
 	// 0:"@O@"  ?  0:"@ID@
@@ -568,7 +640,7 @@ public class Hulden {
 	// followed by an @ID@ on tape 3.
 
 	// Hulden:  Upper(X) means: a 3-tape string with X on tape 2 
-	// ignoring possible hard epsilons
+	// ignoring possible hard epsilons on tape 2
 	// (@0@)
 
 	// Hulden:
@@ -655,62 +727,159 @@ public class Hulden {
 	// define Longest(X)	[	Tape1of3(IOpen Tape1Sig* ["@O@"|IOpen] Tape1Sig*) 
 	//						& 	Tape2of3(X/"@0@" - [?* "@0@"])
 	//						] ;
+	//		modified again below (in the Java code)
 	//
 	//	2013-12-27 KRB I think there needs to be a LongestRightArrow (orig)
 	//  and a new LongestLeftArrow for left-arrow rules
+	//
+	//
+	//
+	//  2015-08-24 Hulden's new "NotLongest" (see below)
 
 	// public Fst Longest(Fst X) {
-	public Fst LongestRightArrow(Fst X) {
+/*
+ * 	public Fst LongestRightArrow(Fst X) {
 		return lib.Intersect(
-					Tape1of3(
-						lib.Concat4Fsts(
-									IOpen(),
-									lib.KleeneStar(Tape1Sig()),
-									lib.Union(
-										lib.OneArcFst(outsideMarkerSym),
-										IOpen()
-									),
-									lib.KleeneStar(Tape1Sig())
-						)
+			Tape1of3(
+				lib.Concat4Fsts(
+						IOpen(),
+						lib.KleeneStar(Tape1Sig()),
+						lib.Union(
+							lib.OneArcFst(outsideMarkerSym),
+							IOpen()
+						),
+						lib.KleeneStar(Tape1Sig())
+				)
+			) ,
+			// Orig uses Tape2of3, Hulden suggests using Upper here
+			//Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+			// YES.  Upper seems to work here;  NO, see below
+			// 2015-03-19 changed back to Tape2of3 here after error found
+			Tape2of3(lib.Difference(
+			//Upper(lib.Difference(  
+			// caused error with "":'<cv>' $con ("":'<v>' $vow "":'</v>')+ "":'</cv>' {max}->
+					ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+					lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+								lib.OneArcFst(hardEpsilonSym)
+							  )
+					
+				)   // end of lib.Difference(
+			)   // end of Tape2of3( (or Upper(  )
+		) ;  // end of return lib.Intersect(
+	}
+*/
+
+/*	public Fst LongestLeftArrow(Fst X) {
+		return lib.Intersect(
+			Tape1of3(
+				lib.Concat4Fsts(
+						IOpen(),
+						lib.KleeneStar(Tape1Sig()),
+						lib.Union(
+							lib.OneArcFst(outsideMarkerSym),
+							IOpen()
+						),
+						lib.KleeneStar(Tape1Sig())
+				)
+			),
+			// difference here, with Tape3of3 instead of Tape2of3?
+			// Hulden suggests using Lower
+			//Tape3of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+			// YES, Lower works here, Tape3of3 does not.
+			// 2015-03-20 found problems with Lower, try just Tape2of3
+			// Go back to Lower
+			Lower(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+			//Tape3of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+			//Tape23of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+			//Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
+									lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
+												lib.OneArcFst(hardEpsilonSym)
+											  )
+					
+									)
+			)
+		) ;
+	}
+*/
+
+	//  2015-08-24 Hulden's new "NotLongest" (see below)
+	//
+	//  Renamed from "Longest" because the patterns actually describe paths that are NOT the longest,
+	//  and the rule restrains 
+	//
+	//  def NotLongestRA(X)  [Upper(X) & Tape1of3(IOpen Tape1Sig* ["@O@" | IOpen] Tape1Sig*)] & [?^3]* [? [?-\"@0@\"] ?];
+	//  disallows @0@ as the last symbol on tape 2
+	//
+	//  def NotLongestLA(X)  [Lower(X) & Tape1of3(IOpen Tape1Sig* ["@O@" | IOpen] Tape1Sig*)] & [?^3]* [? ? [?-\"@0@\"]];
+	//  disallows @0@ as the last symbol on tape 3
+	//  
+
+	public Fst NotLongestRightArrow(Fst X) {
+		return lib.Intersect3Fsts(
+			Upper(X),	// will be Lower(X) in NotLongestLeftArrow
+			Tape1of3(
+				lib.Concat4Fsts(
+						IOpen(),
+						lib.KleeneStar(Tape1Sig()),
+						lib.Union(
+							lib.OneArcFst(outsideMarkerSym),
+							IOpen()
+						),
+						lib.KleeneStar(Tape1Sig())
+				)
+			) ,
+			lib.Concat(
+				lib.KleeneStar(lib.Concat3Fsts(
+									lib.OneArcFst(lib.otherIdSym),
+									lib.OneArcFst(lib.otherIdSym),
+									lib.OneArcFst(lib.otherIdSym)
+							  		)
+							  ),
+				lib.Concat3Fsts(
+					lib.OneArcFst(lib.otherIdSym),
+					// disallow final hardEpsilonSym on tape 2 (for right-arrow rules)
+					lib.Difference(
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(hardEpsilonSym)
 					),
-					// Orig uses Tape2of3, Hulden suggests using Upper here
-					//Tape2of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
-					// YES.  Upper seems to work here
-					Upper(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
-											lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
-														lib.OneArcFst(hardEpsilonSym)
-													  )
-							
-											)
-					)
-				) ;
+					lib.OneArcFst(lib.otherIdSym)
+				)
+			)
+		) ;  // end of return lib.Intersect3Fsts(
 	}
 
-	public Fst LongestLeftArrow(Fst X) {
-		return lib.Intersect(
-					Tape1of3(
-						lib.Concat4Fsts(
-									IOpen(),
-									lib.KleeneStar(Tape1Sig()),
-									lib.Union(
-										lib.OneArcFst(outsideMarkerSym),
-										IOpen()
-									),
-									lib.KleeneStar(Tape1Sig())
-						)
-					),
-					// difference here, with Tape3of3 instead of Tape2of3
-					// Hulden suggests using Lower
-					//Tape3of3(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
-					// YES, Lower works here, Tape3of3 does not
-					Lower(lib.Difference(ignoreFst(X, lib.OneArcFst(hardEpsilonSym)),
-											lib.Concat(	lib.KleeneStar(lib.OneArcFst(lib.otherIdSym)),
-														lib.OneArcFst(hardEpsilonSym)
-													  )
-							
-											)
+	public Fst NotLongestLeftArrow(Fst X) {
+		return lib.Intersect3Fsts(
+			Lower(X),	// will be Upper(X) in NotLongestRightArrow
+			Tape1of3(
+				lib.Concat4Fsts(
+						IOpen(),
+						lib.KleeneStar(Tape1Sig()),
+						lib.Union(
+							lib.OneArcFst(outsideMarkerSym),
+							IOpen()
+						),
+						lib.KleeneStar(Tape1Sig())
+				)
+			) ,
+			lib.Concat(
+				lib.KleeneStar(lib.Concat3Fsts(
+									lib.OneArcFst(lib.otherIdSym),
+									lib.OneArcFst(lib.otherIdSym),
+									lib.OneArcFst(lib.otherIdSym)
+							  		)
+							  ),
+				lib.Concat3Fsts(
+					lib.OneArcFst(lib.otherIdSym),
+					lib.OneArcFst(lib.otherIdSym),
+					// disallow final hardEpsilonSym on tape 3 (for left-arrow rules)
+					lib.Difference(
+							lib.OneArcFst(lib.otherIdSym),
+							lib.OneArcFst(hardEpsilonSym)
 					)
-				) ;
+				)
+			)
+		) ;  // end of return lib.Intersect3Fsts(
 	}
 
 
@@ -1296,6 +1465,14 @@ public class Hulden {
 		SubstEpsilonInPlace(ResultFst, ruleRightAngleSym) ;
 
 		lib.OptimizeInPlace(ResultFst) ;
+
+		// KRB:  2015-01-18 added this step to exclude # from OTHER in rule FSTs
+		// I think that rule FSTs always contain OTHER, but check to be sure.
+		//if (ResultFst.getContainsOther()) {
+		//	ResultFst.getSigma().add(symmap.putsym(ruleWordBoundarySym)) ;
+		//}
+		// Rethought again.  Make the rule _contexts_ exclude # from
+		// OTHER
 
 		return ResultFst ;
 	}

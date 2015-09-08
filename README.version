@@ -1,6 +1,49 @@
 
 		Kleene Version Notes
 
+2015-08
+	Many minor corrections of typos in the User Manual.
+
+2015-08
+	Many examples now added to regression-test files using 'assert'
+	commands.  Many errors were found and fixed in the process.
+
+2015-08-25  
+	Translated corrected definitions of Lower(),
+	NotLongestRightArrow() and NotLongestLeftArrow() from Mans Hulden into
+	Java.  This corrected a long-term bug in <-{max} rules. 
+
+2015-06-07 Fixed (or confirmed a fix) to transducer-style alternation
+	rules.  Previously simple examples like a:b -> would work but not more
+	complicated examples like (ab*):c {max} ->.
+
+2015-03-06
+	Fixed a problem with transducer rules, e.g. a*:b -> / l _ r.
+
+2015-02-12
+	Made postfixed iteration expressions higher precedence than
+	crossproduct (i.e., switched the precedence for postfixed iteration
+	and crossproduct) to allow compilation of a*:b, now equivalent to
+	(a*):b, and a*:b+, now equivalent to (a*):(b+).  Until this change,
+	a*:b wouldn't compile at all.  The old precedence, where a:b* was
+	equivalent to (a:b)*, was inherited from the Xerox Finite State
+	Tools, wherein a:b in twolc is a basic alphabetic character (the
+	alphabet in twolc is a set of character pairs).  So in Xerox twolc,
+	as well as lexc, interpreting a:b* as (a:b)* seemed
+	natural/preferable.  But from the Kleene perspective, twolc is
+	obsolete, and it seems preferable to give the postfixed iteration
+	operators *, + and ? higher precedence than :.
+
+2015-01-??
+	Fixed a small error in alternation rules where . in a context
+	could match #.  E.g.  x -> y / . _
+	intended to require some character before x, e.g. ax mapping to
+	zy.  However, because . could match #, the rule was unexpectedly
+	mapping x to y.  Solution, in the FSTs computed for a context,
+	if the context contains OTHER, then add # to the alphabet (thus
+	preventing the dot (OTHER) from matching #.
+	
+
 2014-12-13
 	Commit of version 0.9.4.2
 

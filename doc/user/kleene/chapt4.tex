@@ -40,7 +40,8 @@ difficult challenges in the implementation of Kleene.
 \subsection{Underlying and Surface, Upper and Lower}
 
 In many kinds of linguistic theory and natural-language processing, and especially in phonology and morphology, there
-is often postulated an abstract, deep or underlying level of analysis
+is often postulated an abstract, deep or underlying level of
+representation
 that gets transformed, mapped or \emph{related}, perhaps
 via one or more intermediate levels, to a final or ``surface'' level.   Common examples include the following:
 
@@ -54,9 +55,10 @@ newline character, and the surface-level string is printed, then one token will 
 \item
 Syllabification:  The abstract level is a string of symbols representing a
 word written in a traditional orthography, or in a phonemic orthography, and the
-surface level is the same word with syllable-boundary characters inserted.
+surface level is the same word with syllable-boundary symbols inserted.
 \item
-Transliteration:  The abstract level is a word written in traditional orthography, e.g.\@
+Transliteration:  The abstract level is a word written in traditional
+orthography, e.g.,
 a Russian word written in
 Cyrillic characters, or a Greek word written with Greek characters, 
 and the surface level is a representation of
@@ -66,7 +68,7 @@ the International Phonetic Alphabet (\init{ipa}).
 Morphology:  The abstract level consists of a baseform or a traditional
 dictionary citation form, plus
 morphological \emph{tag} symbols representing part-of-speech, tense, voice,
-mood, person, number and gender---e.g.\@ \emph{cantar[Verb][PresIndic][1P][Pl]}, indicating the
+mood, person, number and gender---e.g., \emph{cantar[Verb][PresIndic][1P][Pl]}, indicating the
 Spanish verb \emph{cantar} (`to sing'), marked as a verb, present
 indicative, first person and plural---and the surface form is a string
 that is the
@@ -143,7 +145,7 @@ c → k
 In Italian, one of the many modern descendants of Latin, the \emph{c},
 originally always representing /k/ in Latin, has become palatalized in the context before the vowels /i/ and
 /e/, and is now pronounced /ʧ/ in those environments, like the English
-<ch> in \emph{chin} /ʧɪn/.  Elsewhere, e.g.\@
+<ch> in \emph{chin} /ʧɪn/.  Elsewhere, e.g.,
 before the vowels /a/, /o/ and /u/, the \emph{c} is still pronounced /k/,
 as it was in Latin.  Ignoring Italian accented vowels for the moment, we could
 describe these alternations as 
@@ -213,9 +215,9 @@ and a testing window will appear.
 \includegraphics[width=\textwidth]{images/testWindow.pdf}
 \end{center}
 
-The testing window has an editable upper input field labeled
-\emph{String >>} at the top and an editable lower input field (also
-labeled \emph{String >>} at the bottom.  The
+The testing window has an editable upper-side input field labeled
+\mbox{``String>\hspace{0pt}>''} at the top and another editable lower input field (also
+labeled \mbox{``String>\hspace{0pt}>''}) at the bottom.  The
 bar in the middle labeled ``FST'' represents the \fst{} being tested.  Type \emph{pacem} in the \emph{upper} field,
 press the \key{enter} key, and the following output will appear in the \acro{gui} terminal window:
 
@@ -234,7 +236,8 @@ or the absence of weight.    Try testing this rule with a few more Latin words w
 
 Then experiment with the following Italian and Spanish rules.  Kleene can handle Unicode characters
 like ʧ, and the \acro{gui} will display them if your Java installation has a font
-that includes International Phonetic Alphabet glyphs, but for now you can substitute some other character or characters, e.g.
+that includes International Phonetic Alphabet glyphs, but for now you
+can substitute some other character or characters, e.g.,
 
 
 \begin{Verbatim}
@@ -261,8 +264,6 @@ $myrule =  c -> tS / _  (e|i) ;
 Kleene will display in the symbol-table window an icon, clearly labeled ``\$myrule,'' that represents the resulting
 \fst{}.  If you right-click on that icon, a menu will appear, and you can select the \texttt{test} menu item to
 cause the test window to be displayed.
-
-[KRB:  add a graphic showing the pull-down menu.]
 
 \subsection{Derivations or Cascades of Rules}
 
@@ -306,8 +307,9 @@ being composed ``below'' or
 expressions, including those with alternation-rule notations, can extend
 over multiple lines and are always terminated with a semicolon.  When this cascade of rules is applied in a downward direction to an input
 string, the output of the first (top) rule \verb!c -> s / _  (e|i)!
-becomes the input to the second \verb!c -> k / _ (a|o|u)! rule
-underneath it, and the output of the application is the output of the
+conceptually becomes the input to the second rule
+\verb!c -> k / _ (a|o|u)!
+underneath it, and the output of the overall application is the output of the
 final (here the second) rule.  However, when the rules are composed
 together, as in this example, there is no longer any intermediate level,
 the result is a single transducer, and the input is literally mapped to the output
@@ -407,7 +409,8 @@ So far we have experimented with individual rules, and simple cascades of two ru
 More generally, in the realm of regular languages and
 regular relations, the upper string  is ``mapped'' into one or more 
 lower strings via a set of ordered rules, which could number in the dozens or hundreds.  Between each
-pair of rules, there will be a conceptual intermediate level.
+pair of rules, there will be a conceptual intermediate level, which
+actually disappears in the composition.
 
 
 \needspace{10\baselineskip}
@@ -537,16 +540,19 @@ e:i -> o:u
 
 
 More precisely, the \emph{upper} and \emph{lower} expressions must be interpretable as denoting
-languages.  Recall that OpenFst finite-state machines are always two-level, with each arc having an
+languages.  Recall that OpenFst finite-state machines are always
+two-level in their structure, with each arc having an
 upper symbol and a lower symbol.  So each finite-state machine is implemented as a transducer, and
 acceptors are special cases of such machines where, on every arc, the upper and lower symbols are the
 same.  Thus the regular expression \texttt{b}, and the regular expression \texttt{b:b} are structurally
 equivalent---they both get interpreted to produce an \fsm{} with one arc that has a \emph{b} symbol on
-the upper side and a \emph{b} symbol on the lower side.  By convention, this machine is interpretable
-as an acceptor.
+the upper side and a \emph{b} symbol on the lower side.  By convention,
+this machine is interpretable as an acceptor or as an identity
+transducer.
 
 Consistent with that convention, the following rules are valid because both the \emph{upper} and
-\emph{lower} expressions are interpretable as denoting regular languages (not relations).
+\emph{lower} expressions can be interpreted as denoting regular
+languages.
 
 \begin{Verbatim}
 // Syntactically and semantically legal, 
@@ -564,7 +570,7 @@ d:d o:o g:g -> c:c h:h i:i e:e n:n
 But if either the \emph{upper} expression or the \emph{lower} expression cannot be interpreted as
 denoting a regular language, an exception will be thrown at runtime.
 
-Alternation rules can also be constrained to match and ``fire'' only in a specified context, based on the following
+Alternation rules can also be constrained to match and fire only in a specified context, based on the following
 template, where \emph{upper}, \emph{lower}, \emph{left} and \emph{right} can all be arbitrarily complex regular
 expressions, but all are semantically limited to be interpretable as regular languages.  The left-hand-side of the rule
 is separated from the context (which is the right-hand-side) by a forward slash \texttt{/}. The underscore character
@@ -578,13 +584,15 @@ is separated from the context (which is the right-hand-side) by a forward slash 
 
 \noindent
 When such a rule is applied ``in a downward direction'' to an input string, the input string must match the \emph{left}
-context, the \emph{upper} expression and the \emph{right} context in order for the rule to fire; if the rule does match the input, then the
-\emph{upper} content on the upper side is mapped to the \emph{lower} content in the output(s).  If the
+context, followed immediately by the \emph{upper} expression and the \emph{right} context in order for the rule to fire; if the rule does match the input, then the
+\emph{upper} content on the upper side is simply mapped to the
+\emph{lower} content in the output(s).  But if the
 input is not matched by the rule, then the rule simply maps the input to itself, the identity mapping.
 
 
-The use of the underscore character to separate the left context from the right context signals the
-Kleene interpreter that the rule writer intends the context to be interpreted as one-level, i.e.\@ the
+The use of the underscore character \texttt{\_} to separate the left context from the right context signals the
+Kleene interpreter that the rule writer intends the context to be
+interpreted as one-level, i.e., the
 \emph{left} and \emph{right} context expressions denote regular languages and are to be matched on the upper
 side of the relation.  As we shall see below, Kleene alternation rules based on Huldén's algorithms can
 also have two-level contexts, denoting transducers; but there is such a long tradition of rules with
@@ -593,7 +601,8 @@ the programmer genuinely intends to designate two-level contexts, then that will
 slightly different syntax to be presented below.  For now we will concentrate on basic mapping rules
 wherein all the rule parts---upper, lower, left context and right context---are intended
 by the programmer
-to denote regular languages, and where the accidental definition of a two-level context will be caught
+to denote regular languages, and where the accidental definition of a
+two-level context will be caught
 and signaled as an error.
 
 The following rule examples are illegal because the contexts are two-level:
@@ -666,13 +675,14 @@ The syntactic contexts in alternation rules are optional, allowing the following
 
 \begin{alltt}
 \emph{upper} -> \emph{lower} /   \emph{left} _ \emph{right} // both contexts present
-\emph{upper} -> \emph{lower} /   _ \emph{right}    // right context only
-\emph{upper} -> \emph{lower} /   \emph{left} _     // left context only
-\emph{upper} -> \emph{lower}               // no contexts
+\emph{upper} -> \emph{lower} /   _ \emph{right}      // right context only
+\emph{upper} -> \emph{lower} /   \emph{left} _      // left context only
+\emph{upper} -> \emph{lower}                  // no contexts
 \end{alltt}
 
 \noindent
-A missing context is semantically equivalent to \verb!.*!, the Universal Language, e.g.
+An unspecified context is semantically equivalent to \verb!.*!, the Universal
+Language, e.g.,
 
 \begin{alltt}
 \emph{upper} -> \emph{lower} /    _ \emph{right}	    // right context only
@@ -690,7 +700,12 @@ s -> z / [aeiou] _ [aeiou]
 s -> z / .* [aeiou] _ [aeiou] .*
 \end{Verbatim}
 
-
+\noindent
+Intuitively, this rule indicates that
+an upperside \texttt{s} is mapped to a lowerside \texttt{z}
+when the \texttt{s} is immediately preceded and followed by a vowel; and it
+just doesn't matter which characters (if any) might precede or follow
+the context vowels.
 
 Alternation rules can have multiple contexts, separated by \texttt{||}, a double vertical bar.
 
@@ -699,6 +714,19 @@ Alternation rules can have multiple contexts, separated by \texttt{||}, a double
 
 \emph{input} -> \emph{output} / \emph{L1} _ \emph{R1} || \emph{L2} _ \emph{R2} \ldots || \emph{Ln} _ \emph{Rn}
 \end{alltt}
+
+\noindent
+In such cases, the input will be mapped to the output if any one of the
+contexts
+is satisfied.  For example, the rule
+
+\begin{Verbatim}
+$rule = s -> z / [aeiou] _ [aeiou] || # _ ;
+test $rule ;
+\end{Verbatim}
+
+\noindent
+will map ``casa'' to ``kaza'' and ``sapo'' to ''zapo.''
 
 \subsection{Left-arrow Rules}
 
@@ -745,9 +773,10 @@ could be accomplished equivalently, without left-arrow rules, by
 \item
 Writing the alternation as a right-arrow rule:\\\verb!s -> z / [aeiou] _ [aeiou]!
 \item
-Inverting the \verb!$fst!:  \verb!$^invert($fst)!
+Inverting the \verb!$fst!:\\  \verb!$^invert($fst)!
 \item
-Composing the right-arrow rule on the lower side of the inverted \verb!$fst!:
+Composing the right-arrow rule on the lower side of the inverted
+\verb!$fst!:\\
 \verb!$^invert($fst) _o_ s -> z / [aeiou] _ [aeiou]!
 \item
 And then inverting the result:\\ 
@@ -829,12 +858,10 @@ Returning to the \verb!a* b -> c! example, adding \verb!max! before the arrow ca
 \begin{Verbatim}
 a* b {max}-> c
 
-// maps aaaab to c
+// maps aaaab down to c only
 \end{Verbatim}
 
-
-[KRB: add a concrete example of syllabification]  
-
+\noindent
 It is important to understand that although the behavior of these rules appears to move
 left-to-right, and looks like some kind of algorithm is being performed at runtime, these
 rules, like all the other alternation rules, are compiled into finite-state transducers
@@ -852,14 +879,14 @@ were moving left-to-right through the input string, but which always match the
 
 [KRB:  consider implementing similar rules with apparent right-to-left
 behavior, similar to the Xerox ->@ and >@ rules.  2013.  Direct
-implementation of such rules would appear to require modifications of
+implementation of such rules would appear to require non-trivial modifications of
 Hulden's algorithms.]
 
 \section{Deletion Rules}
 
 [KRB:  fill out this section]
 
-A deletion rule maps something into nothing, i.e.\@ into the empty string.  The
+A deletion rule maps something into nothing, i.e., into the empty string.  The
 following rule maps \texttt{p}, \texttt{t} and \texttt{k} to the empty string, in
 the context at the end of a string.
 
@@ -871,7 +898,7 @@ the context at the end of a string.
 
 \section{Epenthesis Rules}
 
-An epenthesis rule inserts symbols where no symbols were before.  That it, it matches the empty string and maps it to
+An epenthesis rule inserts symbols where no symbols were before.  That is, it matches the empty string and maps it to
 something not empty.  Recall that empty double quotes, \verb!""!, denotes the empty string.  The following epenthesis rule
 
 \begin{Verbatim}
@@ -885,7 +912,7 @@ an infinite number of outputs.\footnote{The Xerox replace rule intuitively
 	written \verb!0 -> i || p _ t!, where \verb!0! represents the empty
 	string, is indeed interpreted this
 way and results in an error.  Xerox epenthesis rules must be notated with special ``dotted brackets,'' 
-e.g.\@ \verb![..] -> i || p _ t! to avoid the error.}  However, the intent of a programmer who writes \verb!"" -> i /  p _ t! is almost always to
+e.g., \verb![..] -> i || p _ t! to avoid the error.}  However, the intent of a programmer who writes \verb!"" -> i /  p _ t! is almost always to
 interpret the input as having only one empty string between symbols, and at the boundaries of a string, and the Kleene rule is automatically interpreted in this way.
 
 
@@ -894,7 +921,8 @@ interpret the input as having only one empty string between symbols, and at the 
 \label{markupRules}
 
 Markup rules match an input expression, map that input expression to itself in the output, and then ``mark up'' the
-output by surrounding the copied expression with symbols specified in the rule, e.g.
+output by surrounding the copied expression with symbols specified in
+the rule, e.g.,
 
 \begin{Verbatim}
 [aeiou] -> '<v>' ~~~ '</v>'
@@ -910,13 +938,15 @@ this rule will map \emph{unique} to
 \noindent
 \emph{<v>u</v>n<v>i</v>q<v>u</v><v>e</v>}.
 
-Markup rules can have contexts.
+Markup rules can have one or more contexts.
 
 \begin{Verbatim}
 [aeiou] -> '<v>' ~~~ '</v>' / leftContext _ rightContext
 \end{Verbatim}
 
-Such markup rules are very similar to those in the Xerox \xfst{} language.  As we shall see, Kleene also offers transducer-style rules that perform
+\noindent
+Such markup rules are very similar to those in the Xerox \xfst{}
+language.  As we shall see below, Kleene also offers transducer-style rules that perform
 markup in even more flexible and powerful ways.
 
 \section{Two-Level Rule Contexts}
@@ -939,8 +969,8 @@ a -> b / (.*):b _2_
 \noindent
 is a rule with a two-level context that maps \texttt{baaa} to {bbbb}.  The
 \verb!_2_! syntax, which can also be typed as ‗, the Unicode
-\acro{double low line},  indicates that the context or contexts are to be interpreted as
-having two levels.  Here the left context is \verb!.*! (the Universal Language) on the upper side and \verb!b! on the
+\acro{double low line},  U+2017, indicates that the context or contexts are to be interpreted as
+having two levels.  Here the left context, \verb!(.*):b!, has \verb!.*! (the Universal Language) on the upper side and \verb!b! on the
 lower side.
 
 [KRB:  explain, step by step, how the only possible output is bbbb]
@@ -984,8 +1014,8 @@ Such rules have been found useful to model a phenomenon known as umlaut.
 The following example of maximal matching involves the insertion of a hyphen to mark a syllable-boundary
 marker, where a syllable starts with a
 consonant, continues with one or more vowels and ends with zero or more consonants,
-provided that the right context starts with one consonant and a vowel.\footnote{Thanks to
-Lauri Karttunen for this example.}
+provided that the right context starts with one consonant and a vowel.\footnote{Thanks
+Lauri Karttunen for this example, which I have modified slightly.}
 
 \begin{Verbatim}
 // Define a set of consonants for your language
@@ -996,16 +1026,19 @@ $C = [bcdfghjklmnprstvyz] ;
 $V = [aeiou] ;
 
 // Define a syllable as the maximal match of
-//	one consonant, followed by
-//	one or more vowels, followed by
+//	one consonant (or beginning of word), followed 
+//	by one or more vowels, followed by
 //	zero or more consonants, provided that
 //	it is followed by one consonant and a vowel.
 // Insert a hyphen after such a matched syllable.
-$Syll = $C $V+ $C* {max}->   ~~~ "-" / _ $C $V ;
+$Syll = 
+	   $V+ $C* {max}->   ~~~ "-" / # _ $C $V 
+	_o_
+	$C $V+ $C* {max}->   ~~~ "-" /   _ $C $V ;
 
 // Define a convenient function that 
 //	takes an input string,
-//	apples $Syll to the string in a downward direction, and
+//	applies $Syll to the string in a downward direction, and
 //	returns the lower side of the resulting relation.
 $^Syllabify($str) { 
 	return $^lowerside($str _o_ $Syll) ; 
@@ -1021,10 +1054,20 @@ print $words ;
 //	No double quotes are needed here.
 print $^Syllabify(continental) ;
 // => con-ti-nen-tal
+
+// Test using assert
+assert #^equivalent($^Syllabify(continental), "con-ti-nen-tal"), 
+       "Test 1 failed" ;
+assert #^equivalent($^Syllabify(esperanto), "es-pe-ran-to"), 
+       "Test 2 failed" ;
 \end{Verbatim}
 
+\noindent
 This modeling of syllabification won't work for all languages, but it is often a
-useful starting point.
+useful starting point.  Note that the \texttt{assert} statements have a
+required first argument, which must be a boolean expression, and an
+optional second argument, which is printed out if and only if the
+assertion fails.
 
 \section{Parallel Rules}
 
@@ -1053,7 +1096,7 @@ and
 b -> a
 \end{Verbatim}
 
-As a first attempt, we try to compose the two rules with the \verb!a -> b! rule above the
+As a first attempt (which will fail), we try to compose the two rules with the \verb!a -> b! rule above the
 \verb!b -> a! rule, and we define a trivial function \verb!$^swap! to facilitate testing.
 
 
@@ -1072,7 +1115,7 @@ print $^swap(abba) ;
 \noindent
 To our disappointment, when we apply \verb!$^swap! to \emph{abba}, the output is not the desired
 \emph{baab} but rather the string \emph{aaaa}.  We then try the opposite ordering of the
-two rules
+two rules in the cascade (which again will not work),
 
 \begin{Verbatim}
 $deriv =  b -> a
@@ -1116,7 +1159,7 @@ of the other, and simple rule re-ordering will not solve this
 problem.
 
 In ordered derivations, such problems can be solved by the use of a temporary symbol---we
-will use the multicharacter symbol \verb![TEMP]!---in the following way
+will use the multi-character symbol \verb![TEMP]!---in the following way
 
 
 \begin{Verbatim}
@@ -1138,7 +1181,8 @@ print $^swap(abba) ;
 This works as desired, but it is far from beautiful or intuitive.  
 Instinctively, we just want to write our two
 simple rules, \verb!a -> b! and \verb!b -> a!, and specify somehow that they are to be
-applied in parallel, simultaneously, rather than one ordered after the other. 
+applied in parallel, simultaneously, rather than one ordered after the
+other in a cascade. 
 
 \newcommand{\dollar}{\char'44}
 
@@ -1146,8 +1190,9 @@ applied in parallel, simultaneously, rather than one ordered after the other.
 
 \subsubsection{The abba Example}
 
-Huld\'en's algorithms allow alternation rules to be compiled in parallel with complete freedom [KRB:  test and confirm
-this].  Unlike xfst Replace Rules, which can be compiled in parallel only if they have the exact same arrow operator,
+Huld\'en's algorithms allow alternation rules to be compiled in parallel with complete
+freedom. [KRB:  needs further testing]
+ Unlike xfst Replace Rules, which can be compiled in parallel only if they have the exact same arrow operator,
 Kleene allows rules of any arrow type to be compiled in parallel.  Unlike traditional Two-Level alternation rules, which are
 compiled in parallel but are
 limited to controlling the mapping of one symbol to one symbol (the so-called ``concrete pairs''), Kleene allows
@@ -1155,7 +1200,7 @@ rules with arbitrary-length mappings to be compiled in parallel.
 
 The overt way to indicate that a set of rules is to be compiled in parallel is to enclose them in the \verb!$^parallel()!
 built-in function, separated by commas.  Our problematic \emph{abba} example shown just above
-can be formulated straightforwardly as
+can now be formulated straightforwardly and intuitively as
 
 \begin{Verbatim}
 $r = $^parallel(a -> b, b -> a) ;
@@ -1178,21 +1223,46 @@ print $^swap(ababaa)
 By compiling the \texttt{a -> b} and \texttt{b -> a} rules in parallel, they apply simultaneously and give us the desired
 results.
 The resulting machine will map \emph{abba} to \emph{baab}, \emph{baab} to \emph{abba},
-etc. 
+etc.   Note that the relative order of the rules, when they are applied in parallel,
+is not significant---the results are the same.
+
+\begin{Verbatim}
+// reverse the order of the rules
+$r = $^parallel(b -> a, a -> b) ;
+
+#^swap($word) {
+    return $^lowerside($word _o_ $r) ;
+}
+
+print $^swap(abba)
+// => baab
+\end{Verbatim}
 
 
 Proponents of parallel rules, notably Professor Kimmo Koskenniemi of the University of
 Helsinki, argue that parallel rule compilation is inherently simpler than ordered
 derivations.  They emphasize the difficulties of rule ordering and point out that a
-developer must understand and somehow keep track of all the intermediate levels in a
-derivation.  However, non-trivial sets of rules applied in parallel can conflict in
+developer must understand and somehow keep track of all the languages at the 
+intermediate levels in a
+derivation.  However, in the experience at Xerox Research, where morphological analyzers
+were written for dozens of languages using ordered cascades of rules, the ordering never
+once proved to be a practical problem.  
+On the other hand, non-trivial sets of rules applied in parallel can conflict in
 various ways that are not at all easy for most developers to understand and fix,
-especially where the rule set includes deletions or epentheses.  In addition,
+especially where the rule set includes deletions or epentheses.\footnote{At Xerox
+	Research, where both traditional parallel ``two-level'' rules and cascaded ``replace
+	rules'' were available, developers even took some mature systems, originally written
+	using two-level rules, and rewrote them using ordered cascades of Xerox ``replace
+rules,'' which they considered easier to understand and deal with.}
+	
+	In addition,
 writing rules in parallel
-also requires the careful use of two-level contexts, often specifying that one side
+also requires the careful expression of two-level contexts, often specifying that one side
 of the context must match while the other side can be anything (the universal language).
 
-Consider the case of the \emph{kaNpat} example, previously encoded as a cascade 
+Consider the case of the \emph{kaNpat} example, previously encoded as a
+straightforward cascade of
+rules:
 
 \begin{Verbatim}
 $r = N -> m / _ (p|b)
@@ -1212,11 +1282,22 @@ test $r ;
 \noindent
 where the \texttt{p -> m} rule now has a left context \texttt{(.*):m} that matches
 anything (the universal language) on the upper side but \emph{m} on the lower
-side.  This is effectively the way of saying that the \texttt{m} of the left context could
+side.  In parallel rules, this is the way of saying that the \texttt{m} of the left context could
 be an original input \emph{m}, or it could be something (a symbol, a sequence of symbols,
 or perhaps even the empty string) that is being mapped to \emph{m} by
 any one of the other rules
-being compiled in parallel.  
+being compiled in parallel.  If one ignores such subtleties and tries to write the
+rule as
+
+\begin{Verbatim}
+// This won't work
+$r = $^parallel( N -> m / _ (p|b) , p -> m / m _2_ ) ;
+// maps kaNpat to kampat, not to the desired kammat
+\end{Verbatim}
+
+\noindent
+Then the \texttt{kaNpat} example will not work as desired.
+
 
 Consider also the mapping of Brazilian-Portuguese \emph{time} to \emph{tSimi} and \emph{parte} to \emph{partSi}, done earlier using a cascade of rules.  
 
@@ -1238,7 +1319,8 @@ $r = $^parallel( e -> i / _ # ,  t -> tS / _2_ (.*):i ) ;
 In this case, the right context of the \texttt{t -> tS} rule must be written as the
 two-level \texttt{(.*):i}, indicating that the \emph{i} could be an original input
 \emph{i} or something mapped to \emph{i} by another parallel rule.  Writing such two-level
-contexts correctly (neither too loose nor too specific) is not always easy for developers.  
+contexts correctly (neither too loose nor too specific) is not always easy for
+developers. 
 
 Consider also the following example, which (in a rule with one-level contexts) maps
 \emph{a} to \emph{b} in the context between \emph{c} and
@@ -1266,25 +1348,24 @@ will have differing conceptual capabilities and tastes.  Kleene allows rule sets
 encoded as derivations, in parallel, or in a mixture of the two approaches.
 
 Note that \verb!$^parallel()! is a special built-in
-function\footnote{\verb!$^parallel()! processes its arguments in
-a particular way and cannot be aliased.  It is thus similar to a Lisp
-special form.}  that requires that its arguments be in full rule syntax.  The following example, which
-tries to compile the rules separately into finite-state machines, and then pass
-the machines as arguments to \verb!$^parallel()! is syntactically and
-semantically
-illegal.  In order to compile rules in parallel, the Huld\'en algorithms need to access
-and compile all of the original rule parts,
-combining them together in non-trivial ways.  If a rule has been pre-compiled into a finite-state machine, the original parts of
-the component rules are no longer identifiable or extractable.
+function\footnote{\verb!$^parallel()! processes its arguments in a particular way and
+cannot be aliased.  It is thus similar to a Lisp special form.}  that requires that its
+arguments appear in full rule syntax.  The following example, which tries to compile the
+rules separately into finite-state machines, and then pass the machines as arguments to
+\verb!$^parallel()! is syntactically and semantically illegal.  In order to compile
+rules in parallel, the Huld\'en algorithms need to access and compile all of the
+original rule parts, combining them together in non-trivial ways.  If a rule has been
+pre-compiled into a finite-state machine, the original parts of the component rules are
+no longer identifiable or extractable.
 
 \begin{Verbatim}
 $rule1 = e -> i / _ # ;
 $rule2 = t -> tS / _2_ (.*):i ;
 
-// this is ILLEGAL
+// this is ungrammatical
 $r = $^parallel( $rule1 ,  $rule2 ) ;
 
-// while this is legal
+// while this, with full rule notation, is legal
 $r = $^parallel( e -> i / _ #, t -> tS / _2_ (.*):i ) ;
 \end{Verbatim}
 
@@ -1301,10 +1382,11 @@ $r = $voiced -> $unvoiced / _ #
 \end{Verbatim}
 
 \noindent
-models the phenomenon where voiced consonants become devoiced at the end of a word.  (The rule is written on multiple lines to be
+models the phenomenon where voiced consonants become devoiced at the end of a word.  
+(The rule is written on multiple lines to be
 more readable, but this is not required.) In German, as a real-world example, the word
 written \emph{Tag} is pronounced \emph{Tak}, the word written \emph{Hund} is pronounced
-\emph{Hunt}. etc.  The rule above is effectively expanded to
+\emph{Hunt}, etc.  The rule above is effectively expanded to
 three rules that are compiled in parallel, equivalent to
 
 \begin{Verbatim}
@@ -1314,7 +1396,7 @@ $r = $^parallel( b -> p / _ #,
 \end{Verbatim}
 
 \noindent
-In this case, the \texttt{{where ...}} clause defines two local variables,
+In this case, the \texttt{\{where ...\}} clause defines two local variables,
 \verb!$voiced! and \verb!$unvoiced!, each of which is bound to a value, one at a
 time, from a supplied list of finite-state machines.  The finite-state machines can be
 arbitrarily complex, though they must conform to any semantic limitations
@@ -1348,16 +1430,18 @@ $@voicedstops = $@(b, d, g) ;
 $@unvoicedstops = $@(p, t, k) ;
 
 $r = $voiced -> $unvoiced / _#  
-        {where  $voiced   _E_ $@voidedstops, 
+        {where  $voiced   _E_ $@voicedstops, 
                 $unvoiced _E_ $@unvoicedstops } ;
 \end{Verbatim}
 \end{samepage}
 
 \noindent
-The following rule, which doubles all vowels, e.g.\@ mapping \emph{unido} to
+The following rule, which doubles all vowels, e.g., mapping \emph{unido} to
 \emph{uuniidoo}, calls \verb!$@^getSigma()!, which is a pre-defined function that
 calculates the alphabet (the ``sigma'') of its \fsm{}
-argument and returns it as a list of finite-state machines.
+argument and returns it as a list of finite-state
+machines.\footnote{Lists of finite-state machines are documented in
+chapter \ref{chapt:lists}.}
 
 \begin{Verbatim}
 $r = $vowel -> $vowel $vowel 
@@ -1368,7 +1452,7 @@ $r = $vowel -> $vowel $vowel
 
 Julius Caesar employed a simple-substitution cipher wherein each Latin
 letter was replaced by the letter three steps along
-in the alphabet, e.g.\@ A was replaced by D, B was replaced by E, C was replaced by F, etc.  At the end of the alphabet,
+in the alphabet, e.g., A was replaced by D, B was replaced by E, C was replaced by F, etc.  At the end of the alphabet,
 the mapping ``wrapped around'' to the beginning so that X was replaced
 by A, Y by B and Z by C.  Like the \emph{abba} example
 above, we intuitively just want all the letter substitutions to happen simultaneously, without mutual interference, and
@@ -1402,7 +1486,8 @@ normal alphabetical order.  \texttt{\$@cipherletter} is then defined as a list o
 reflecting Caesar's original offset.
 \texttt{\$en} is a rule that maps each plaintext letter to its corresponding ciphertext letter, and \verb!$^encipher! is a
 little function that composes the \verb!$en! rule ``under'' the input string and then extracts and returns the lower side
-(the output) of the result.  The result of \verb!$^encipher("attack at dawn")! is the ciphertext \emph{DWWDFN DW GDZQ}.
+(the output) of the result.  The result of \verb!$^encipher("attack at dawn")! 
+is the ciphertext string \emph{DWWDFN DW GDZQ}.
 
 There are two ways to implement decipherment of the same cipher.  Following the same pattern, we can define \verb!$de! as
 a rule that maps each ciphertext letter to its plaintext equivalent, and the \verb!$^decipher! function facilitates the
@@ -1471,10 +1556,11 @@ the mapping only from the lower side to the upper side, not vice versa.
 
 \subsubsection{Where Mixed Clauses}
 
-Kleene also supports the \texttt{where mixed} keyword, which causes the interpreter to compute the Cartesian Product
-of all the list values and assign the local variables to each of the
-results in turn.  For \texttt{where mixed}, the lists of values do not have
-to have the same length.  For example, in the rule
+Kleene also supports the \texttt{where mixed} keyword, which causes the
+interpreter to compute the Cartesian Product of all the list values and
+assign the local variables to each of the results in turn.  For
+\texttt{where mixed}, the lists of values do not have to have the same
+length.  For example, in the rule
 
 \begin{Verbatim}
 $r = $foo -> $bar 
@@ -1525,7 +1611,7 @@ We have already examined epenthesis rules such as
 
 \noindent
 where the upper-side input expression is the empty string.  A similar case is where the input expression denotes a
-language that includes the empty string, e.g.
+language that includes the empty string, e.g.,
 
 \begin{Verbatim}
 a* -> x / l _ r
@@ -1551,7 +1637,8 @@ $^parallel( (a* - "") -> x / l _ r, "" -> x / l _ r)
 
 \noindent
 but this is all hidden from the programmer.\footnote{Xerox Replace Rules for epenthesis require the ``dotted bracket'' notation as
-the input expression, e.g.\@  \verb![..] -> i!, or surrounding the input expression, e.g.\@ \verb![.a*.] -> x!, in
+the input expression, e.g.,  \verb![..] -> i!, or surrounding the input
+expression, e.g., \verb![.a*.] -> x!, in
 cases where the input language includes the empty string.  This notation causes the Xerox xfst interpreter to treat
 the input as having only one empty string where, mathematically, an infinite number of empty strings occur.  The
 dotted-bracket notation is easily forgotten by programmers, and the failure to use it, in cases where the input
@@ -1563,28 +1650,35 @@ were only one empty string before and after each input symbol.}
 
 \subsection{Traditional Rules vs.\ Transducer-Style Rules}
 
-Transducer-style rules were an innovation in the Foma language\footnote{\url{https://code.google.com/p/foma/}} of 
-Dr.\@ M\r{a}ns Huldén, inspired by a suggestion by Gerdemann and van
-Noord
-\citep{gerdemann+vannoord:1999}.\footnote{For documentation of transducer-style rules in Foma,
-	see
+Transducer-style rules were an innovation in the Foma
+language\footnote{\url{https://code.google.com/p/foma/}} of Dr.\@
+M\r{a}ns Huldén, inspired by a suggestion by Gerdemann and van Noord
+\citep{gerdemann+vannoord:1999}.\footnote{For documentation of
+	transducer-style rules in Foma, see
 \url{https://code.google.com/p/foma/wiki/RegularExpressionReference#Transducers_with_backreferences}.
 The original paper by Dale Gerdemann and Gertjan van Noord is available
-at \url{http://acl.lds.upenn.edu/E/E99/E99-1017.pdf}.}  With help from 
+at \url{http://acl.lds.upenn.edu/E/E99/E99-1017.pdf}.  The alternation
+rules in OpenGrm Thrax are also in the transducer style.  If anyone know
+more about the history of such rules, please contact me.}  With help from
 Huldén, they were added to Kleene in January 2014.
 
-In the traditional alternation rules that we have seen so far, the left-hand side of the rule always
-contains upper and lower expressions that must denote regular languages (not relations) and which are
-separated in the rule syntax with one of the many rule-arrow operators.  A right-arrow rule has a
-default downward bias, meaning that we typically think of the input matching on the upper side of the
-relation, and the output being read off the lower side.  Conversely, a left-arrow rule has a default
-upward bias, meaning that we typically think of the input matching on the lower side of the relation,
-and the output being read off the upper side.\footnote{In Kleene, as in the Xerox Finite State Tools, we
-	typically visualize transducers as having an upper and a lower side, and we emphasize their
-	bidirectionality: they can be applied to input either in an downward direction (``generation'')
-	or in an upward direction (``analysis'').  Recall that in the OpenFst tradition, what Kleene and
-	Xerox call the upper side is always termed the ``input'' side, and the lower side is always termed
-the ``output'' side.}
+In the traditional alternation rules that we have seen so far, the
+left-hand side of the rule always contains upper and lower expressions
+that must denote regular languages (not relations) and which are
+separated in the rule syntax with one of the many rule-arrow operators.
+A right-arrow rule has a default downward bias, meaning that we typically
+think of the input matching on the upper side of the relation, and the
+output being read off the lower side.  Conversely, a left-arrow rule has
+a default upward bias, meaning that we typically think of the input
+matching on the lower side of the relation, and the output being read off
+the upper side.\footnote{In Kleene, as in the Xerox Finite State Tools,
+	we typically visualize transducers as having an upper and a lower
+	side, and we emphasize their bidirectionality: they can be applied to
+	input either in an downward direction (``generation'') or in an
+	upward direction (``analysis'').  Recall that in the OpenFst
+	tradition, what Kleene and Xerox call the upper side is always termed
+the ``input'' side, and the lower side is always termed the ``output''
+side.}
 
 \begin{alltt}
 // a traditional right-arrow rule, with a default 
@@ -1597,17 +1691,18 @@ the ``output'' side.}
 \emph{upper} <- \emph{lower} / \emph{left} _ \emph{right}
 \end{alltt}
 
-In some cases, it can be more intuitive or convenient to express the mapping of a rule not as 
-separate \emph{upper}
-and \emph{lower} expressions, but rather as a single combined transducer expression,
-e.g.\@ \emph{(upper):(lower)}.
-Such rules are known in Kleene as \emph{left-hand-side transducer rules}
-or just \emph{transducer-style} rules.  As we shall see, some rules with
-\texttt{where} clauses can be expressed more readably as
-transducer-style rules, and transducer-style rules provide a more
-general way to express multiple insertions than traditional markup rules.  As we shall see, there are even
-some cases where a potentially useful mapping that is easily expressible in a transducer-style rule cannot be re-expressed as a rule
-with separate \emph{upper} and \emph{lower} expressions.
+In some cases, it can be more intuitive or convenient to express the
+mapping of a rule not as separate \emph{upper} and \emph{lower}
+expressions, but rather as a single combined transducer expression, e.g.,
+\emph{(upper):(lower)}.  Such rules are known in Kleene as
+\emph{left-hand-side transducer rules} or just \emph{transducer-style}
+rules.  As we shall see, some rules with \texttt{where} clauses can be
+expressed more readably as transducer-style rules, and transducer-style
+rules provide a more general way to express multiple insertions than
+traditional markup rules.  As we shall see, there are even some cases
+where a potentially useful mapping that is easily expressible in a
+transducer-style rule cannot be re-expressed as a rule with separate
+\emph{upper} and \emph{lower} expressions.
 
 \subsection{Simple Mapping Rules in the Transducer Style}
 
@@ -1619,8 +1714,9 @@ will look at left-arrow rules and then
 progress to more complicated examples that better illustrate the power and generality of the
 transducer-style rules.  
 
-The simplest kind of traditional right-arrow mapping rule maps an upper expression, e.g.\@ \verb!a!, downward to a lower
-expression, e.g.\@ \verb!b!.  
+The simplest kind of traditional right-arrow mapping rule maps an upper
+expression, e.g., \verb!a!, downward to a lower
+expression, e.g., \verb!b!.  
 
 \begin{Verbatim}
 // a traditional right-arrow rule
@@ -1635,7 +1731,7 @@ the default input expression, here \verb!a!, with the crossproduct operator to f
 The key point here is that there is a single expression, denoting a transducer, on the left side of the arrow.
 
 \begin{Verbatim}
-// an equivalent transducer-style rule
+// a transducer-style rule equivalent to a -> b
 $downward = a:b -> ;
 \end{Verbatim}
 
@@ -1655,7 +1751,8 @@ it can be converted into an equivalent transducer-style rule by combining the \e
 \end{alltt}
 
 \noindent
-Recall that the cross-product operator, \verb!:!, is of high precedence, so the parentheses may be
+Recall that the cross-product operator, \verb!:!, is of high precedence,
+so the parentheses are often
 necessary to ensure that the \emph{upper} and \emph{lower} expressions are interpreted correctly.
 
 These are trivial examples, and at this point it is impossible to see the point of the exercise.  Rest
@@ -1714,35 +1811,40 @@ $max = (ab*):c {max} -> ;
 $maxopt = ab* {max} ->? c ;
 
 // equivalent transducer-style
+// Note the need for parens around ab*, to make
+// this rule equivalent to the one just above,
+// because crossproduct : has higher precedence
+// than concatenation.
 $maxopt = (ab*):c {max} ->? ;
 
 	// min
 
 // traditional
-$min = a*b* {min} -> c ;
+$min = ab* {min} -> c ;
 
 // equivalent transducer-style
-$min = (a*b*):c {min} -> ;
+$min = (ab*):c {min} -> ; 
 
 	// min optional
 
 // traditional
-$min = a*b* {min} ->? c ;
+$min = ab* {min} ->? c ;
 
 // equivalent transducer-style
-$min = (a*b*):c {min} ->? ;
+$min = (ab*):c {min} ->? ;
 \end{Verbatim}
 
 Note again that for right-arrow transducer-style rules, the arrows all point at nothing.  If the rule
-has contexts or \texttt{where} clauses, they appear immediately after the right arrow, e.g.
+has contexts or \texttt{where} clauses, they appear immediately after
+the right arrow, e.g.,
 
 \begin{Verbatim}
 // a transducer-style rule with a context
-$rule1 = a*b -> / left _ right ;
+$rule1 = a*:b -> / left _ right ;
 
 // a transducer-style rule with a where clause
 $rule2 = $up:$low -> { where $up _E_ $@(a, b, c),
-                             $low _E_ $@(x, y z) } ;
+                             $low _E_ $@(x, y, z) } ;
 
 // a transducer-style rule with a context and a where clause
 $rule3 = $up:$low -> / _ # { where $up _E_ $@(b, d, g),
@@ -1766,15 +1868,15 @@ input side expression, here \verb!b!, and combine them with the crossproduct ope
 transducer expression \verb!a:b!.  
 
 \begin{Verbatim}
-// equivalent transducer-style left-arrow rule
+// transducer-style left-arrow rule equivalent to a <- b
 $upward = <- a:b ;
 \end{Verbatim}
 
 \noindent
 Note that in the resulting left-arrow transducer-style rule, the left arrow points at nothing.
-(Recall that in right-arrow transducer-style rules, shown above, the right arrows also point at nothing.)  As
-always, the left arrow indicates the upward bias of the rule, here mapping up from lower-side \verb!b!s upward to
-upper-side \verb!a!s.
+(Recall that in right-arrow transducer-style rules, shown above, the right arrows also point at
+nothing.)  As always, the left arrow indicates the upward bias of the rule, here mapping up from
+lower-side \verb!b! upward to upper-side \verb!a!.
 
 Note the following equivalences between traditional left-arrow rules and their
 transducer-style left-arrow equivalents:
@@ -1815,57 +1917,58 @@ $maxopt = <-? {max} c:(ab*) ;
 	// min
 
 // traditional
-$min = c <- {min} a*b* ;
+$min = c <- {min} ab* ;
 
 // equivalent transducer-style
-$min = <- {min} c:(a*b*) ;
+$min = <- {min} c:(ab*) ;
 
 	// min optional
 
 // traditional
-$min = c <-? {min} a*b* ;
+$min = c <-? {min} ab* ;
 
 // equivalent transducer-style
-$min = <-? {min} c:(a*b*) ;
+$min = <-? {min} c:(ab*) ;
 \end{Verbatim}
 
 \subsection{Transducer-Style Rules vs.\ Where-Clause Rules}
 
-In cases where a set of parallel rules differ only in the \emph{input} and \emph{output} expressions,
-transducer-style rules can provide the most readable syntax.  Consider the following three equivalent
-rule definitions for devoicing consonants at the end of a word, involving explicitly parallel rules (using the
-\verb!$^parallel()! function), a rule with a \texttt{where} clause, and a transducer-style rule.
+In cases where a set of parallel rules differ only in the \emph{input}
+and \emph{output} expressions, transducer-style rules can provide the
+most readable syntax.  Consider the following three equivalent rule
+definitions for devoicing consonants at the end of a word, involving
+explicitly parallel rules (using the \verb!$^parallel()! function), a
+rule with a \texttt{where} clause, and a transducer-style rule.
 
 \begin{Verbatim}
 // explicit parallel rules
 $explicitPar = $^parallel( b -> p / _ #,  
                            d -> t / _ #,  
-						   g -> k / _ # ) ;
+                           g -> k / _ # ) ;
 
 // equivalent rule with a where clause
 $wherePar = $voiced -> $unvoiced / _ #  
-               { where $voiced _E_ $@(b, d, g),
+               { where $voiced   _E_ $@(b, d, g),
                        $unvoiced _E_ $@(p, t, k) } ;
 
 // equivalent transducer-style rule
 $transducerPar = b:p | d:t | g:k -> / _ # ;
 \end{Verbatim}
 
-\noindent
-In this case, most people would prefer to write and read the transducer-style
-rule.  If, however,
-a set of parallel rules involved variations in the contexts, a 
-\texttt{where} clause rule would be the 
-best option, and it could not be re-expressed as a transducer-style rule.
+\noindent In this case, most people would prefer to write and read the
+transducer-style rule.  If, however, a set of parallel rules involved
+variations in the contexts, a \texttt{where} clause rule would be the
+best option, and it could not be re-expressed as a transducer-style
+rule.
 
 
 \subsection{Transducer-Style Rules vs.\ Traditional Markup Rules}
 
-Transducer-style rules provide a more general and powerful alternative to the markup rules
-previously presented.  First
-recall that an epenthesis rule maps the empty string into some non-empty string, e.g. to
-insert an \verb!i! ``out of nowhere'' between a \verb!p! and an immediately following
-\verb!t!:
+Transducer-style rules provide a more general and powerful alternative
+to the markup rules previously presented.  First recall that an
+epenthesis rule maps the empty string into some non-empty string, e.g.,
+to insert an \verb!i! ``out of nowhere'' between a \verb!p! and an
+immediately following \verb!t!:
 
 \begin{Verbatim}
 $ep = "" -> i /  p _ t ;
@@ -1877,10 +1980,12 @@ $ep = "":i -> / p _ t ;
 \end{Verbatim}
 
 
-Markup rules, presented in section \ref{markupRules}, page \pageref{markupRules}, are essentially double-epenthesis
-rules, matching an input expression, copying it to the output, and epenthetically inserting
-symbols before and output the copied output.  Recall that the operator \verb!~~~! denotes the
-copy of the input expression.  The following rule puts \init{xml}-like \verb!<v>! and
+Markup rules, presented in section \ref{markupRules}, page
+\pageref{markupRules}, are essentially double-epenthesis rules,
+matching an input expression, copying it to the output, and
+epenthetically inserting symbols before and output the copied output.
+Recall that the operator \verb!~~~! denotes the copy of the input
+expression in traditional markup rules.  The following rule puts \init{xml}-like \verb!<v>! and
 \verb!</v>! symbols around each vowel.
 
 \begin{Verbatim}
@@ -1893,8 +1998,8 @@ $markup = [aeiou] -> '<v>' ~~~ '</v>' ;
 //	are multi-character symbols
 \end{Verbatim}
 
-The transducer-style equivalent rule does not use the \verb!~~~! operator, and it is arguably
-more readable.
+The equivalent transducer-style rule does not use the \verb!~~~!
+operator, and it is arguably more readable.
 
 \begin{Verbatim}
 // equivalent transducer-style rule to surround vowels 
@@ -1915,21 +2020,23 @@ on the left and a \verb!</v>! on the right.
 
 \subsubsection{Generalized Epenthesis}
 
-Because the transducer expression on the left-hand side of a transducer-style rule can denote
-\emph{any} two-projection relation, i.e.\@ any relation expressible in Kleene and OpenFst, 
-it should be obvious that we are no longer limited to the single insertions of tradition
-epenthesis rules or the double epenthesis of traditional
-markup rules.  We can now write a transducer-style rule to insert three or more epenthetical sequences.
+Because the transducer expression on the left-hand side of a
+transducer-style rule can denote \emph{any} two-projection relation,
+i.e., any relation expressible in Kleene and OpenFst, it should be
+obvious that we are no longer limited to the single insertions of
+tradition epenthesis rules or the double epenthesis of traditional
+markup rules.  We can now write a transducer-style rule to insert three
+or more epenthetical sequences.  Consider the following example:
 
 \begin{Verbatim}
 $vow = [aeiou] ;
-$con = [ptkbdgszlrwy] ;
+$con = [ptkbdgfvszmnlrwy] ;
 
 // wrap each vowel with <v> and </v>, and wrap each 
 // consonant(s)-vowel(s) sequence in <cv> and </cv>
 
 $generalMarkup = 
-  "":"<cv>" $con+ ("":'<v>' $vow "":'</v>')+ "":'</cv>' {max}-> ;
+  "":'<cv>' $con+ ("":'<v>' $vow "":'</v>')+ "":'</cv>' {max}-> ;
 
 // maps "stabile" to 
 //   "<cv>st<v>a</v></cv><cv>b<v>i</v></cv><cv>l<v>e</v></cv>"
@@ -1956,8 +2063,8 @@ surround the output with arbitrary symbols.
 \begin{Verbatim}
 $generalMapAndMarkup = "":l  (cat):(feline) "":r -> ;
 
-// maps "cat" to "lfeliner"
-// maps "scatter" to "slfelinerter"
+// maps "cat" down to "lfeliner"
+// maps "scatter" down to "slfelinerter"
 \end{Verbatim}
 
 \noindent
@@ -1971,12 +2078,13 @@ input to the output, but also matches expressions on the left and right and maps
 bracketing expressions to something different.
 
 \begin{Verbatim}
-$rule = a:e C* a:e -> / # _ ;
+$con = [ptkbdgfvszmnlrwy] ;
+$rule = a:e $con* a:e -> / # _ ;
 \end{Verbatim}
 
 \noindent
 This rule maps \emph{aa} to \emph{ee}, \emph{aCa} to \emph{eCe}, \emph{aCCa}
-to \emph{eCCe}, etc. and cannot be re-expressed as a traditional mapping rule.
+to \emph{eCCe}, etc.\@ and cannot be re-expressed as a traditional mapping rule.
 
 In conclusion, the new transducer-style rules offer a clean notation that is often more
 readable, general and powerful than traditional mapping rules that separate the \emph{input}

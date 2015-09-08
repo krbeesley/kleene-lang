@@ -39,7 +39,7 @@ effectively of highest precedence.
 \hline
 \verb!\uHHHH! & \init{bmp} symbol specified by code point value\\
 \hline
-\verb!\uHHHHHHHH! & supplementary symbol specified by code point value\\
+\verb!\UHHHHHHHH! & supplementary symbol specified by code point value\\
 \hline
 . & (dot) matches any symbol\\
 \hline
@@ -58,7 +58,8 @@ effectively of highest precedence.
 \noindent
 Symbols with multi-character names (also known as ``multi-character symbols'') can contain any
 Unicode character from the
-\init{bmp}\footnote{\url{https://en.wikipedia.org/wiki/Plane_(Unicode)}} (Basic Multilingual Plane) except for newline and
+\init{bmp}\footnote{\url{https://en.wikipedia.org/wiki/Plane_(Unicode)}}
+(Basic Multilingual Plane) except for the newline and
 carriage return.\footnote{The newline or \unicode{line feed} character has the code
 point value \textbackslash{}u000A; the \unicode{carriage return} is \textbackslash{}u000D.}  The
 single quotes are delimiters of the multi-character 
@@ -78,7 +79,7 @@ the names contain punctuation symbols; that is, it is almost always a
 mistake to define multi-character symbols with plain alphabetic names
 like \verb!'Noun'!, \verb!'Verb'!, \verb!'sh'! or \verb!'ing'! that, 
 minus the single quotes, could be visually confused with a simple
-sequence of separate alphabetic symbols.\footnote{In rare instances, the
+sequence of separate alphabetic symbols.\footnote{In some instances, the
 orthography of a language may contain digraphs, trigraphs, etc.\@ that
 are always treated as indivisible units, and these might be encoded
 safely and usefully as multi-character symbols in a finite-state machine
@@ -93,7 +94,7 @@ thrown.
 \subsection{Inherently Delimited Regular Expressions}
 
 The following regular expressions are syntactically complex but
-inherently delimited, making them also of highest precedence.
+inherently delimited with punctuation characters, making them also of highest precedence.
 
 \vspace{0.5cm}
 
@@ -104,7 +105,7 @@ inherently delimited, making them also of highest precedence.
 \hline
 \verb![^aeiou] [^a-z] [^A-Za-z0-9]! & complemented character sets\\
 \hline
-\verb!"dog" "+" "AT&T"! & double-quoted literalized concatenations of symbols\\
+\verb!"+" "AT&T" " " "dog"! & double-quoted literalized concatenations of symbols\\
 \hline
 \verb!<0.5> <0.01> <0.36> <1.0>! &  weights\\
 \hline
@@ -118,6 +119,38 @@ an \fsm{}\\
 
 \vspace{0.5cm}
 
+\texttt{[aeiou]} is equivalent to \texttt{(a|e|i|o|u)} and denotes the union of the
+symbols \texttt{a}, \texttt{e}, \texttt{i}, \texttt{o} and \texttt{u}.  \texttt{[a-z]},
+where the \texttt{-} is a hyphen, denotes the union of a range of characters and is
+equivalent to the tediously typed
+\texttt{(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)}.  Unions of character
+ranges are always inclusive of the first and last symbols, and the content of the range
+is defined by the Unicode encoding.  The first symbol in a range must have a lower
+Unicode code point value than the last symbol in the range.  As in Perl regular
+expressions, \texttt{[a-ex-zmr]} is equivalent to \texttt{[abcdexyzmr]}.
+
+\texttt{[\^{}aeiou]} is equivalent to \texttt{(. - (a|e|i|o|u))} and denotes the symbol
+complement of the union \texttt{(a|e|i|o|u)}.  That is, \texttt{[\^{}aeiou]} denotes any
+single symbol \emph{except} \texttt{a}, \texttt{e}, \texttt{i}, \texttt{o} or \texttt{u}.
+
+\texttt{"+"} denotes a literal plus sign---otherwise \texttt{+} is a special character.
+(A literal plus sign can also be typed as \texttt{\textbackslash{}+}.)  \texttt{"AT\&T"} is equivalent
+to \texttt{(A T "\&" T)}, the concatenation of \texttt{A}, \texttt{T}, a literal
+ampersand \& and \texttt{T}.  As already mentioned, spaces are normally ignored in
+Kleene regular expressions, and \texttt{"~"} is one way to denote a literal space
+symbol.  \texttt{"dog"} denotes the concatenation of \texttt{d}, \texttt{o} and
+\texttt{g}, but as none of these characters is special, the double quotes are
+extraneous in this case, and so \texttt{"dog"} is equivalent to \texttt{dog} and
+\texttt{d o g}.  One way to denote the empty zero-length string (the \emph{epsilon}) is \texttt{""}.
+
+Angle-bracketed expressions like \texttt{<0.5>} represent a weight in the Tropical
+Semiring.  The angle brackets can contain a simple literal number, as in this example,
+or an arbitrarily complex arithmetic expression (see chapter
+\ref{chapt:arithmeticexpressions}).
+
+Functions that return an \fsm{} value have a syntax like
+\texttt{\$\^{}nameoffunction(}\emph{args...}\texttt{)}.
+
 \Kleene{} employs a system of
 sigils\footnote{\url{http://en.wikipedia/org/wiki/Sigil_(computer_programming)}}
 to distinguish identifiers like \verb!$abc! from simple concatenations of symbols 
@@ -125,7 +158,7 @@ like \verb!abc!.  A prefixed
 \verb!$! marks a variable name with a finite-state-machine value; a prefixed
 \verb!$^! marks the
 name of a function that returns a finite-state-machine value; and a prefixed \verb!$@! marks the name of
-a list of machines (see chapter \ref{chapt:lists}.
+a list of finite-state machines (see chapter \ref{chapt:lists}).
 
 \vspace{0.5cm} 
 
@@ -154,13 +187,6 @@ contain any Unicode \init{bmp} symbol except for newline and
 carriage-return.\footnote{The newline or \unicode{line feed} character is
 \textbackslash{}u000A; the \unicode{carriage return} is
 \textbackslash{}u000D.}
-
-Double quoting is not needed for
-normal alphabetic symbols---the regular expression \verb!"dog"! is
-equivalent to \verb!dog!, \verb!d o g!, etc.---but
-is useful for literalizing special characters, e.g.\@ \verb!"+"!, and for
-surrounding strings that include a special character, e.g.\@
-\verb!"AT&T"! and \verb!"myfilename.txt"!.
 
 A closed set of control characters can appear inside double-quoted strings,
 and in normal regular-expression text,
@@ -214,9 +240,9 @@ listed from high to low precedence.
 \hline
 ( ) &  parenthetical grouping & circumfix &\\
 \hline
-: & crossproduct & infix &\\
-\hline
 \verb!* + ? {2} {2,4} {2,}! & iteration & postfix &\\
+\hline
+: & crossproduct & infix &\\
 \hline
 \verb!~!  & complement/negation & prefix & \\
 \hline
@@ -235,30 +261,83 @@ $\circ$ \emph{or} \_o\_  & composition & infix & left assoc.\\
 \end{tabular}
 
 \vspace{0.5cm}
+
+Parenthesized expressions have the highest priority, and so parentheses can
+be used to force desired groupings, overriding other default
+precedences.
+
+Postfixed iteration operators have the next highest precedence.
+The postfixed \texttt{*}, sometimes called the Kleene star, denotes zero
+or more repetitions of the previous expression.  Similarly, the
+postfixed \texttt{+} (the Kleene plus) 
+denotes one or more of the previous expression.
+The postfixed question mark \texttt{?} indicates that the previous
+expression is optional; thus \texttt{a?} is equivalent to \texttt{(a |
+"")}, the union of \texttt{a} and the empty string.  The postfixed
+\texttt{\{2\}} indicates the concatenation of two of the previous
+expression; e.g., \texttt{a\{2\}} is equivalent to \texttt{aa}.
+\texttt{a\{2,4\}} denotes 2 to 4 concatenations of \texttt{a}, and
+\texttt{a\{2,\}} denotes 2 or more concatenations of \texttt{a}.
+
 The : is the cross-product operator, used in examples like \texttt{a:b},
-\texttt{(book):(books)} and \verb!$fst1:$fst2!.  The operands must
-denote regular languages (not regular relations), and the result is a
-relation that relates each string in one language to all the strings in
-the other language.  Because : has high precedence, note that a regular
-expression like \texttt{ab:cd} is equivalent to \texttt{a(b:c)d}.
+\texttt{s:z}, \texttt{(book):(books)} and \verb!$fst1:$fst2!.  The
+operands must denote regular languages (not regular relations), and the
+result is a relation that relates each string in one language to all the
+strings in the other language.  Because : has higher precedence than
+concatenation, note that a regular expression written \texttt{ab:cd} is
+equivalent to \texttt{a(b:c)d}.
 
+The prefixed \texttt{\~{}} denotes the language complement of the
+following expression.  For example, \texttt{\~{}a} is equivalent to
+\texttt{(.* - a)}, i.e., the universal language minus the string
+\texttt{a}.  The expression following \texttt{\~{}} must denote a
+regular language (not a regular relation).  The arguments to the infixed
+subtraction and intersection operators, \verb!-! and \verb!&!, must also
+denote regular languages.
 
+The union operator, \verb!|!, works with arguments that denote both
+regular languages and regular relations.
+
+The composition operator, typed either as $\circ$ or its \acro{ascii}
+equivalent \texttt{\_o\_}, where the \texttt{o} in \texttt{\_o\_} is the
+lowercase \texttt{o} letter, will be explained below.
+
+The \texttt{(}, \texttt{)}, \texttt{:}, \texttt{*}, \texttt{+},
+\texttt{?}, \texttt{\~{}}, \texttt{-}, \texttt{\&} and $\circ$ are all
+special characters, and they can be literalized (un-specialized) in the
+usual Kleene ways; e.g., a literal asterisk can be typed as
+\texttt{"*"}, \verb!\*!, or \verb![*]!.
 
 \subsection{Precedence Issues}
  
 The relative precedence of  \verb!:!, \verb!~!, and the various postfix
-iteration operators could still be debated, though
-there are precedents to follow.\footnote{The precedence shown is
-that currently favored by Helmut Schmid (\init{sfst}), and it is the relative precedence that Lauri Karttunen
-has chosen for the \acro{parc} \texttt{xfst} code to be released with the second printing of
-the book \emph{Finite State Morphology} (private communications).}
-Currently, \verb!~.*! is
-equivalent to \verb!~(.*)! and so denotes the empty language; \verb!a:b*!
-is equivalent to \verb!(a:b)*!, and \verb!~a:b! is equivalent to
-\verb!~(a:b)!, which is semantically illegal.\footnote{In general, transducers are not closed under
-complementation, so \texttt{\~{}T}, where \texttt{T} is a transducer, causes a
-runtime exception in \Kleene{}, much like division by zero in
-arithmetic expressions.}
+iteration operators could still be debated, and it will probably never be
+possible to please everyone.
+Currently in Kleene, 
+\verb!a:b*!  is equivalent to \verb!a:(b*)!,\footnote{This is a
+departure from the precedence in the Xerox xfst language, where
+\verb!a:b*! is interpreted as \verb!(a:b)*!.  The historical
+justification for that interpretation harked back to the earlier Xerox twolc
+language, wherein the alphabet was not a set of letters like \verb!a!,
+\verb!b! and \verb!c!, but rather a set of ``concrete pairs'' like
+\verb!a:a!, \verb!a:b!, \verb!s:z!, etc. To those already familiar with
+twolc, wherein \verb!a:b! was an indivisible alphabetic unit, it seemed
+natural to interpret \verb!a:b*! as \verb!(a:b)*!. As the twolc language
+later fell into complete disuse at Xerox, and as alphabets of concrete
+pairs play no part in Kleene, the argument for interpreting
+\verb!a:b*! as \verb!(a:b)*! now lacks appeal.}
+\verb!a*:b!  is equivalent to \verb!(a*):b!,
+\verb!a*:b*! is equivalent to \verb!(a*):(b*)!,
+and
+\verb!$^invert(a*:b*)! is equivalent to \verb!b*:a*!.
+The notation \verb!~.*! is
+equivalent to \verb!~(.*)! and so denotes the empty language.
+Note also that \verb!~a:b! is
+equivalent to \verb!~(a:b)!, which is semantically illegal.\footnote{In
+	general, transducers are not closed under complementation, so
+	\texttt{\~{}T}, where \texttt{T} is a transducer, causes a runtime
+exception in \Kleene{}, much like division by zero in arithmetic
+expressions.}
 
 By long tradition, concatenation has higher precedence
 than union and intersection, so one can write  
@@ -283,29 +362,31 @@ The precedence of subtraction (\verb!-!) relative to intersection
 (\verb!&!) is still debatable, but it should probably be higher than
 union (\verb!|!).
 Rules are typically composed together, so composition is given lower precedence
-than the various operators used to construct rules.  The use of
-parentheses, even when formally unnecessary, to show groupings can
-often improve the readability of your source code.
+than the various operators used to construct rules (see chapter
+\ref{chapt:alternationrules}).  
 
-Unicode is embraced from the beginning in the Java/Swing \acro{gui}, and users
-are encouraged, though not required, to edit
-their script files using a Unicode-capable text
-editor.\footnote{\Kleene{} has a Java-language
-parser, and so is able, using normal Java features, to read a file in
-almost any standard encoding and convert it to Unicode.  Unless told otherwise,
-Java assumes that a file being read is in the default encoding of the
-host
-operating system and will convert it to Unicode accordingly.}  Unicode
-characters can also
-be indicated in the syntax using the familiar Java-like \verb!\u!HHHH
-escape sequence, i.e.\@ \verb!\u! followed by exactly four hex
-digits: 0-9, a-f or A-F.  For
-supplementary Unicode characters, Kleene recognizes the Python-like
-\verb!\U!HHHHHHHH escape sequence, i.e.\@ uppercase
-\verb!\U! followed by exactly eight hex digits; and for any Unicode
-character, Kleene also recognizes the
-\verb!\U{H...}! notation, which contains one or more hex digits between the
-curly braces.
+The use of
+parentheses, even when formally unnecessary, to explicitly show groupings can
+often improve the human readability of your source code.
+
+\subsection{Unicode and Kleene}
+
+Unicode is embraced from the beginning in the Java/Swing \acro{gui}, and users are
+encouraged, though not required, to edit their script files using a Unicode-capable text
+editor.\footnote{In the dark days before Unicode, writing applications for Russian,
+	Greek, Georgian, etc.\@ too often used to require or encourage the use of Roman
+	transliterations, which are problematic and irksome.  \Kleene{} has a Java-language parser, and so
+	is able, using normal Java features, to read a file in almost any standard encoding
+	and convert it to Unicode.  Unless told otherwise, \Kleene{} (like Java) assumes that a file
+	being read is in the default encoding of the host operating system (as detected by
+Java) and will convert it to Unicode accordingly.  Kleene also provides ways, described
+below, to read script files in any encoding that you designate.}  Unicode characters can also be
+indicated in the syntax using the familiar Java-like \verb!\u!HHHH escape sequence,
+i.e., \verb!\u! followed by exactly four hex digits: 0-9, a-f or A-F.  For
+supplementary Unicode characters, Kleene recognizes the Python-like \verb!\U!HHHHHHHH
+escape sequence, i.e., uppercase \verb!\U! followed by exactly eight hex digits; and
+for any Unicode character, Kleene also recognizes the \verb!\U{H...}! notation, which
+contains one or more hex digits between the curly braces.
 
 Kleene source files are typically Unicode files, and may contain code or comments
 containing arbitrary Unicode characters; so in Unicode files
@@ -320,27 +401,29 @@ Kleene also provides a function \verb!$^charForCpv(#num)!, aliased as \verb!$^cp
 complex arithmetic expression (see chapter \ref{chapt:arithmeticexpressions}) as its argument
 and returns a character symbol.  There is also a function \verb!#^getIntCpv($char)!, aliased as
 \verb!$^char2cpv($char)!, that takes a one-symbol regular expression and returns the code point value as a
-number.  The following expressions are equivalent:
-
+number.  The following expressions are all equivalent:
 
 \begin{Verbatim}
 $fsm = a b c ;
-$fsm = a b \u0063 ;
-$fsm = a b $^charForCpv(0x63) ;
+$fsm = a b \u0063 ;             // hexadecimal 63 is the code 
+                                //   point value for c
+$fsm = a b $^charForCpv(0x63) ; // 0x63 is the hex _number_ 63
 $fsm = a b $^charForCpv(99) ;   // decimal 99 = hexadecimal 0x63
 $fsm = a b $^cpv2char(0x63) ;
 $fsm = a b $^cpv2char(99) ;
 
 $fsm = a b $^cpv2char(0x62 + 1) ;
 $fsm = a b $^cpv2char(98 + 1) ;
-$fsm = a b $^cpv2char(#^char2cpv(a) + 1) ;
+$fsm = a b $^cpv2char(100 - 1) ;
+$fsm = a b $^cpv2char(#^char2cpv(a) + 2) ;
 \end{Verbatim}
 
 \noindent
 Note that the argument to \verb!$^cpv2char(#num)! is an arbitrarily complex 
 \emph{arithmetic} expression, not a regular expression;
 and in an arithmetic expression, the plus sign \verb!+! denotes simple arithmetic addition, not one or more
-iterations like the Kleene-plus in a regular expression.
+iterations like the Kleene-plus in a regular expression.  Similarly, inside an
+arithmetic expression, the hyphen \texttt{-} denotes normal arithmetic subtraction.
 
 
 \subsection{Weights}
@@ -358,7 +441,7 @@ In the Tropical Semiring
 The weights are floating-point logarithmic \emph{costs}, to be explained below.
 \item
 The \emph{extension} operation that accumulates weights along a single
-path, to calculate the weight of the whole path, is simple addition.\footnote{In OpenFst, the extension operation of
+path, to calculate the weight of the whole path, is simple arithmetic addition.\footnote{In OpenFst, the extension operation of
 each
 semiring is abstractly called \texttt{Times()}.}
 \item
@@ -378,13 +461,22 @@ Where \texttt{p} is a probability ranging from 0.0 (impossible) to
 such that 0.0 probability corresponds to infinite cost, and 1.0
 probability corresponds to a cost of zero.
 In Kleene regular-expression syntax, weights are denoted within angle brackets,
-e.g.\@ \texttt{<0.1>} and \texttt{<0.9>}. 
+e.g.\@ \texttt{<0.1>} and \texttt{<0.9>}.  The angle brackets can contain any
+arbitrarily complex arithmetic expression (see chapter
+\ref{chapt:arithmeticexpressions}).
 
 Each arc and each final state in a finite-state machine has a weight.  An unweighted
-machine in Kleene is one in which all the weights are 0.0.
+machine in Kleene is one in which all the weights are the neutral weight 0.0.
 
-Usually the weights in
-the Tropical Semiring are non-negative, and if the user tries to
+If you visualize the weights as costs calculated from probabilities, where each
+probability \texttt{p} ranges from 0.0 (impossible) to 1.0 (certain), and each cost
+\texttt{c} is calculated as \texttt{-log(p)}, then all the costs will be non-negative,
+ranging from 0.0 (no cost) to positive infinity (infinite cost).  However, the Tropical
+Semiring in Kleene (from OpenFst) is defined such that the costs can range from negative
+infinity to positive infinity, thus permitting negative costs.  As will be shown below,
+negative costs can sometimes be useful in pattern-matching applications.
+
+If the programmer tries to
 denote negative weights straightforwardly as, for example, \@ \texttt{<-0.1>}, this
 creates a problem for the Kleene tokenizer, which recognizes the
 sequence \texttt{<-} as a left arrow, used in alternation rules, which
@@ -398,12 +490,12 @@ are to
 Put whitespace between the \texttt{<} and \texttt{-}, i.e.\@
 \texttt{< -0.1>}, or
 \item
-Put parentheses around the negative value, i.e.\@
+Put parentheses around the negative cost value, i.e.\@
 \texttt{<(-0.1)>}
 \end{enumerate}
 
 \noindent
-If the user types \texttt{<-0.1>}, Kleene generates a
+If the programmer types \texttt{<-0.1>}, Kleene generates a
 ParseException and, in the \acro{gui}, prints a message showing how
 to fix the syntax.
 
@@ -414,15 +506,18 @@ together, precision is lost.  In the Tropical Semiring, where the weights are co
 extension operation is addition, the precision problem is avoided.  Also, computers traditionally
 performed addition more efficiently than multiplication, but this may not be true in modern computers.} but programmers are much more likely to think in terms of
 probabilities (0.0 to 1.0) or percentages (0 to 100).  Kleene supports functions that return arithmetic
-values (see chapter \ref{chapt:arithmeticexpressions}), including \verb!#^prob2c(#num)!, which takes a probability
-argument (0.0. to 1.0) and returns the cost, and \verb!#^pct2c(#num)!, which takes a percentage argument
+values (see chapter \ref{chapt:arithmeticexpressions}), including \verb!#^prob2c(#num)!,
+which takes an argument representing a probability
+(0.0. to 1.0) and returns the cost; and \verb!#^pct2c(#num)!, which takes an argument
+representing a percentage
 (0 to 100) and returns the cost.  These functions can be used inside the angle brackets, e.g.
 
 
 \begin{Verbatim}
 $fst = c  ( a <#^prob2c(.5)> 
           | u <#^prob2c(.4)> 
-          | o <#^prob2c(.1)> ) t ;
+          | o <#^prob2c(.1)> 
+          ) t ;
 \end{Verbatim}
 
 \noindent
@@ -557,12 +652,13 @@ $w = .:. ; // map any symbol to any symbol, including itself
 \end{alltt}
 
 \noindent
-As in the Xerox finite-state toolkit, the \verb!.! really represents \emph{any}
-possible character---including simple and multi-character symbols---or the mapping of any character to itself, and is not limited to some
-finite alphabet pre-defined by the programmer.
+The Kleene \verb!.! really represents \emph{any}
+possible symbol---including simple and multi-character symbols---or the mapping of any character to itself, and is not limited to some
+finite alphabet pre-defined by the programmer.\footnote{The Kleene \verb!.! is like the
+\verb!?! in the Xerox Finite State Toolkit.}
 
 The semantics of the special .\@ (dot or period) is quite complex, being
-interpreted into machines 
+interpreted into \fsm{}s 
 that match \specsym{other}, also known as unknown, symbols, and this subject is treated in
 more detail in Appendix~\ref{app:other}.  Luckily, the Kleene interpreter takes care of this, and
 the programmer doesn't
@@ -614,7 +710,7 @@ consisting of the strings \emph{dog}, \emph{cat}, \emph{zebra},
 \emph{octopus} and \emph{frog}.  (The \fsm{} could also be viewed and used as an
 identity transducer that maps each of these words to itself.)  A reference to an
 unbound variable inside a regular expression
-raises a runtime exception, from which interactive Kleene can recover.
+raises a runtime exception, from which the interactive Kleene \gui{} can recover.
 
 Because finite-state machines can get very large, copying is avoided.
 The following sequence of assignment statements results in \verb!$var2! being an alias, bound to
@@ -631,7 +727,7 @@ $var2 = $var1 ; // $var2 and $var1 are now bound
 \subsubsection{Regular Operations}
 
 Rather than inventing and proliferating new regular-expression operators, 
-the \Kleene{} philosophy is to give access to some operations via
+the \Kleene{} design philosophy is to give access to some operations via
 pre-defined functions, including
 
 \begin{description}
@@ -650,7 +746,7 @@ pre-defined functions, including
 \end{description}
 
 \noindent
-Functions that return an \fsm{} value are preceded with the \verb!$^! sigil.
+Names of functions that return an \fsm{} value are preceded with the \verb!$^! sigil.
 Note that \verb!$^inputProj()!, \verb!$^inputside()! and \verb!$^upperside()! are equivalent, where the
 ``input'' terminology reflects the OpenFst visualization of an \fst{}, and the
 ``upper'' terminology reflects the Xerox visualization.  The same holds for
@@ -728,13 +824,14 @@ that Kleene makes a clear distinction between regular expressions and arithmetic
 A Unicode character like \texttt{b}, though it has an integer code point value of hexadecimal 62, is
 not, for Kleene, the same as the integer value.  We have already presented the \verb!\u0062! notation,
 which is a regular expression and denotes the Unicode character \texttt{b}.  In contrast, in Kleene arithmetic
-expressions, hexadecimal 62 is denoted as \texttt{0x62}.  
+expressions, the hexadecimal number 62 is denoted as \texttt{0x62}.  
 
 \subsection{User-defined Function Syntax}
 
 \subsubsection{Simple Examples}
 
-Users can also declare and call their own functions.  As a minimal and admittedly silly example, consider the
+Users can also declare and call their own functions.  As a minimal and admittedly
+trivial example, consider the
 \emph{function definition}
 
 \begin{Verbatim}
@@ -969,15 +1066,30 @@ $net1 = $^append_ing(walk|talk) ;
 $net2 = $^append_espVend(pens|dir) ;
 \end{Verbatim}
 
-\noindent
-Recall that the sigil \verb!$^! marks a function that returns an \fsm{}. Similarly,
-the sigil \verb!$^^!, as in \verb!$^^append_suffix!, marks a function that returns a function that returns an
-\fsm{}.  Note that the \texttt{return} statement in this function returns a function, notated as an anonymous
-function.
+\noindent Recall that the sigil \verb!$^! marks a function that returns an \fsm{}.
+Similarly, the sigil \verb!$^^!, as in \verb!$^^append_suffix!, marks a function that
+returns a function that returns an \fsm{}.  Note that the \texttt{return} statement in
+this function returns a function, notated here as an anonymous function.
 
 \begin{Verbatim}
 // return an anonymous function
 return $^($a) { return $a $suff ; } ;
+\end{Verbatim}
+
+\noindent
+You can also avoid the use of anonymous functions by using a private function declaration inside
+the outer function declaration, and then returning the name of the private function:
+
+\begin{Verbatim}
+$^^append_suffix($suff) {
+    // declare a private function
+    $^foo($a) {
+        return $a $suff ; } ;
+    }
+
+    // then return that function
+    return $^foo ;
+}
 \end{Verbatim}
 
 The function \verb!$^append_ing! just concatenates \emph{ing} to
@@ -1000,7 +1112,7 @@ is called.
 
 Kleene functions can be defined to have \emph{required} and/or \emph{optional}
 parameters, where optional parameters have explicit default
-values.\cprotect\footnote{The new Kleene argument-passing and parameter-binding scheme
+values.\cprotect\footnote{The Kleene argument-passing and parameter-binding scheme
 is modeled on that of Python, minus the Python parameters denoted with
 initial single and double asterisks.  In Python, a parameter with a name like
 \verb!*foo! is bound to a tuple containing any extra positional arguments in
@@ -1099,6 +1211,8 @@ the component features in a predefined canonical order.  Show how this
 can be done with Kleene functions with optional arguments.
 \end{quote}
 
+
+
 \section{Right-linear Phrase-structure Grammars}
 
 \subsection{Right-linear Syntax}
@@ -1151,18 +1265,16 @@ $net = $^start($>Root) ;
 
 \noindent
 The syntax on the right-hand-side of productions is identical to regular-expression syntax, but allowing right-linear references to productions of the form
-\verb!$>!\emph{Name}.
+\verb!$>!\emph{Name}.  
 
 \subsection{Right-linear Semantics}
-
 
 \subsubsection{Enforcing the Right-linear Limitation}
 
 After a production is parsed into an
 \init{ast}, and before it is evaluated and stored in the symbol table, the
-\init{ast} is sent a message to accept a visitor object\footnote{This
-visitor is of type
-RrKleeneVisitor.} that ensures that
+\init{ast} is sent a message to accept a visitor object
+that ensures that
 all references to productions are genuinely right-linear.  In the simplest cases,
 a right-linear reference is visually on the far right-hand side of the
 expression, as with \verb!$>Foo! in the following example:
@@ -1175,6 +1287,7 @@ $>Production = a b c $>Foo ;
 The following production is illegal because the reference to \verb!$>Foo! is not right-linear.
 
 \begin{Verbatim}
+// illegal
 $>Production = a b c $>Foo d ;
 \end{Verbatim}
 
@@ -1196,6 +1309,8 @@ $>Production = a b c ( d e f $>X | g h i j $>Y | k l m $>Z ) ;
 \end{Verbatim}
 
 \noindent
+In simple terms, legal right-linear references have nothing concatenated
+after them.
 Violations of the right-linear restriction are found and reported
 at production parse-time.
 
@@ -1306,9 +1421,13 @@ at point B is out-of-scope and unavailable.
 
 \begin{Verbatim}
 $foo = cat ;        // point A
+
+// start of code block
 {
     $foo = dog ;    // point B
 }
+// end of code block
+
 print $foo ;        // point C
 \end{Verbatim}
 
@@ -1317,7 +1436,7 @@ print $foo ;        // point C
 Function blocks are very similar to the stand-alone code blocks, being
 evaluated in a new frame/scope.  The formal parameters of the function are
 bound as local variables in the
-new frame, and any variables created in the block are also local.
+new frame created to evaluate the function call, and any variables created in the block are also local.
 
 
 \begin{Verbatim}
@@ -1356,8 +1475,8 @@ if (#^numStates($fst) < 30) {
 
 Normally, from inside function blocks and stand-alone code blocks,
 it is not possible to change the value of non-local variables,
-i.e.\@ variables that are defined in ``higher'' frames; nor is it
-possible to delete such variables.  Exceptionally, it may be useful
+i.e., variables that are defined in ``higher'' frames; nor is it
+possible to delete such variables.  In exceptional cases/, it may be useful
 or necessary for code within a stand-alone code block or function
 block to change the value of a variable or variables outside that
 scope.  To allow this, the variable or variables to be changed must
@@ -1378,6 +1497,7 @@ $foo = cat ;        // point A
     $foo = dog ;    // point B
 }
 print $foo ;        // point C
+assert #^equivalent($foo, dog) ;
 \end{Verbatim}
 \end{samepage}
 
@@ -1457,14 +1577,16 @@ identifiers, optionally separated by commas.
 
 \subsection{Free Variables}
 
-In general, expressions inside a stand-alone code block, or inside a function block, can
-always \emph{refer} to variables outside the local scope, to retrieve their values, but
-they cannot \emph{change} the value of such variables unless they are expressly declared to be
-external. In the following example, at point B, \verb!$foo! is referred to, and its
-value retrieved, and this is legal and normal.  Because there is no local binding of
-\verb!$foo!, Kleene searches up the static environment links to find the first higher
-frame that contains a binding for \verb!$foo!,  and returns the value.  In such a case,
-\verb!$foo! is known as a free variable.
+In general, expressions inside a stand-alone code block, or inside a
+function block, can always \emph{refer} to variables outside the local
+scope, to retrieve their values, but they cannot \emph{change} the value
+of such variables, or \emph{delete} them,  unless they are expressly declared to be external. In
+the following example, at point B, \verb!$foo! is referred to, and its
+value retrieved, and this is legal and normal.  Because there is no
+local binding of \verb!$foo!, Kleene searches up the static environment
+links to find the first higher frame that contains a binding for
+\verb!$foo!,  and returns the value.  In such a case, \verb!$foo! is
+known as a free variable.
 
 \begin{samepage}
 \begin{Verbatim}
@@ -1477,7 +1599,22 @@ $foo = dog | cat | rat ;  // point A
 \end{samepage}
 
 \noindent 
-In an assignment statement, free variables occur only on the right-hand side.
+Similarly, functions can refer to free variables.
+
+\begin{samepage}
+\begin{Verbatim}
+$foo = dog | cat | rat ;  // point A
+
+$^myfunc($a)
+{
+    $bar = $foo $a ;      // point B, $foo is a free variable
+    return $bar ;
+}
+\end{Verbatim}
+\end{samepage}
+
+
+In an assignment statement within a block, free variables occur only on the right-hand side.
 If a variable, such as \verb!$bar! at point B, 
 appears on the left-hand side of an assignment, then its value is being
 changed, and it is assumed to be local---and is created locally if it doesn't already
@@ -1536,7 +1673,7 @@ function-definition time.}
 
 \subsection{Export Statements}
 
-As an experiment, Kleene supports \texttt{export} statements that can
+As a questionable experiment, Kleene supports \texttt{export} statements that can
 appear only in a stand-alone code block, and which cause a local
 variable, and its bound value, to be ``exported'' up from the current
 frame to the mother frame.\footnote{For stand-alone code blocks, the
@@ -1616,7 +1753,7 @@ $case = n ;
 
 $nouns = $nroot $augdim* $num? $case? ;
 
-// now delete intermediate FSMs no longer needed
+// now delete the intermediate FSMs no longer needed
 delete $nroot $augdim $num $case ;
 \end{Verbatim}
 
@@ -1636,10 +1773,11 @@ value, e.g.
     // intermediate FSMs 
     $nroot = elefant | kat | hund | bird ;
     $augdim = eg | et ;
+    $nsuff = o ;
     $num = j ;
     $case = n ;
     // the final FSM 
-    $nouns = $nroot $augdim* $num? $case? ;
+    $nouns = $nroot $augdim* $nsuff $num? $case? ;
 
     export $nouns ;
 }
@@ -1657,11 +1795,12 @@ $nouns = "" ;
     // intermediate FSMs 
     $nroot = elefant | kat | hund | bird ;
     $augdim = eg | et ;
+    $nsuff = o ;
     $num = j ;
     $case = n ;
 
     // set the final (external) value
-    $nouns = $nroot $augdim* $num? $case? ;
+    $nouns = $nroot $augdim* $nsuff $num? $case? ;
 }
 \end{Verbatim}
 
@@ -1679,9 +1818,10 @@ nouns and verbs, one might write the following:
     {
         $nroot = elefant | kat | hund | bird ;
         $augdim = eg | et ;
+        $nsuff = o ;
         $num = j ;
         $case = n ;
-        $nouns = $nroot $augdim* $num? $case? ;
+        $nouns = $nroot $augdim* $nsuff $num? $case? ;
         export $nouns ;
     }
     {
@@ -1702,7 +1842,7 @@ After the evaluation of this nested block, only the final \verb!$esp!
 variable would be available, and all the intermediate code and \fsm{s} 
 would be released, as if they had been explicitly deleted.
 Again, \texttt{export} is implemented as an experiment, and it remains
-to be seen if they will prove truly useful.
+to be seen if it will prove truly useful.
 
 \section{Language Restriction Expressions}
 
@@ -1713,7 +1853,7 @@ acceptors.  For
 example, the expression
 
 \begin{Verbatim}
-b => a _ c ;
+b => a _ c
 \end{Verbatim}
 
 \noindent

@@ -60,34 +60,34 @@ public class ImageJDesktopPane extends JDesktopPane {
         return image;
     }
 
-    public void paintComponent( Graphics g ) {
-        if (isOpaque()) {
-            super.paintComponent( g );
-            if ( image != null ) {
-                int width = getWidth() ;
-		int height = getHeight();
+	public void paintComponent( Graphics g ) {
+		if (isOpaque()) {
+			super.paintComponent( g );
+			if ( image != null ) {
+				int width = getWidth() ;
+				int height = getHeight();
 
-                g.setColor( getBackground() );
-                g.fillRect( 0, 0, width, height );
-                if ( fillEntireArea )
-                    g.drawImage( image.getImage(), 0, 0, width, height, this );
-                else {
-                    if ( !tileImage ) {
-                        g.drawImage( image.getImage(),
-                                     ( width-image.getIconWidth() )/2,
-                                     ( height-image.getIconHeight() )/2,
-                                     this );
-                    } else {
-                        int tileW = image.getIconWidth();
-                        int tileH = image.getIconHeight();
-                        for ( int ypos = 0; height - ypos > 0; ypos += tileH ) {
-                            for ( int xpos = 0; width - xpos > 0; xpos += tileW ) {
-                                image.paintIcon( null, g, xpos, ypos );
-                            }
-                        }
-                    }
-                }
-            }
-        }   
-    }
+				g.setColor( getBackground() );
+				g.fillRect( 0, 0, width, height );
+				if ( fillEntireArea )
+					g.drawImage( image.getImage(), 0, 0, width, height, this );
+				else {
+					if ( !tileImage ) {
+						g.drawImage( image.getImage(),
+								( width-image.getIconWidth() )/2,
+								( height-image.getIconHeight() )/2,
+								this );
+					} else {
+						int tileW = image.getIconWidth();
+						int tileH = image.getIconHeight();
+						for ( int ypos = 0; height - ypos > 0; ypos += tileH ) {
+							for ( int xpos = 0; width - xpos > 0; xpos += tileW ) {
+								image.paintIcon( null, g, xpos, ypos );
+							}
+						}
+					}
+				}
+			}
+		}   
+	}
 }

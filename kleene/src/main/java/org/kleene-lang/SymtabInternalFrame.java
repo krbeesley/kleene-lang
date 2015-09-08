@@ -82,9 +82,38 @@ public class SymtabInternalFrame extends JInternalFrame {
 		setVisible(true) ;
     }
 
-	public void addIcon(SymtabIconButton sib) {
-		iconDisplayPanel.add(sib) ;
-	}
+	// old
+	//public void addIcon(SymtabIconButton sib) {
+	//	iconDisplayPanel.add(sib) ;
+	//}
+
+	// If addIcon is called from inside the GUI, the call will already
+	// be in the Event Dispatch Thread; but this method can
+	// also be called from _outside_ the Event Dispatch Thread,
+	// in particular when a Kleene statement is parsed and
+	// evaluated by the Interpreter, and the Interpreter posts
+	// its results to the Symtab pane.  That's when one needs
+	// to call SwingUtilities.invokeLater, which performs the posting
+	// operation in the Event Dispatch Thread.  If you don't do
+	// this, then additions can be mysteriously lost in non-reproducible
+	// ways.
+    public void addIcon(SymtabIconButton sib) {
+		final SymtabIconButton fsib = sib ;
+
+		iconDisplayPanel.add(fsib) ;
+
+		// This caused unexpected delays in displaying the icons
+		//if (SwingUtilities.isEventDispatchThread()) {
+		//	iconDisplayPanel.add(fsib) ;
+		//} else {
+		//	SwingUtilities.invokeLater(new Runnable() {
+		//		public void run() {
+		//			iconDisplayPanel.add(fsib) ;
+		//		}
+		//	});
+		//}
+    }
+
 
 	public void removeIcon(SymtabIconButton sib) {
 		iconDisplayPanel.remove(sib) ;

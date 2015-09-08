@@ -47,7 +47,8 @@ $ gunzip kleene-mac-0.9.4.0.tar.gz
 
 \noindent
 This should produce a file named kleene-mac-0.9.4.0.tar,\footnote{Sometimes 
-your web browser will \texttt{gunzip} the file for you.} and then ``untar'' that file with
+your web browser will \texttt{gunzip} the file for you.} and then you
+``untar'' that file with the command
 
 \begin{Verbatim}
 $ tar xvf kleene-mac-0.9.4.0.tar
@@ -93,7 +94,7 @@ $ java -jar Kleene.jar
 \end{Verbatim}
 
 \noindent
-or one of the aliases described in \texttt{README.install}.
+or, better, use one of the aliases described in \texttt{README.install}.
 This should bring up the Kleene \acro{gui} (Graphical User Interface),
 which looks like this:
 
@@ -109,7 +110,7 @@ which looks like this:
 The look-and-feel will be a little different on OS X and Linux.  The
 application window, which almost fills the screen, can be minimized using
 the buttons at the top, and all the windows can be adjusted in size by
-mouse-clicking on the lower-right corner.
+mouse-clicking and dragging  the lower-right corner.
 Inside the application window, there is a
 pseudo-terminal window\footnote{It is called a \emph{pseudo} terminal
 because it allows you to type commands, and view responses, in a
@@ -126,7 +127,7 @@ interactively.
 
 \subsection{First, is it working?}
 
-Just to make sure that Kleene is working, enter the following statement carefully in the bottom line of the
+Just to make sure that Kleene is working, enter the following statement in the bottom line of the
 pseudo-terminal window:
 
 \begin{Verbatim}
@@ -134,13 +135,15 @@ $fsm = dog | cat | bird ;
 \end{Verbatim}
 
 \noindent
+The spaces shown here, surrounding the operators, are not necessary.
 Be sure to include the semicolon at the end, and press the Enter key on your keyboard to
 initiate interpretation.  If everything is working, you should see an icon named
 \verb!$fsm!
-appear in the symbol-table window on the right.  Your statement has 
+appear in the symbol-table window on the right.  This shows that 
+your statement has 
 been successfully interpreted to
 build a finite-state machine.  In this case, it is an \fsm{} that encodes the
-language that contains just three words:  ``dog,'' ``cat'' and ``bird.''
+language that contains just three strings (i.e., words):  ``dog,'' ``cat'' and ``bird.''
 
 \subsection{Visualizing Finite-State Machines}
 
@@ -154,10 +157,10 @@ draw $fsm ;
 \end{Verbatim}
 
 \noindent
-manually in the pseudo-terminal.  In fact, selecting the \texttt{draw} menu
+manually in the bottom line of the pseudo-terminal.  In fact, selecting the \texttt{draw} menu
 item causes the statement \verb!draw $fsm ;! to be written in the
 pseudo-terminal, and then interpreted, exactly as if you had typed it yourself.  This
-behavior is designed to help you learn the scripting language.
+behavior of the \acro{gui} is designed to help you learn the scripting language.
 
 If everything is working correctly, you should see the following \fsm{}
 diagram appear on your screen.
@@ -173,9 +176,9 @@ diagram appear on your screen.
 
 Note that the finite state machine (\init{fsm}) has a start state, represented by a bold
 circle labeled ``Start,'' a single final state represented with a double circle, and
-other states
+other (non-final) states
 represented with plain circles.  Where the \fsm{} has \texttt{n} states, they are
-numbered in a dense range from \texttt{0} to \texttt{n - 1}.  The start state is
+always numbered in a dense range from \texttt{0} to \texttt{n - 1}.  The start state is
 often, but not always, number \texttt{0}.   This particular \fsm{} has three \emph{paths} leading from the
 start state to the final state, each path encoding one word.
 
@@ -183,7 +186,9 @@ Each transition or \emph{arc} leading from a state to a
 state has a label like \texttt{d:d}.  The first \texttt{d} is termed the \emph{input
 symbol}, and the second the \emph{output symbol}, in the OpenFst visualization of
 \init{fsm}s.  Thus the compound labels are always interpreted as
-\texttt{InputLabel}:\texttt{OutputLabel}.
+\texttt{InputLabel}:\texttt{OutputLabel}.  In this example, each
+InputLabel is equal to its associated OutputLabel, so the \init{fsm}
+can be viewed and used either as an acceptor or as an identity transducer.
 
 In other traditions, \init{fsm}s are visualized a bit differently, and
 the terminologies
@@ -205,7 +210,7 @@ the labels as \emph{upper} and \emph{lower}:  \texttt{Upper}:\texttt{Lower}.
 Kleene is based on the OpenFst library, but with some powerful semantic features
 borrowed from
 the Xerox tradition.  In this book, it is sometimes important to
-understand an \fsm{} in OpenFst terms, as having \texttt{Input}:\texttt{Output}
+understand a Kleene \fsm{} in OpenFst terms, as having \texttt{Input}:\texttt{Output}
 labels.  At other times, where the bi-directionality of \fsm{}s is
 relevant, I will talk about \texttt{Upper}:\texttt{Lower} labels. 
 
@@ -243,9 +248,9 @@ they appear in common programming languages and operating-system utilities, see 
 
 In contrast to programming-language ``regular'' expressions, the regular expressions of Kleene are true regular
 expressions in the sense that they always
-encode \emph{regular languages} or \emph{regular relations}, and they compile into
+denote \emph{regular languages} or \emph{regular relations}, and they compile into
 finite-state machines (\fsm{}s).  Such regular languages/relations, and the
-corresponding \fsm{}s, have mathematically clean and powerful \emph{closure properties}, meaning
+corresponding \fsm{}s that encode them, have mathematically clean and powerful \emph{closure properties}, meaning
 that they can be combined together using various operations---including concatenation,
 union and composition---and the results are still \emph{regular}.  These terms will be explained as we progress.
 
@@ -262,6 +267,14 @@ following in the Kleene \acro{gui}.
 $fsm = d ;
 draw $fsm ;
 \end{Verbatim}
+
+\noindent
+or just
+
+\begin{Verbatim}
+draw d ;
+\end{Verbatim}
+
 
 \noindent
 The resulting \fsm{} has two states, one the start state and the other a final state,
@@ -283,8 +296,8 @@ strings, including ``a,'' ``z,'' ``dog,'' ''mmmmmm,'' ``hwiughuiegw,'' etc.  An 
 can thus be used as an \emph{acceptor} that accepts all and only the strings in the
 language that it encodes.
 
-This same \fsm{} can be viewed as an \emph{identity transducer} that maps the string
-``d'' to ``d,'' i.e.\@ maps ``d'' to itself.  In OpenFst, the labels on the arcs are always
+This same \fsm{} can be viewed and used as an \emph{identity transducer} that maps the string
+``d'' to ``d,'' i.e.\@, it maps ``d'' to itself.  In OpenFst, the labels on the arcs are always
 two-level, \texttt{input}:\texttt{output}, or, in the Xerox visualization,
 \texttt{upper}:\texttt{lower}.  An \fsm{} like that shown above is interpreted either as an acceptor
 or as an identity transducer, depending on what is needed by an operation.
@@ -309,8 +322,9 @@ This will bring up a test window into which you can type an input string.
 \noindent
 The \fst{} being tested
 is represented by the bar labeled ``FST'' in the center.
-The test window has two string-input fields, one at the top and one at the bottom, both labeled
-``String>>.''  For testing
+The test window has two string-input fields, one at the top and one at
+the bottom, both labeled in red as
+``String>\hspace{0pt}>.''  For testing
 an acceptor, it doesn't matter which field you use.  If you enter \texttt{d} in the top 
 field, and then press the Enter key, the answer 
 
@@ -396,7 +410,7 @@ draw $fsm ;
 \end{Verbatim}
 
 \noindent
-For improved readability, you can insert spaces and newlines as desired, e.g.
+For improved human readability, you can insert spaces and newlines as desired, e.g.
 
 \begin{Verbatim}
 $fsm = dog
@@ -430,7 +444,8 @@ test $fsm ;
 you will find that it accept the four strings, and no others.
 
 When the \fsm{} is an acceptor, the \texttt{print} command will list the strings with their
-weights.  If you don't want to see the weight, use the \texttt{pr} command.
+weights.  If you don't want to see the weights, use the \texttt{pr}
+command instead of \texttt{print}.
 
 \begin{Verbatim}
 print $fsm ;
@@ -451,18 +466,19 @@ cherry
 \end{Verbatim}
 
 \noindent
-Note that a language is a set of strings, and in a set, the order of its elements 
-undefined.  \fsm{}s may be constructed, and words encoded by the \fsm{}
+Note that a language is a set of strings, and in any set, the order of its elements 
+is undefined and not significant.  \fsm{}s may be constructed, and words encoded by the \fsm{}
 may be printed, in orders that you didn't expect.
 
 In general, spaces and other whitespace characters are ignored in Kleene regular
 expressions unless they are explicitly literalized.  
 One way to literalize spaces, and other
-special characters, is to precede them with the backslash character \textbackslash.
+special characters, is to precede them with the backslash character
+\textbackslash.
 
 \begin{Verbatim}
 // This is a comment:
-// Printing a string with a literal space
+// Printing a string that includes a literal space
 pr Hello\ world ;
 // outputs:  Hello world (as a single string)
 \end{Verbatim}
@@ -478,8 +494,9 @@ draw "Hello world" ;
 \end{Verbatim}
 
 Kleene regular expressions, like Perl regular expressions, can also use parentheses for
-grouping.  A postfixed asterisk * meaning zero or more, a postfixed plus-sign +,
-meaning one or more, and a postfixed question mark ? indicating that the preceding
+grouping.  A postfixed asterisk *, meaning zero or more of the previous
+expression, a postfixed plus-sign +,
+meaning one or more, and a postfixed question mark ?, indicating that the preceding
 expression is optional, are also as in Perl regular expressions.
 The following example encodes the words ``dog,'' ``cat'' and
 ``horse,'' each with an optional \texttt{s} on the end, for a total of six strings.
@@ -516,8 +533,8 @@ When it becomes tedious to type long unions of symbols, e.g.
 \texttt{(a|b|c|d|}\ldots{}\texttt{x|y|z)} one can
 use the Perl-like square-bracketed notation for character unions: for
 example, \texttt{[a-z]} encodes the union of all characters starting at
-\texttt{a} and ending with \texttt{z}.  Similarly, \texttt[aeiou] denotes
-the union of \texttt{a}, \texttt{e}, \texttt{i}, \texttt{o} and \texttt{u}.
+\texttt{a} (inclusive) and ending with \texttt{z} (inclusive).  Similarly, \texttt[aeiou] denotes
+the union of symbols \texttt{a}, \texttt{e}, \texttt{i}, \texttt{o} and \texttt{u}.
 
 
 \begin{Verbatim}
@@ -540,7 +557,8 @@ The resulting \fsm{} will accept strings like ``Apple,'' ``a27,'' ``dOg,''
 ``z3b4n6'' and
 ``d2T456m7'' while rejecting strings such as ``4abc'' and ``26.''
 
-Regular languages can be subtracted from each other:
+Regular languages can be subtracted from each other, the result also
+being a regular language.  The hyphen is interpreted as the minus sign.
 
 \begin{Verbatim}
 $lang = (dog | cat | elephant | apple | orange) - 
@@ -561,15 +579,15 @@ The \texttt{assert} command, in this case, tests the equivalence
 of the \fsm{} \verb!$lang! and the expected result.  The \texttt{assert}
 command and the \verb!#^equivalent()! function will be explained below in more detail.
 For now, it is sufficient to understand that the \texttt{assert} command will
-throw an exception if the boolean condition is false, and will do nothing if the
-boolean condition is true.
+throw an exception if the boolean expression evaluates as false, and will do nothing if the
+boolean condition is true.  This can be useful in testing.
 
 Regular languages can also be intersected, resulting in a new language
 containing all and only the strings they have in common.
-The operator for intersection is \&.
+The operator for intersection is the ampersand \&.
 
 \begin{Verbatim}
-$commonAnimals = 
+$animals = 
    (dog | cat | elephant | whale | ant | bird | reindeer) & 
    ( cat | horse | reindeer | snail | whale ) ; 
 pr $animals ;
@@ -587,7 +605,7 @@ $fsm = p . t ;
 \noindent
 accepts words including ``pat,'' ``pet,'' ``pit,'' ``pot'',
 ``put,'' ``pbt,'' ``ppt,'' etc.  And because . really 
-represents any symbol, the expression
+represents \emph{any} symbol, the expression
 \verb!.*! represents the Universal Language, the language that contains all possible
 strings of any character, of any length, including the empty (zero-length) string.
 
@@ -621,8 +639,9 @@ strings, i.e.\@ the Universal Language, except
 (i.e.\@ minus) the strings in the language it applies to.  Thus \texttt{\~{}.*} is
 equivalent to \texttt{.* - .*}, the Universal Language minus itself.
 
-The empty string is the string of zero length, containing no symbols at all.  It can be
-notated in Kleene as \verb!""!.  The Empty String Language, not to be confused with the Empty
+The empty string is a string, but it is the string of zero length, containing no symbols at all.  It can be
+notated in Kleene regular expressions as \verb!""!.  By long convention, the empty string is
+also known as the \emph{epsilon}.  The Empty String Language, not to be confused with the Empty
 Language, is the language that contains exactly one string, the empty string.
 
 \begin{Verbatim}
@@ -633,13 +652,13 @@ $EmptyStringLang = "" ;
 
 When \fsm{}s are built in Kleene, they are (where possible) automatically \emph{optimized}, which involves a
 combination of determinization, minimization and epsilon-removal.  The epsilon, which can be
-denoted as \verb!""! in regular expressions, is the empty
+denoted as \verb!""! in regular expressions, is just the empty
 (zero-length) string, and epsilon-removal involves the
 elimination of all arcs that have [eps]:[eps] labels.  Thus the assignment
 
 
 \begin{Verbatim}
-$fsm = a "" c ;
+$fsm = a "" b ;
 \end{Verbatim}
 
 \noindent
@@ -759,11 +778,19 @@ real-life applications, where \fsm{}s can encode languages of millions of words,
 machines can easily contain tens of thousands of states and arcs, and
 runtime performance is critical, the
 processes of epsilon-removal, determinization and minimization---known
-collectively as \emph{optimization}---are vital.  Luckily, Kleene
+collectively as \emph{optimization}---are vital.  Luckily, where
+possible, Kleene
 automatically optimizes all \fsm{}s by default, and the average Kleene
 programmer never has to worry about it.\footnote{Expert users may occasionally
 want to turn off one or more of the optimization processes, and Kleene provides
-a way to do this.  See Appendix \ref{app:optimize}.}
+a way to do this.  See Appendix \ref{app:optimize}.  \init{fsm}s that
+contain cycles (loops) cannot generally be determinized, but if these
+cyclical
+\init{fsm}s also have the ``twins property,'' they can theoretically be
+determinized.  OpenFst currently does not offer an algorithm to detect
+the twins property, and so Kleene cannot currently determinize some
+cyclical \init{fsm}s.  It is hoped that a suitable algorithm will be
+added to OpenFst in the future.}
 
 The optimization---especially the determinization---of weighted \fsm{}s
 and of \fsm{}s with cycles is a challenge still under study.
@@ -787,14 +814,15 @@ pr $fsm ;
 \subsubsection{Unicode}
 
 Kleene supports the Unicode character set, 
-which current contains over 100,000 defined characters and has a capacity
+which currently contains over 100,000 defined characters and has a capacity
 to encode over 1 million characters.  Programmers are encouraged to edit their Kleene scripts
 directly in Unicode using their favorite Unicode-capable text editors, though Kleene 
 can read and process scripts written in all common character sets.  
 
 The Kleene \gui{} is written using the Java Swing library; its text widgets are
 automatically Unicode-capable, and you can use standard Java input methods to facilitate
-typing in exotic characters.  In some cases, it may be convenient to designate Unicode
+typing in exotic characters.  In some cases, it may be convenient in
+Kleene code to designate Unicode
 characters by their code point value.  Unicode characters in the Basic Multilingual Plane
 can all be encoded using four hexadecimal digits, and in Kleene regular expressions they
 can be designated as the \acro{ascii} sequence \verb!\uHHHH!, where \texttt{H} is in the
@@ -873,7 +901,7 @@ just like any letter
 \begin{Verbatim}
 $fsm1 = b e t ;
 $fsm2 = b \u0065 t ;	// equivalent
-assert(#^equivalent($fsm1, $fsm2) ;
+assert #^equivalent($fsm1, $fsm2) ;
 \end{Verbatim}
 
 \noindent
@@ -891,7 +919,8 @@ $fsm = b 101 t ;   // ILLEGAL
 \subsubsection{Multi-character Symbols}
 
 In addition to Unicode characters, it is often useful to have user-defined symbols that
-have multi-character names, often called ``multi-character symbols.''  For example, you can
+have multi-character names, often called ``multi-character symbols'' in
+the Xerox tradition.  For example, you can
 define [Noun], [Verb], [Adj], [Adv], [Sing], [Plur], etc.\@ as symbols that suggest
 linguistic categories or features.  In another notational tradition, these might be spelled +Noun,
 +Verb, +Adj, etc.  In Kleene syntax, you simply surround a string of characters in single quotes
@@ -905,7 +934,7 @@ $fsm = a b '[Noun]' ;
 \noindent
 The single quotes delimit the name of the symbol but are not actually part of the symbol
 name.  Each multi-character symbol is also stored as an integer label on an arc in the result
-\fsm{}, and the integer is taken from a Unicode Private Use Area (\init{pua}).
+\fsm{}, and the integer is automatically assigned from a Unicode Private Use Area (\init{pua}).
 
 In general it is recommended that multi-character symbol names include at least
 one punctuation character to help human beings distinguish them from sequences of
@@ -921,21 +950,21 @@ $myfsm = 'noun' ;
 print $myfsm ;
 // outputs: noun
 
-// a concatenation of four symbols
+// vs. a concatenation of four symbols
 $yourfsm = noun ;
 // outputs: noun
 \end{Verbatim}
 
 \noindent
 but the printed output \texttt{noun}, being a single multi-character symbol,
-is humanly indistinguishable from the printed word ``noun''
+is visually indistinguishable from the printed word \texttt{noun}
 that is a concatenation of four separate symbols.  In practice, the use of
-multi-characters symbols like \verb'noun' leads to much confusion and is
+multi-character symbols like \verb'noun' leads to much confusion and is
 strongly discouraged.  
 
 \subsubsection{Characters in Variable Names}
 
-\fsm{} variable names in Kleene start with a dollar sign, a letter, and then any number of
+\fsm{} variable names in Kleene start with a dollar sign, followed by a letter, and then any number of
 letters and digits.
 
 
@@ -959,20 +988,22 @@ $\u03b1\u03b2 = a b ;
 Kleene supports Unicode to the extent that Java does, which is pretty well but not
 perfectly.  Users can write their scripts using the International Phonetic Alphabet, Greek,
 Cyrillic, Arabic, etc.\@ without ever needing to resort to clumsy transliterations.
-Whether the Kleene \gui{} can actually display a character depends on the fonts installed in
-your Java installation.
+Whether the Kleene \gui{} can actually display the characters depends on the fonts installed in
+your Java installation and on the Unicode rendering capabilities of the
+Java Swing widgets.
 
 \subsection{Regular Languages and Regular Relations}
 
 \subsubsection{Regular Languages and Acceptors}
 
-In formal language theory, a language is a set of strings.  A regular language, where
+Let's review some basic concepts and terminology.  In formal language theory, a language is a set of strings.  A regular language, where
 \emph{regular} is a technical term,\footnote{In some traditions, the term
 \emph{rational} is used instead of \emph{regular}.} is formally defined as a language that can be defined
 using only concatenation, union and the Kleene-closure\footnote{The Kleene-closure is named
 after mathematician Steven Cole Kleene, who invented it.  The Kleene programming language
 is named after the same man.} operator *, which indicates zero or
-more repetitions.  Any finite (i.e.\@ not infinite) language is a regular language.  Some infinite languages,
+more repetitions of the preceding expression.  Any finite (i.e., not
+infinite in size) language is a regular language.  Some infinite languages,
 such as \verb!b*!, which is the language of all strings that contain zero or more
 \texttt{b} letters, are also regular.  Some infinite languages are not regular
 and so cannot be encoded in an \fsm{}; we cannot handle such languages in Kleene.
@@ -985,10 +1016,10 @@ more labeled directed arcs that lead from a state to a state.
 When an acceptor is applied to an input string, it will either accept it or reject it.  It
 will accept all and only the strings in the regular language that it encodes.
 
-In classic visualizations of acceptors, they have only a single label on
+In classic textbook visualizations of acceptors, they have only a single label on
 each arc.  In OpenFst, and therefore in Kleene, all arc labels have two labels, an input
 label and an output label: \verb!i:o!.  By convention in OpenFst, an \fsm{} is an acceptor,
-or can be interpreted as an acceptor,
+or can be interpreted and used as an acceptor,
 if and only if each input label is equal to its associated output label.
 
 Regular languages, and the acceptors that encode them, have some very interesting and
@@ -1024,7 +1055,7 @@ is a set of
 \emph{ordered pairs}
 of strings.  For example, (dog, dogs), (cat, cats), (elephant, elephants), (woman, women)
 and (deer, deer)
-are ordered pairs of words that, in English, have a singular noun as the first word, and its plural
+are ordered pairs of strings (words) that, in English, have a singular noun as the first word, and its plural
 as the second word.  A set of such pairs, denoted in set theory (not Kleene syntax) as \{ (dog, dogs), (cat, cats), (elephant,
 elephants), (woman, women), (deer, deer) \}, is a regular relation.  All finite relations are
 regular relations.  Some infinite relations are also regular.
@@ -1034,7 +1065,7 @@ regular relations and finite-state transducers can have any number of levels, kn
 \emph{projections}, but OpenFst and most practical computer implementations have been limited to two.
 A finite-state transducer (\fst{}) has a finite number of states, one of which is
 designated as the start state, and zero or more of which are final.  An \fst{} can also
-contain zero of more labeled directed arcs that lead from a state to a state.  Each label
+contain zero or more labeled directed arcs that lead from a state to a state.  Each label
 consists of two parts, an input label and an output label, notated  \verb!i:o!.  In a finite-state
 transducer, the input
 and output labels of an arc can be different, or the same.
@@ -1060,9 +1091,14 @@ results in the \fst{}
 
 
 \noindent
-More generally, : is the \emph{cross-product} operator that takes two operands that must
-both denote regular languages (not regular relations).  It creates a regular relation with the
-left operand as the input projection, and the right operand as the output projection.
+More generally, the colon : is the \emph{cross-product} operator that takes two operands that must
+both denote regular languages (not regular relations).  In the OpenFst
+visualization, \texttt{a:b} creates a regular relation with the
+left operand \texttt{a} as the input projection, and the right operand
+\texttt{b} as the
+output projection.  (In the Xerox visualization, \texttt{a:b} denotes a
+regular relation that has \texttt{a} on the upper projection and
+\texttt{b} on the lower projection.)
 Often the cross-product operator is used to map
 individual strings, as in this Kleene example.
 
@@ -1084,12 +1120,14 @@ $foo = (dog|cat|rat):(animal|mammal) ;
 
 \noindent
 where the input (upper-side) language consists of the strings ``dog,'' ``cat'' and ``rat,'' and the output (lower-side)
-language consists of the strings ``animal'' and ``mammal.''  The cross-product is an \fst{} that
-relates ``dog'' in the input language to both ``animal'' and ''mammal'' in the output
+language consists of the strings ``animal'' and ``mammal.''  The
+cross-product of the two regular languages is a regular relation, encoded as an \fst{}, that
+relates ``dog'' in the input language to both ``animal'' and ``mammal'' in the output
 language.  And similarly for ``cat'' and ``rat.''  The resulting relation
 contains the six ordered pairs (dog, animal), (dog, mammal), (cat, animal), (cat,
-mammal), (rat, animal) and (rat, mammal).  Note that a relation is a set of ordered string
-pairs, and the order of the string pairs is not significant.
+mammal), (rat, animal) and (rat, mammal).  Note that a relation is a
+\emph{set} of ordered string
+pairs, and, as in any set, the order of the string pairs is not significant.
 
 Note that the cross-product operator : has higher precedence than concatenation, so  the example
 
@@ -1101,7 +1139,7 @@ $foo = abcd:ef ;
 is equivalent to
 
 \begin{Verbatim}
-	$foo = abc(d:e)f ;
+$foo = abc(d:e)f ;
 \end{Verbatim}
 
 \noindent
@@ -1111,9 +1149,10 @@ Parentheses can be used to force whatever groupings are desired.
 \subsubsection{Applying Transducers}
 
 In the OpenFst visualization, an \fst{} is \emph{applied} to an input string by
-matching the symbols of the input string against a sequence of \emph{input symbols}.  If the input string matches successfully
+matching the symbols of the input string against a sequence of
+\emph{input symbols} on arcs in the \fst{}.  If the input string matches successfully
 and completely against a sequence of input symbols, on a \emph{path} leading from the start state,
-arc-by-arc to a final state, 
+arc-by-arc to a final state, the input is accepted and
 the output is a string consisting of the sequence of \emph{output symbols} from the same path 
 in the \fst{}.  
 
@@ -1128,7 +1167,9 @@ from singular nouns like ``dog,'' ``cat'' and ``woman'' to their \emph{related} 
 words (strings of symbols). 
 Looked at in the other direction,
 the same \fst{} provides a mapping from plural forms to their
-related singular forms.
+related singular forms.  \fst{}s are bidirectional, though (as we
+shall see) it can be more efficient to apply them in one of the
+directions.
 
 Try building and testing the following example in the Kleene \gui{}:
 
@@ -1142,25 +1183,28 @@ test $numberMapper ;
 \end{Verbatim}
 
 \noindent
-Enter a singular noun like ``dog'' in the upper-side input field, and the output
+When the test window appears, enter a singular noun like ``dog'' in the upper-side input field, and the output
 will be the plural form ``dogs.''  Enter ``formula'' in the upper-side input
 field, and the output will be the two plural forms:  ``formulas'' and
 ``formulae.''  
 
-
 An \fsm{} encoding an acceptor can also be interpreted and used as an \emph{identity transducer}
 that maps each of the words in the language to itself.
 
-An \fst{} that encodes a relation is \emph{functional} if each input string has exactly one
+An \fst{} that encodes a relation is \emph{functional} if and only if each input string has exactly one
 output string.  Very commonly when modeling natural languages, an \fst{} can map one input
 string to multiple output strings, reflecting ambiguity. 
 
 A regular relation is a relation between two regular languages, one of which is, in the
 OpenFst tradition, termed the
-\emph{input projection} and the other the \emph{output projection}.  In all cases, every
-string in the input language/projection is related to at least one
-string in the output language/projection, and each string in the output language/projection is related to at
-least one string in the input language/projection.
+\emph{input projection} (or input language) and the other the
+\emph{output projection} (or output language).  In the Xerox tradition,
+one refers to the upper projection/language and the lower
+projection/language.  In all cases, every
+string in the input (or upper) language/projection is related to at least one
+string in the output (or lower) language/projection, and each string in
+the output (lower) language/projection is related to at
+least one string in the input (upper) language/projection.
 
 In the Xerox
 visualization of \fst{}s, which emphasizes the bi-directionality of \fst{s}, the projections
@@ -1173,28 +1217,32 @@ outputting strings of lower-side labels.  Xerox
 researchers also talk about \emph{analysis} or ``application in an upward direction,'' matching the symbols of
 the input string against lower-side symbols, and outputting strings of upper-side symbols. 
 The \texttt{test} facility in the Kleene \acro{gui} reflects the Xerox/\acro{parc}
-visualization of bidirectional \fst{}s.
+visualization of bidirectional \fst{}s, allowing you to type input words
+in the upper input field, to be matched on the upper side of the
+transducer; and, conversely, allowing you to type input words in the
+lower input field, to be matched on the lower side of the transducer.
 
 The following transducer, which includes multi-character symbols,
-models the formation of regular English plurals more elegantly, and
-reflects the Xerox
+models the formation of regular English plurals more elegantly, and the
+comments
+reflect the Xerox
 visualization.
 
 \begin{Verbatim}
-// a set of noun roots
+	// a set (i.e., a language) of noun roots
 $nroot = dog|cat|bird|horse|worm ;
 $ncat = '[Noun]':"" ; // [Noun] tag on the upper side,
                       // the empty string on the lower side
-$num = '[Sg]':"" | '[Pl]':s	; 
+$num = '[Sg]':"" | '[Pl]':s ; 
 // [Sg] on the upper side, 
-//   and empty string on the lower.
+//   and the empty string on the lower side.
 // [Pl] on the upper side, 
-//   and s on the lower
+//   and s on the lower side.
 
 // now just concatenate the three FSMs
 $nouns = $nroot $ncat $num ;
 
-test $nouns ; // and launch the test window
+test $nouns ; // launches the test window
 \end{Verbatim}
 
 \noindent
@@ -1224,16 +1272,16 @@ cats: 0.0
 Again, just ignore the weight \texttt{0.0}, which will be explained later.  If you enter
 \texttt{horse[Noun][Sg]} in the upper entry field, the output will be \texttt{horse}.  Xerox
 researchers working on morphology 
-generally referred to this kind of application as \emph{generation}, taking
+generally refer to this kind of application as \emph{generation}, taking
 an abstract upper-side string and generating a surfacy lower-side string (or strings).  Now,
 applying the same \fst{} in the opposite direction, try entering 
 \texttt{horse} in the \emph{lower} input field; the result will be \texttt{horse[Noun][Sg]}.
 And if you enter \texttt{horses} in the lower input field, the output will be \texttt{horse[Noun][Pl]}.
-Xerox researchers referred to this mode of application as \emph{analysis}, mapping from surfacy
-strings to abstract analysis strings.  \fst{}s are bidirectional, and the Xerox visualization of
+Xerox researchers refer to this mode of application as \emph{analysis}, mapping from surfacy
+strings to abstract analysis strings.  \fst{}s are mathematically bidirectional, and the Xerox visualization of
 \fst{}s emphasizes that bidirectionality. 
 Such \fst{}s, which perform morphological analysis and
-generation, can be written to model word analysis in natural languages like English, French, German,
+generation, can be (and have been) written to model word analysis and generation in natural languages like English, French, German,
 Arabic, Zulu, etc.
 
 As we shall see, there is value to both the Xerox and the OpenFst
@@ -1330,7 +1378,7 @@ exception and print out a (hopefully) useful message.
 \subsubsection{Playing with \fst{}s}
 
 A regular relation, encoded as an \fst{}, is a relation between two regular languages,
-called the input projection and the output projection, and we can extract those
+called (in the OpenFst tradition) the input projection and the output projection, and we can extract those
 projections using the pre-defined Kleene functions \verb!$^inputProj()!
 and \verb!$^outputProj()!.
 
@@ -1345,6 +1393,14 @@ $outputLang = $^outputProj($fst) ;
 pr $outputLang ;
 // outputs: animal mammal
 \end{Verbatim}
+
+The \verb!$^inputProj()! function has an alias \verb!$^inputside()!, and
+the
+\verb!$^outputProj()! function has an alias \verb!$^outputside()!, in
+case you find them more intuitive.  Similarly, the aliases
+\verb!$^upperProj()!, \verb!$^upperside()!, \verb!$^lowerProj()! and
+\verb!$^lowerside()! are provided in case you prefer the Xerox
+visualization.
 
 We can compute the inversion of an \fst{} with the \verb!$^invert()!
 function, and the reverse of an \fsm{} (which reverses all the paths right-to-left)
@@ -1377,7 +1433,8 @@ $rule =  s -> z / [aeiou] _ [aeiou] ;
 \end{Verbatim}
 
 \noindent
-which states that an \texttt{s} on the input side is mapped to a \texttt{z} on the output
+which states that an \texttt{s} on the input (upper) side is mapped to a
+\texttt{z} on the output (lower)
 side when it appears between two vowels.  The rule compiles into a transducer, which you can
 draw and test in the usual ways:
 
@@ -1417,7 +1474,7 @@ draw $infLang ;
 \noindent
 and it can still be drawn.
 
-In any non-trivial project, however, the \fsm{}s can soon become huge, consisting of hundreds of
+In any non-trivial project to model natural language, however, the \fsm{}s can soon become huge, consisting of hundreds of
 thousands of states and arcs, and drawing is obviously out of the question.  In such cases,
 one can still need to ask ``What do the input (or output) strings look like?'', and Kleene
 offers some useful commands to show you random samples of the languages.  
@@ -1479,7 +1536,8 @@ strings of International Phonetic Alphabet symbols representing their pronunciat
 perhaps to be fed to a speech synthesizer, and
 morphological analyzer \fst{s} would map orthographical words into analysis strings showing
 the baseform, part of speech and other relevant information.  Such morphological analyzers
-could be used to aid in dictionary lookup and to provide output to syntactic parsers.
+could be used to aid in dictionary lookup and to provide output to
+part-of-speech disambiguators (part-of-speech taggers) and syntactic parsers.
 
 Grammars consisting of multiple sub-components, performing tokenization, morphological
 analysis, disambiguation and shallow-robust parsing can be written as \fst{}s and then
@@ -1497,6 +1555,6 @@ documentation, teaching, promotion and further computational linguistics.  The r
 morphological analyzer can easily and repeated be tested, using millions of words, to
 test its coverage and accuracy.  The writing of a finite-state
 morphological
-analyzer for a new language is a suitable and  popular project for a Master's thesis.
+analyzer for a new language is a suitable and  popular project for a master's thesis.
 
 

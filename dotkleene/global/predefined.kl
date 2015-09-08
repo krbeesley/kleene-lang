@@ -89,6 +89,7 @@ $^inputProj! = $^inputside! ;  // alias
 $^inputProject! = $^inputside! ;  // alias
 $^inputProjection! = $^inputside! ;  // alias
 $^upperside! = $^inputside! ;  // alias, Xerox visualization
+$^upperProj! = $^inputside! ;  // alias, Xerox visualization
 
 $^inputside($fst) {
 	return $^__inputproj($fst) ;  // built-in
@@ -97,6 +98,7 @@ $^inputProj = $^inputside ;	// alias
 $^inputProject = $^inputside ;	// alias
 $^inputProjection = $^inputside ;  // alias
 $^upperside = $^inputside ; // alias, Xerox visualization
+$^upperProj = $^inputside ; // alias, Xerox visualization
 
 $^outputside!($fst) {
 	return $^__outputproj!($fst) ; // built-in
@@ -105,6 +107,7 @@ $^outputProj! = $^outputside! ;	// alias
 $^outputProject! = $^outputside! ;	// alias
 $^outputProjection! = $^outputside! ;	// alias
 $^lowerside! = $^outputside! ;  // alias, Xerox visualization
+$^lowerProj! = $^outputside! ;  // alias, Xerox visualization
 
 $^outputside($fst) {
 	return $^__outputproj($fst) ; // built-in
@@ -113,6 +116,7 @@ $^outputProj = $^outputside ;	// alias
 $^outputProject = $^outputside ;	// alias
 $^outputProjection = $^outputside ;	// alias
 $^lowerside = $^outputside ; // alias, Xerox visualization
+$^lowerProj = $^outputside ; // alias, Xerox visualization
 
 $^copy($fst) {
 	return $^__copy($fst) ;  // built-in
@@ -875,10 +879,14 @@ $^eq($L, $left, $right) {
 	// extract an FSM with the move-alphabet (containing all and only
 	// symbols that appear between the delimiters)
 
+	// KRB: added parens below, two places in $moveAlphaFsm,
+	// to reflect change of precedence
+	// 2015-02-28 * higher than :
+
 	$moveAlphFsm = $^outputProj(	
 			$Leq _o_
-			( [^'KLEENEeqLB']:""* 'KLEENEeqLB':"" [^'KLEENEeqRB']* 'KLEENEeqRB':"" )*
-			[^'KLEENEeqLB']:""*
+			( ([^'KLEENEeqLB']:"")* 'KLEENEeqLB':"" [^'KLEENEeqRB']* 'KLEENEeqRB':"" )*
+			([^'KLEENEeqLB']:"")*
 				   				) ;
 	$move = ~.* ;
 	foreach ($sym in $@^getSigma($moveAlphFsm)) {

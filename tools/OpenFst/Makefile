@@ -9,7 +9,7 @@
 WINPORT_DIR=$(CURDIR)/../../winport
 include $(WINPORT_DIR)/os_type.mk   # set os_type to standard name for OS type
 
-OPENFST_BASENAME=openfst-1.3.3
+OPENFST_BASENAME=openfst-1.4.1
 OPENFST_ARCHIVE=$(OPENFST_BASENAME).tar.gz
 
 OPENFST_LIBDIR=$(OPENFST_BASENAME)/src/lib

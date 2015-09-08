@@ -33,7 +33,7 @@ we need to do one or both of the following:
 Write \emph{runtime code} that reads in a Kleene \fsm{}, e.g.\@
 from an \init{xml} representation, 
 rebuilds the \fsm{} in memory, applies it to input and retrieves the output.
-Such runtime code, probably implemented in a library in Java, C++, Python or whatever, could be
+Such runtime code, probably implemented in a library in Java, \CPP{}, Python or whatever, could be
 imported and used by application programs.
 \item
 Or, write scripts that take a Kleene \fsm{} and convert it into stand-alone
@@ -51,7 +51,7 @@ or in any program written in Scala, Groovy or Clojure, which are also based on t
 (\init{jvm}) and so can use Java classes.
 
 In the future, it should be possible to convert Kleene \fsm{}s into classes in other languages,
-e.g.\@ C++ and Python.
+e.g.\@ \CPP{} and Python.
 
 I will first discuss the current status and usage of the ``fst2java'' project, which generates
 executable code in Java, and then give a high-level view of the requirements for runtime code.
@@ -1082,9 +1082,10 @@ matched paths.  Conversely, upward application involves matching the list of cod
 values against paths of labels on the lower (OpenFst ``output'') side of the \fsm{}, and
 returning the lists of labels on the upper (OpenFst ``input'') side of the matched paths.
 
-The runtime code would typically be implemented as a library, for example a C++ library that
+The runtime code would typically be implemented as a library, for
+example a \CPP{} library that
 could be loaded
-by a C++ program.  The library would have an \init{api} listing the callable functions of the library
+by a \CPP{} program.  The library would have an \init{api} listing the callable functions of the library
 that implement the tasks just listed.  Any larger program that imported the
 runtime-code library would be able to integrate \fsm{} processing.
 
