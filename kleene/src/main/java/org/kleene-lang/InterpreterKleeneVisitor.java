@@ -11723,14 +11723,15 @@ class RuleSemanticParts {
 				// if the GUI is active, remove the icon from the 
 				// GUI symtab window
 				final String fimg = img ;
+				final Object fdata = data ;
 				if (((InterpData)data).getInGUI()) {
 					if (javax.swing.SwingUtilities.isEventDispatchThread()) {
-						removeFromGUISymtab(fimg, data) ;
+						removeFromGUISymtab(fimg, fdata) ;
 
 					} else {
 						javax.swing.SwingUtilities.invokeLater(new Runnable() {
 							public void run() {
-								removeFromGUISymtab(fimg, data) ;
+								removeFromGUISymtab(fimg, fdata) ;
 							}
 						});
 					}
@@ -11768,15 +11769,17 @@ class RuleSemanticParts {
 				Frame foundFrame = null ;
 				foundFrame = env.remove(key) ;
 
+				final String fkey = key ;
+				final Object fdata = data ;
 				if (foundFrame == mainFrame) {
 					if (inGUI) {
 						if (javax.swing.SwingUtilities.isEventDispatchThread()) {
-							removeFromGUISymtab(key, data) ;
+							removeFromGUISymtab(fkey, fdata) ;
 
 						} else {
 							javax.swing.SwingUtilities.invokeLater(new Runnable() {
 								public void run() {
-									removeFromGUISymtab(key, data) ;
+									removeFromGUISymtab(fkey, fdata) ;
 								}
 							});
 						}
@@ -11785,11 +11788,11 @@ class RuleSemanticParts {
 				if (inGUI) {
 					final PseudoTerminalInternalFrame fterminal = terminal ;
 					if (javax.swing.SwingUtilities.isEventDispatchThread()) {
-						fterminal.appendToHistory("// Deleting " + key) ;
+						fterminal.appendToHistory("// Deleting " + fkey) ;
 					} else {
 						javax.swing.SwingUtilities.invokeLater(new Runnable() {
 							public void run() {
-								fterminal.appendToHistory("// Deleting " + key) ;
+								fterminal.appendToHistory("// Deleting " + fkey) ;
 							}
 						});
 					}
