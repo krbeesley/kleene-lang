@@ -7,8 +7,9 @@
 Alternation rules are extensions of the regular-expression language, and each alternation rule compiles into a
 finite-state transducer.  As always, finite-state transducers encode regular relations, and the ``action'' of a rule,
 which appears superficially to be algorithmic, changing an input string into one or more output strings, is in
-reality just the matching of a string of input on one side of the relation and the return of the related strings on the
-other side of the relation.
+reality just the matching of a string of input on one side of the relation
+and the return of the related string or strings on the
+opposite side of the relation.
 
 Kleene has its own rule syntax, designed to be as familiar and intuitive as possible to trained linguists, but the
 rules are interpreted using algorithms invented by Dr.\@ M\r{a}ns Huldén, who has made them freely available for
@@ -164,7 +165,16 @@ c -> k / _ (a | o | u)
 \noindent
 read as ``upper-level \emph{c} maps to lower-level \emph{k} in the context before \emph{a}, \emph{o} or \emph{u}.''
 Note that the rules have a left-hand-side and a right-hand-side, separated by a forward slash.  The underscore marks
-the location in the context where the alternation occurs.  For now we
+the location in the context where the alternation occurs.  In general, such
+a rule can have a left context and a right context, either of which (or
+both) can be empty.
+
+\begin{alltt}
+\emph{input} -> \emph{output} / \emph{left} _ \emph{right}
+\end{alltt}
+
+\noindent
+For now we
 will type the rule arrow as a hyphen followed by a
 right angle bracket.\footnote{The Kleene parser will accept either a hyphen
 followed by a right angle bracket, or the Unicode \acro{rightwards
@@ -175,7 +185,8 @@ right angle bracket, the two typed characters will be automatically
 intercepted and substituted with a \acro{rightwards arrow} (→).  A
 kleene\_utf-8.vim keymap file is also available for the gvim editor.}
 
-In Latin-American Spanish, another descendant of Latin, the orthographical \emph{c} maps to \emph{s} before /e/ and /i/, 
+In Latin-American Spanish, another descendant of Latin, the orthographical
+\emph{c} is pronounced as (maps to) \emph{s} before /e/ and /i/, 
 
 \begin{Verbatim}
 c -> s / _ ( e | i )
@@ -241,7 +252,7 @@ can substitute some other character or characters, e.g.,
 
 
 \begin{Verbatim}
-// Italian, 
+// Simple Italian example, 
 // using tS to represent the affricate represented by 
 //    the ch in chin
 test  c -> tS / _  (e|i) ;
@@ -279,6 +290,7 @@ underscore, followed by a lowercase \emph{o} letter, followed by another undersc
 	Kleene.kmap input method in the \acro{gui}, or the kleene\_utf-8.vim
 	keymap in gvim, the typed \verb!_o_! sequence will be
 intercepted and replaced with the \acro{ring operator} \ringop{}.}
+
 Try entering the following derivation or ``cascade'' of rules and testing them using words like \emph{casa},
 \emph{cosa}, \emph{poco}, \emph{curioso}, \emph{ciudad}, \emph{cace} and \emph{cimento}.
 
@@ -289,6 +301,7 @@ $rule = c -> s / _  (e|i) _o_ c -> k / _ (a|o|u) ;
 test $rule ;
 \end{Verbatim}
 
+\noindent
 To better visualize the cascade of the two rules, they can equivalently be typed as
 
 \needspace{5\baselineskip}
@@ -326,7 +339,8 @@ rule has fired, any \emph{c}s still remaining will be mapped to \emph{k}.
 
 \begin{Verbatim}
 // Improved Spanish rules for the realization of c
-$rule = c -> s / _  (e|é|i|í)
+$rule = 
+c -> s / _  (e|é|i|í)
 _o_
 c -> k ;
 
@@ -335,7 +349,8 @@ test $rule ;
 
 \noindent
 The new rule cascade will now handle cases like \emph{pacto} and \emph{accidente},
-outputting \emph{pakto} and \emph{aksidente}, respectively.  Note that if a rule does not ``match and fire,'' then it simply maps the input string to itself.  
+outputting \emph{pakto} and \emph{aksidente}, respectively.  Note that if an
+alternation rule does not ``match and fire,'' then it simply maps the input string to itself.  
 
 [KRB:  add graphics showing the rule compiled into finite-state
 machines]
@@ -372,7 +387,7 @@ and then entering \emph{kaNpat} as the upper-side input.  The output is the stri
 m} rule will map \emph{kaNpat} to the intermediate string \emph{kampat}, and then
 the second \texttt{p -> m} rule will map from \emph{kampat} to \emph{kammat}.
 However, when the two rules are compiled and composed, the
-intermediate level simply disappears, and the resulting transducer maps \emph{kaNpat} to
+intermediate level literally disappears, and the resulting transducer maps \emph{kaNpat} to
 \emph{kammat} in a single step.
 
 Using the same transducer, if
@@ -385,7 +400,7 @@ single step.  Note also that if you input \emph{kammat}, then the result is agai
 
 At this point it is instructive to use the same transducer and apply it in an
 \emph{upward} direction to the input \emph{kammat}.  To do this, simply enter
-\emph{kammat} in the lower input field of the testing window.  The output will
+\emph{kammat} in the \emph{lower} input field of the testing window.  The output will
 consist of three strings:
 
 \begin{itemize}
@@ -547,7 +562,7 @@ acceptors are special cases of such machines where, on every arc, the upper and 
 same.  Thus the regular expression \texttt{b}, and the regular expression \texttt{b:b} are structurally
 equivalent---they both get interpreted to produce an \fsm{} with one arc that has a \emph{b} symbol on
 the upper side and a \emph{b} symbol on the lower side.  By convention,
-this machine is interpretable as an acceptor or as an identity
+this machine is interpretable either as an acceptor or as an identity
 transducer.
 
 Consistent with that convention, the following rules are valid because both the \emph{upper} and
@@ -704,8 +719,8 @@ s -> z / .* [aeiou] _ [aeiou] .*
 Intuitively, this rule indicates that
 an upperside \texttt{s} is mapped to a lowerside \texttt{z}
 when the \texttt{s} is immediately preceded and followed by a vowel; and it
-just doesn't matter which characters (if any) might precede or follow
-the context vowels.
+just doesn't matter which characters (if any) might precede the left context or follow
+the right context.
 
 Alternation rules can have multiple contexts, separated by \texttt{||}, a double vertical bar.
 
@@ -726,7 +741,7 @@ test $rule ;
 \end{Verbatim}
 
 \noindent
-will map ``casa'' to ``kaza'' and ``sapo'' to ''zapo.''
+will map ``casa'' to ``kaza'' and ``sapo'' to ``zapo.''
 
 \subsection{Left-arrow Rules}
 

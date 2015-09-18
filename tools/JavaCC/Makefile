@@ -18,5 +18,10 @@ old:
 	# KRB 2012-04--2 had to remove the ./
 	#tar -xzf $(JAVACC_ARCHIVE) ./$(JAVACC_BASENAME)/bin
 	tar -xzf $(JAVACC_ARCHIVE) $(JAVACC_BASENAME)/bin
+
 clean:
 	rm -rf */
+
+clean-all: clean
+	find . -type l -delete
+

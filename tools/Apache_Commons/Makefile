@@ -22,6 +22,11 @@ old:
 	tar -xzf $(COMMONS_LANG_ARCHIVE) $(COMMONS_LANG_BASENAME)/$(COMMONS_LANG_BASENAME).jar
 	@echo "(We can safely ignore the spurious message \"tar: A lone zero block at XXXX\".)"
 
-
+# delete all directories
 clean:
 	rm -rf */
+
+# delete link(s) to library package(s)
+clean-all: clean
+	find . -type l -delete
+

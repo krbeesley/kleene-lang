@@ -51,9 +51,13 @@ $(FSTLIB): $(OPENFST_BASENAME)/Makefile
 	( cd $(OPENFST_BASENAME) ; $(MAKE) )
 
 # this clean should work when continuing to development on the same platform
+# with the same version
 clean:
 	( cd $(OPENFST_BASENAME) ; $(MAKE) clean )
 
-# super clean to start all over again, perhaps on a separate platform
+# super clean to start all over again, with a new version of the
+# library, perhaps on a new platform
 clean-all:
 	rm -rf $(OPENFST_BASENAME)
+	find . -type l -delete
+

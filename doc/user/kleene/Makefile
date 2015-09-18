@@ -1,7 +1,7 @@
 # Makefile for Kleene user manual
 
 TARGET=kleene
-VERSION=0.9.4.2
+VERSION=0.9.5.0
 
 default: $(TARGET).pdf
 

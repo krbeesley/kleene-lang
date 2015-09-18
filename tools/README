@@ -60,7 +60,7 @@ Java .jar files
 
 	Apache_Commons	for		commons-lang3-3.1.jar		(from tar.gz)
 	dom4j					dom4j-1.6.1.jar				(from tar.gz)
-	icu4j					icu4j-51_1.jar				(dist. as a .jar)
+	icu4j					icu4j-54_1.jar				(dist. as a .jar)
 	jaxen					jaxen-1.1.6.jar				(from tar.gz)
 	rome					rome-1.0.jar				(dist. as a .jar)
 					Copied into Kleene/src/java/lib/
@@ -68,7 +68,7 @@ Java .jar files
 
 C++ libraries, must be recompiled for each platform. See Makefiles
 
-	ICU4C			icu4c-51_1-src.tgz
+	ICU4C			icu4c-54_1-src.tgz
 					for		libicudata.51.1.dylib  or .so  or .dll
 							libicui18n.51.1.dylib
 							libicuuc.51.1.dylib

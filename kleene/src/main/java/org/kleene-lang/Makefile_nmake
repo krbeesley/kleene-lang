@@ -26,7 +26,7 @@
 # Set os_type to standard name for OS type.
 os_type=win
 
-VERSION=0.9.4.2
+VERSION=0.9.5.0
 NAME=Kleene
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)

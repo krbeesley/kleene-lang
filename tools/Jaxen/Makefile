@@ -20,3 +20,7 @@ old:
 
 clean:
 	rm -rf */
+
+clean-all: clean
+	find . -type l -delete
+

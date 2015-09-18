@@ -21,3 +21,6 @@ Also edit kleene-lang/kleene/src/main/java/org/kleene-lang/Makefile
 
 and change the library numbers appropriately.
 
+Also edit kleene-lang/toos/README to show the currently used version
+numbers.
+

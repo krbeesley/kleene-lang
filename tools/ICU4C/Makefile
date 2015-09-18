@@ -69,6 +69,8 @@ clean:
 	( cd $(ICU4C_SOURC_DIR) ; $(MAKE) clean )
 
 # delete the whole icu/ directory, preparatory to starting over
-# from scratch, perhaps on a different platform
+# from scratch, perhaps on a different platform, or new version
 clean-all:
 	rm -rf */
+	find . -type l -delete
+
