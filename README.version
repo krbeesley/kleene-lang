@@ -2,7 +2,8 @@
 		Kleene Version Notes
 
 2015-09-17
-	Revision of makefiles for library dependencies.
+	Revision of makefiles for library dependencies.  
+	First successful compilation of Kleene for 64-bit Linux.
 
 2015-08
 	Many minor corrections of typos in the User Manual.

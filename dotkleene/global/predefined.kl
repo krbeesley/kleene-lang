@@ -700,7 +700,7 @@ $^foldLeft($^bin, $@list, $init) {
 // this order is seen in
 // Python:  reduce(func, list, init)
 // CommonLisp: (reduce func list init)
-// (Closure and Scheme put the init before the list)
+// (Clojure and Scheme put the init before the list)
 // 
 // Having the first 2 args as function and list is common
 // for 'map' functions in many languages
@@ -913,18 +913,18 @@ $^eq($L, $left, $right) {
 // where $lang is a language of syllables, prosodic feet, or whatever that needs
 // to be reduplicated, and $sep is the separator character (usually "-" or "")
 $^redup($lang, $sep="") {
-	require #^isAcceptor($lang), "First argument to $^redup() must be an acceptor." ;
-	require !#^isCyclic($lang), "First argument to $^redup() must be a finite acceptor."
+	require #^isAcceptor($lang), "The first argument to $^redup() must be an acceptor." ;
+	require !#^isCyclic($lang), "The first argument to $^redup() must be a finite acceptor---i.e., no cycles."
 	;
-	require !#^containsOther($lang), "First argument to $^redup() must not contain OTHER." ;
+	require !#^containsOther($lang), "The first argument to $^redup() must not contain OTHER." ;
 	require !#^isEmptyLanguage($lang), 
-		"First argument to $^redup() must not be the empty language." ;
+		"The first argument to $^redup() must not be the empty language." ;
 	require !#^isEmptyStringLanguage($lang), 
-		"First argument to $^redup() must not be the empty string language." ;
+		"The first argument to $^redup() must not be the empty string language." ;
 
-	require #^isAcceptor($sep), "Second argument to $^redup() must be an acceptor." ;
+	require #^isAcceptor($sep), "The second argument to $^redup() must be an acceptor." ;
 	require !#^isEmptyLanguage($sep), 
-		"Second argument to $^redup() must not be the empty language." ;
+		"The second argument to $^redup() must not be the empty language." ;
 
 	return $^substSymbol!(
 				$^substSymbol!(

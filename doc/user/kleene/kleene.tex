@@ -14,12 +14,16 @@
 \usepackage{fontspec}
 \usepackage{xltxtra}
 %\usepackage{framed}
-% N.B. Charis does not have a mono font face!
+% N.B. Charis does not have a mono font face!  (Is this right?)
 % try {DejaVu Sans Mono} or {Courier New} or {Lucida Sans Typewriter}
-\setmonofont[Scale=0.9]{DejaVu Sans Mono}	% used in verb and Verbatim; don't specify
-							% tex-text in verb environments (it
-							% implements smart quotes and turns ---
-							% into a dash, etc.)
+% monofont used in verb and Verbatim
+% DO NOT set Mapping=tex-text in verb/Verbatim environments (it 
+%	implements smart quotes and turns --- into a dash, etc.)
+%\setmonofont[Scale=0.9]{DejaVu Sans Mono}
+% specify ItalicFont to use \emph{} inside alltt and see oblique
+%	text (there is no DejaVu Sans Mono Italic font)
+\setmonofont[Scale=0.9,ItalicFont=DejaVu Sans Mono Oblique]{DejaVu Sans Mono}	
+%\setmonofont[Scale=MatchLowercase]{Charis SIL}	
 %\defaultfontfeatures{Mapping=tex-text} 	% for all subsequent fonts
 % need Renderer=ICU to get small caps
 \setmainfont[Mapping=tex-text,Renderer=ICU]{Charis SIL}
@@ -183,7 +187,15 @@
 \newcommand{\term}{\textsc}			% technical term introduced
 \newcommand{\specsym}{\textsc}		% special symbol in an FSM (e.g. OTHER)
 
-\newcommand{\str}[1]{``\texttt{#1}''}
+%\newcommand{\str}[1]{``\texttt{#1}''}
+
+\newcommand{\iostr[1]{{\emph{#}}}
+	% used in running text, e.g.
+	%" if you input \iostr{buku-buku} to the FSM, you get back
+	% \iostr{buku[Noun][Redup]}"
+	% This is preferable to using quotation marks, which are
+	% problematic with commas and periods (in American usage)
+
 \newcommand{\regex}[1]{{\tt #1}}
 \newcommand{\regexp}[1]{{\tt #1}}
 
@@ -377,6 +389,7 @@ under the same license.
 \include{app2}		% Optimization of Networks
 \include{app3}		% Control Characters in Kleene
 \include{app4}		% GUI Network Testing and OTHER
+\include{app5}		% Work-around for right-to-left rules
 
 
 \include{cheat1}	% Built-in FSM-valued Functions

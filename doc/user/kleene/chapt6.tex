@@ -38,7 +38,7 @@ transducing one word into another, assigning a cost to deleting a
 letter, a cost to adding a letter and a cost to changing one letter into
 another letter.  In the Tropical Semiring, the costs associated with multiple changes are simply
 added together to yield the total cost.  Mapping a letter to itself is free, involving no cost,
-i.e.\@ a neutral cost of 0.0.  Of
+i.e., a neutral cost of 0.0.  Of
 course, with
 enough editing changes, any word can be changed to any other word,
 but intuitively we want to concentrate on the possible corrections that
@@ -101,7 +101,7 @@ $swap = ( .:. - . ) $changecost ;
 \noindent
 Recall that \texttt{.:.} denotes the transducer that maps any symbol to any
 symbol, including itself.  Then \texttt{(~.:.~- .~)} denotes the transducer
-that maps any symbol to any other symbol, \emph{not} including identity mappings.  We
+that maps any symbol to any other symbol, so \emph{not} including identity mappings.  We
 assign such letter swaps the cost of 7.0.
 
 Armed with these definitions, our first draft of the model for transducing between a 
@@ -113,14 +113,13 @@ in Kleene terms:
 $editModel = ( $ident | $delete | $insert | $swap )* ;
 \end{Verbatim}
 
-We also need a unigram \emph{language model} that encodes the language (i.e.\@ the
+We also need a unigram \emph{language model} that encodes the language (i.e., the
 set) of properly spelled words that will serve as possible corrections.  
 Initially, such a model can be constructed
 as a simple unweighted union of words,
 
 \begin{Verbatim}
 $langModel = a | back | bake | bee | carrot | deer | eye ;
-// and so on for hundreds, thousands, millions of words
 \end{Verbatim}
 
 \noindent
@@ -156,8 +155,8 @@ the fact that, with enough edits, \emph{frm} can be transduced into any of the
 
 At this point, we can start to use the weights (costs) to focus on the more
 likely corrections, given our edit model and language model.  In the OpenFst
-library, the function that prunes an \fsm{} to contain only the best paths (i.e.\@
-lowest cost, in the Tropical Semiring) is called ShortestPath.  That operation
+library, the function that prunes an \fsm{} to contain only the best paths (i.e.,
+lowest cost paths, in the Tropical Semiring) is called ShortestPath.  That operation
 and terminology are exposed in the Kleene function \verb!$^shortestPath($fst, #num=1)!.  For
 example, we can limit \verb!$corr! to the best five corrections using
 
@@ -234,7 +233,7 @@ Rank   Word                           Frequency
 
 \noindent
 The ``Frequency'' column shows the count of occurrences of each word from the
-corpus.  For example, P(the), the probability of a word being \emph{the}, i.e.\@ the probability of
+corpus.  For example, P(the), the probability of a word being \emph{the}, i.e., the probability of
 selecting a word from the corpus at random, and having it be \emph{the}, is
 computed as the count of occurrences of \emph{the}, here 107946, divided by the
 total number of tokens in the corpus, i.e.\@

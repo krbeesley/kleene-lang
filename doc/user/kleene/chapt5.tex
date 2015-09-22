@@ -7,6 +7,7 @@
 The purpose of this chapter is to present some non-trivial examples that
 do not involve weights.  This is definitely work in progress, and
 examples will be added, corrected and expanded in future releases.
+Example contributions from users would be gratefully received.
 
 \section{Spanish Morphology}
 
@@ -109,12 +110,12 @@ aman
 \end{Verbatim}
 
 \noindent
-showing that \emph{amo} (``I love'') is the first-person singular present indicative form of
-\emph{amar}, \emph{amas} (``thou lovest'') is the second-person singular,
-\emph{ama} (``he/she loves'') is the
-third-person singular, \emph{amamos} (``we love'') is the first-person plural,
-\emph{amáis} (``you love'') is the second-person plural, and \emph{aman} (``they
-love'') is the third-person plural.   The root
+showing that \emph{amo} (`I love') is the first-person singular present indicative form of
+\emph{amar}, \emph{amas} (`thou (you singular) lovest') is the second-person singular,
+\emph{ama} (`he/she loves') is the
+third-person singular, \emph{amamos} (`we love') is the first-person plural,
+\emph{amáis} (`you (plural) love') is the second-person plural, and \emph{aman} (`they
+love') is the third-person plural.   The root
 is \emph{am}, and the six
 suffixes for this group are pretty obviously \emph{o}, \emph{as}, \emph{a}, \emph{amos},
 \emph{áis} and \emph{an}.  We want to
@@ -123,7 +124,7 @@ orthographical verb string, e.g.\@ \emph{amo}, and return
 a string that includes the infinitive \emph{amar}, the information that it is a
 verb, and the information that it is the first-person singular present indicative
 form.  
-We will employ a number of multi-character symbol tags to
+We will invent and employ a number of multi-character symbol tags to
 convey part-of-speech, person, number, tense, aspect and mood information.  Our
 \fsm{} will include paths like the following, ignoring alignment and epsilons,
 
@@ -141,7 +142,7 @@ multi-character symbols.  Conversely, we want to be able to apply the same
 While the spellings of the lower-side words in the
 \fsm{} are determined by the rules of Spanish orthography, the design of the upper-side
 analysis strings is in our hands, and some care and study should go into that
-design.  This is just one possible design.\footnote{Another possibility is to include
+design.  This is just one possible design of many.\footnote{Another possibility is to include
 \init{xml}-like symbols to mark up the analysis strings.}
 Don't worry too much about the spelling of the multi-character symbols;
 we will show later that they can be changed trivially at a later time, using
@@ -303,7 +304,7 @@ the input \texttt{amar[VERB][V3][PresIndic][1P][Sg]}, and the result will be
 \texttt{amo}.  The \fsm{} thus \emph{transduces} from strings representing conjugated
 verbs to strings representing analyses of those verbs, and vice versa.
 
-Finally, we can define a function for testing that prints out all the conjugated forms for a
+Finally, we can define a convenient function, here called \verb!^conj()!, for testing that prints out all the conjugated forms for a
 verb, in a canonical order that can be compared to the usual published and
 online charts.
 
@@ -472,15 +473,16 @@ printing out the entire conjugation paradigm.
 \end{Verbatim}
 
 \noindent
-The coverage can be expanded to other verbs, in the same first-conjugation group,
+The coverage of our exampler can be expanded trivially to other verbs of the same
+first-conjugation class
 by simply adding more citation forms to the definition of \verb!$V3CitationForms!.
 
 \subsubsection{Expanding the Spanish Verb Morphological Analyzer}
 
-In addition to the first conjugation, a large group consisting of regular
+In addition to the first conjugation, a large class consisting of regular
 \mbox{\emph{-ar}} verbs, 
-the second conjugation consists of regular \mbox{\emph{-er}} verbs, including \emph{beber} (``to drink''), and the third conjugation consists of
-regular \mbox{\emph{-ir}} verbs, including \emph{vivir} (``to live'').  Both my Larousse and Bescherelle conjugation guides identify a total
+the second conjugation consists of regular \mbox{\emph{-er}} verbs, including \emph{beber} (`to drink'), and the third conjugation consists of
+regular \mbox{\emph{-ir}} verbs, including \emph{vivir} (`to live').  Both my Larousse and Bescherelle conjugation guides identify a total
 of 90 verb-conjugation classes for Spanish, though their numbering systems differ, and even a
 single publisher may not use consistent numbering from one edition to another.  The 90 classes
 include a large number of irregular verbs with idiosyncratic conjugations.

@@ -89,11 +89,17 @@ OPENFST_INCS=$(OPENFST_INCDIR)/fst/*.h
 LIBNAME=kleeneopenfst
 
 CC=g++
-OPT=-O2
+
+# For Linux, detect 32 vs 64 bit
+NUMBITS := $(shell getconf LONG_BIT)
+OPT_32 := -std=c++11
+OPT_64 := -std=c++11 -fPIC
+
 
 ######################### LINUX ############################
 
 ifeq ($(os_type),linux)
+ OPT=$(OPT_$(NUMBITS))
  DOT=/usr/bin/dot
  JNILIBTYPE=so
  DYLIBTYPE=so
@@ -116,7 +122,7 @@ ifeq ($(os_type),linux)
  ICU4CUC_BASENAME=libicuuc
  ICU4CUC_DLL=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)
  ICU4CUC_DLL_AND_LINKS=$(ICU4C_LIBDIR)/$(ICU4CUC_BASENAME).$(DYLIBTYPE)*
- CFLAGS=$(OPT)  # for 64-bit Linux, add -fPIC
+ CFLAGS=$(OPT)  # for 64-bit Linux, add -fPIC (done above in setting OPT)
  CINC=-I$(OPENFST_INCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(ICU4C_INCDIR)
  LDLFLAGS=-Wl,-L$(OPENFST_LIBDIR)/.libs,-L$(ICU4C_LIBDIR)
  #LDRFLAGS=-Wl,-rpath,$(OPENFST_LIBDIR)/.libs
@@ -157,6 +163,7 @@ ifeq ($(os_type),linux)
 endif
 
 ifeq ($(os_type),mac)
+ OPT=-O2
  #DOT=/Applications/Graphviz.app/Contents/MacOS/dot
  DOT=/usr/local/bin/dot
  JNILIBTYPE=jnilib
@@ -218,6 +225,7 @@ ifeq ($(os_type),mac)
 endif
 
 ifeq ($(os_type),cygwin)
+ OPT=-O2
  DOT="C:/Program Files/Graphviz 2.21/bin/dot"
  JNILIBTYPE=dll
  DYLIBTYPE=dll

@@ -107,14 +107,17 @@ basbas
 Indonesian illustrates productive full-root and full-stem reduplication, and the standard
 orthography now dictates that a hyphen be used as the separator.  For example, where \emph{buku} is the
 word for book, the overt plural is written \emph{buku-buku};\footnote{Reduplication is not used if
-the word appears in a context that makes the plurality obvious, e.g. when \emph{buku} is preceded by
+the word appears in a syntactic context that makes the plurality
+obvious, e.g., when \emph{buku} is preceded by
 the words for the plural cardinal numbers two, three, four, etc.} and where \emph{rumah} is the word for house,
 the overt plural is \emph{rumah-rumah}.  Though this was once a very difficult
 form of reduplication to handle in finite-state systems, it is quite easy using \verb!$^redup()!.
 
 
-Let's assume that we want to create a transducer \verb!$indonesianNouns! that relates ``buku'' on the lower
-side to ``buku[NOUN]'' on the upper side, and ``buku-buku'' on the lower side to ``buku[NOUN][REDUP]'' on
+Let's assume that we want to create a transducer \verb!$indonesianNouns!
+that relates \emph{buku} on the lower
+side to \emph{buku[NOUN]} on the upper side, and \emph{buku-buku} on the
+lower side to \emph{buku[NOUN][REDUP]} on
 the upper side.  This requires surrounding the call to \verb!$^redup()!
 with some idiomatic code, as in this example:
 
@@ -191,8 +194,9 @@ test $indonesianNouns ;
 \end{Verbatim}
 
 \noindent
-and enter, in the lower-side entry field, ``buku,'' the output will be ``buku[NOUN].''  And if you enter
-``buku-buku,'' the output will be ``buku[NOUN][REDUP].''
+and enter, in the lower-side entry field, \emph{buku}, the output will
+be \emph{buku[NOUN]}.  And if you enter
+\emph{buku-buku}, the output will be \emph{buku[NOUN][REDUP]}.
 
 
 \subsubsection{Partial Contiguous Prefixal Reduplication}
@@ -200,7 +204,7 @@ and enter, in the lower-side entry field, ``buku,'' the output will be ``buku[NO
 The following example, from M\r{a}ns Huldén, models a reduplication
 phenomenon found in Warlpiri,
 where the first prosodic foot of a word, defined by the pattern C V C? C? V (a consonant, a vowel,
-one or two optional consonants, and a second vowel) is reduplicated.  No separating
+zero to two consonants, and a second vowel) is reduplicated.  No separating
 hyphen is used in the orthography.  Thus if the
 baseform is \emph{pangurnu}, the reduplicated form is \emph{pangupangurnu}.  Because the
 reduplication is attached to the front of the word, this is known as \verb!prefixal!
@@ -220,11 +224,11 @@ $prosodicFoot = $C $V $C? $C? $V ;
 
 // extract out the prosodic stems (the substrings that need to
 // be reduplicated)
-$prosodicStem = $^lowerside($lexicon _o_ $prosodicFoot .:""*) ;
+$prosodicStem = $^lowerside($lexicon _o_ $prosodicFoot (.:"")*) ;
 
 // calculate/construct the reduplicated strings
 $rmorphology = 
-    "":.* $lexicon '[REDUP]':""
+	("":.)* $lexicon
     _o_
     $^redup($prosodicStem, \-) .* & [^-]* $^ignore($lexicon, \-)
     _o_
@@ -235,8 +239,10 @@ $warlpiri = $lexicon '[UNMARKED]':"" |
             $rmorphology '[REDUP]':"" ;
 \end{Verbatim}
 
-If you test the result, you will find that lower-side ``wantimi'' is related to upper-side ``wantimi[UNMARKED],'' and
-lower-side ``wantiwantimi'' is related to upper-side ``wantimi[REDUP].''  Draw the network, test the
+If you test the result, you will find that lower-side \iostr{wantimi} is
+related to upper-side \iostr{wantimi[UNMARKED]}, and
+lower-side \iostr{wantiwantimi} is related to upper-side
+\iostr{wantimi[REDUP]}.  Draw the network, test the
 strings in both directions, and walk through the example until you are comfortable with it.  This
 illustrates the general idiom for computing prefixal reduplication, and the main change for other languages
 with this phenomenon will be to redefine the prosodic foot (or syllable) that is appropriate.
@@ -259,10 +265,10 @@ $adj = haska | waʃte | mazdi | tuftu ;
 
 $pattern = $C $C $V ;
 
-$syl = $^outputProj($adj _o_ .:""* $pattern) ;
+$syl = $^outputProj($adj _o_ (.:"")* $pattern) ;
 
 $redupMorphology = 
-        $adj "":.*
+		$adj ("":.)*
         _o_
         $^ignore($adj, \-) [^-]* & .* $^redup($syl, \-)
         _o_
@@ -272,9 +278,10 @@ $dakota = $adj ('[ADJ]''[SG]'):"" |
           $redupMorphology('[ADJ]''[REDUP]'):"" ;
 \end{Verbatim}
 
-If you test the resulting \fst{} in the usual way, the lower-side ``haska'' is related to the
-upper-side ``haska[ADJ][SG],'' and lower-side ``haskaska'' is related to the upper-side
-``haska[ADJ][REDUP].''  Other languages with suffixal reduplication can be handled similarly,
+If you test the resulting \fst{} in the usual way, the lower-side
+\iostr{haska} is related to the
+upper-side \iostr{haska[ADJ][SG]}, and lower-side \iostr{haskaska} is related to the upper-side
+\iostr{haska[ADJ][REDUP]}.  Other languages with suffixal reduplication can be handled similarly,
 modifying the \verb!$pattern! as appropriate for the language.  In another language, for example,
 the pattern might be \verb!$C $V $C!.
 
@@ -301,7 +308,7 @@ $pat = $C $V ;
 // extract the syllables to be reduplicated
 $sylls = $^outputProj($lang
                       _o_
-                      .:""* $pat $C:""? $V:"") ;
+					  (.:"")* $pat ($C:"")? $V:"") ;
 
 $rmorph = $lang
           _o_
@@ -317,7 +324,7 @@ $samoan = $lang '[UNMARKED]':"" | $rmorph '[REDUP]':"" ;
 \subsubsection{Full Reduplication with Alternations}
 
 \citet[p. 57]{sproat:1992} lists the following examples of full-stem
-reduplication in Javanese that also involve some vowel
+prefixal reduplication in Javanese that also involve some vowel
 alternations.\footnote{Sproat in turn
 cites an unpublished manuscript by Paul
 Kiparsky, ``The Phonology of Reduplication,'' Stanford University, that
@@ -356,7 +363,7 @@ As Kiparsky describes it, if the second vowel of the stem is not /a/---
  result that /a/ is changed to /o/ and /ɛ/ is changed to /e/, and change 
  the second vowel to /a/. If the second vowel of the stem is /a/, then the 
  left copy remains unchanged but the /a/ in the right copy changes to /ɛ/. 
- If both vowels are /a/, as in djaran 'horse', there are three different 
+ If both vowels are /a/, as in djaran `horse', there are three different 
  possibilities, as shown [above].
 \end{quote}
 
@@ -368,28 +375,28 @@ $Base = adʊs | bali | bosən | ɛlɛq | ibu |
         dolan | udan | djaran ;
 $V = [aeiouɛʊə] ;
 $C = [bdfgjklmnpqrstvwx] ;
-$Lexicon =  "" <- \- .* ||  _ '[HabRep]'
+$Lexicon =  "" <- \- .* /  _ '[HabRep]'
             _o_
-            $redup(Base, \-) '[HabRep]':"" | 
+            $^redup($Base, \-) '[HabRep]':"" | 
 			$Base '[Unmarked]':"" ;
 
 // The Lexicon transducer now contains input-output
 // pairs such as:
 
-// b o l a           [HabRep]    (input)     
-// b o l a - b o l a             (output)         
+// b a l i           [HabRep]    (input)     
+// b a l i - b a l i             (output)         
 // or
-// b o l a [Unmarked]   (input)
-// b o l a              (output)
+// b a l i [Unmarked]   (input)
+// b a l i              (output)
 
 
 // This we can now compose with the rules that change
 // vowels in the two copies yielding, e.g., 
-// bola-bola -> bola-bali, etc.
+// bali-bali -> bola-bali, etc.
 
 // The main rule
 $Rule1 =  
-    $parallel( $a -> $b / # $C* _ $C* ($V - a) .* \-
+    $^parallel( $a -> $b / # $C* _ $C* ($V - a) .* \-
                { where $a _E_ $@(a, ɛ), 
                        $b _E_ $@(o, e) },
                $V -> a / # $C* $V $C* _ .* \- ,
@@ -397,15 +404,10 @@ $Rule1 =
              ) ;
 
 // To handle the "three different possibilities" 
-// seen in "djaran"
-// KRB:  Is -> || a two-level restriction expression?
-// KRB:  Need fixed here for Foma-to-Kleene
+// seen in "djaran", where both vowels are 'a'
 $Rule2 =  
-  $parallel(
-    a:[o|a] [C|V]*   %- C*  a:ɛ C*  a:ɛ -> || .#. C*  _ ?* ,
+  $^parallel(
     a:(o|a) ($C|$V)* \- $C* a:ɛ $C* a:ɛ -> /  #   $C* _ .* ,
-
-    a (->) o || .#. C*  _ ?* %- 
     a ->?  o /  #   $C* _ .* \-
   ) ;
 
@@ -422,6 +424,8 @@ The resulting \verb!$javanese! \fst{} can be tested in the usual way.
 The \verb!$redup($lang, $sep="")! function demonstrated above calls a lower-level
 function \verb!$^eq()! that is harder to use but permits the modeling of
 discontiguous reduplication.
+
+[KRB:  Fill out this section]
 
 
 \section{Semitic Interdigitation}
