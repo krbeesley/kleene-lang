@@ -1,0 +1,133 @@
+\chapter{Alternation Rules with Apparent Right-to-Left Behavior}
+
+\label{app:righttoleft}
+
+\section{The Reverse Everything Trick}
+
+At the present time, the rules used to compile alternation rules do not
+allow straightforward implementation of rules that appear to operate
+right-to-left, preferring the maximum (or minimum) match when multiple
+matches are possible.  Fortunately, right-to-left behavior is rarely
+needed, but when it is needed, M\r{a}ns Huldén has proposed a work-around, based on his observation that a desired (but not yet implemented) rule like
+
+\begin{alltt}
+// Not yet implemented
+\emph{input} \{xam\}-> \emph{output} / \emph{left} _ \emph{right}
+\end{alltt}
+
+\noindent
+can be simulated, using current operators and functions, as
+
+\begin{alltt}
+// A viable work-around
+$^reverse(
+    $^reverse(\emph{input}) \{max\}-> $^reverse(\emph{output}) / 
+    $^reverse(\emph{left}) _ $^reverse(\emph{right})
+)
+\end{alltt}
+
+\noindent
+which is informally known as the ``reverse everything trick.''
+
+\section{A Simple Syllabification Example}
+
+The following illustration, contrasting left-to-right vs.\@ right-to-left
+behavior, is based on an elegantly minimal xfst example
+from Lauri Karttunen.  Assume that an input string, representing a word, has
+already been divided into syllables (where S represents a syllable).  Assume also
+that in Language A, syllables are grouped in pairs into prosodic feet from
+left-to-right, i.e., where the input is \emph{SSSSS}, the desired output 
+(using literal parentheses for marking up feet) is \emph{(SS)(SS)S}.  In
+contrast, Language B groups pairs of syllables into feet from right to left, such
+that if the input is the same \emph{SSSSS}, the output should be
+\emph{S(SS)(SS)}.
+
+Using a convenient \verb!$^applydown! function for testing and a transducer-style
+rule to insert the literal parentheses, Language A can be handled as
+
+\begin{Verbatim}
+$^applydown($fst, $lang) {
+    return $^lowerside($lang _o_ $fst) ;
+}
+
+// Language A: 
+// max left-to-right pairing of syllables into feet
+$LFoot = "":"(" S S "":")" {max}-> ;
+
+pr $^applydown($LFoot, SSSSS) ;
+// prints (SS)(SS)S
+
+// Language B: 
+// max right-to-left pairing of syllables into feet
+$RFoot = $^reverse($^reverse("":"(" S S "":")") {max}->) ;
+
+pr %^applydown($RFoot, SSSSS) ;
+// prints S(SS)(SS)
+\end{Verbatim}
+
+Using traditional markup rules rather than transducer-style rules, the solution is arguably less intuitive.  Recall
+that traditional markup rules are of the form
+
+\begin{alltt}
+\emph{input} -> \emph{LeftInsertion} ~~~ \emph{RightInsertion}
+\end{alltt}
+
+\noindent
+where \emph{LeftInsertion} and \emph{RightInsertion} are epenthetically inserted
+around a copy of the matched input expression.  Using a maximum left-to-right
+rule, Language A is again easily handled:
+
+\begin{Verbatim}
+$LFoot = S S {max}-> "(" ~~~ ")" ;
+
+pr $^applydown($LFoot, SSSSS) ;
+// prints (SS)(SS)S
+\end{Verbatim}
+
+\noindent
+but the following (intuitive but wrong) attempt to handle Language B fails to
+output the desired \emph{(SS)(SS)S}.
+
+\begin{Verbatim}
+// Intuitive but wrong
+$RFoot = $^reverse($^reverse(S S) {max}-> 
+            $^reverse( “(“ ) ~~~ $^reverse( “)” ) ) ;
+
+pr $^applydown($RFoot, SSSSS) ;
+// prints S)SS()SS(
+\end{Verbatim}
+
+\noindent
+To get the desired output, one must manually switch the direction of the
+parentheses in the insertion expressions:
+
+\begin{Verbatim}
+// This works, but is arguably less than intuitive
+$RFoot = $^reverse($^reverse(S S) {max}-> 
+            $^reverse( “)“ ) ~~~ $^reverse( “(” ) ) ;
+
+pr $^applydown($RFoot, SSSSS) ;
+// prints S(SS)(SS)
+\end{Verbatim}
+
+\noindent
+This may be another argument for the superiority of transducer-style rules over
+traditional markup rules.
+
+
+\section{Right-to-Left Functionality Summary}
+
+In Kleene, rules for maximum and minimum right-to-left behavior might
+eventually be implement using the \texttt{\{xam\}->}, \texttt{\{nim\}->}, \texttt{<-\{xam\}}, and
+\mbox{\texttt{<-\{nim\}}} arrows.  However,
+deep limitations in the current design and algorithms for compiling alternation
+rules prevent the straightforward implementation of such rules.
+
+Right-to-left rule behavior is seldom needed in practice, but where it is, the
+``reverse everything trick'' is a viable work-around for simple cases.  Note that
+this trick will not work for a rule being compiled in parallel with
+other rules; the built-in \verb!$^parallel()! function requires that each of
+its arguments be expressed in full rule notation; after applying the
+reverse-everything trick, the rule is wrapped in a call to \verb!$^reverse()!
+that cannot be parsed or interpreted inside a call to \verb!$^parallel()!.
+

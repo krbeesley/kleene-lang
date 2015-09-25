@@ -95,6 +95,15 @@ NUMBITS := $(shell getconf LONG_BIT)
 OPT_32 := -std=c++11
 OPT_64 := -std=c++11 -fPIC
 
+# any javac 1.6 or higher can be used: try  $ javac -version
+JAVAC=javac
+# I think that the Java source code is 1.5 or 1.6, with no 1.7 
+# features; Setting -source and -target to 1.6 will cause an
+# error if the source code does contain 1.7 features.  If it
+# succeeds, it will allow Kleene to be run by anyone with
+# java 1.6
+JAVA_TARGET_VERSION := -source 1.6 -target 1.6
+
 
 ######################### LINUX ############################
 
@@ -391,7 +400,7 @@ class: $(NAME).class
 $(NAME).class OpenFstLibraryWrapper.class: *.java
 	@echo ""
 	@echo "Building all the Kleene class files from their java files..."
-	javac $(CLASSPATHFLAG) *.java
+	$(JAVAC) $(CLASSPATHFLAG) $(JAVA_TARGET_VERSION) *.java
 
 ###############################################################################
 # Build the JNI bridge library so we can use OpenFst from Java.
