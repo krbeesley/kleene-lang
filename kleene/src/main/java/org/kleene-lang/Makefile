@@ -37,10 +37,12 @@ NUMBITS := $(shell getconf LONG_BIT)
 
 VERSION=0.9.5.0
 NAME=Kleene
+ifeq ($(os_type),mac)
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
+endif
 # for Linux (but not mac) add "-32bit" or "-64bit" to the name
 ifeq ($(os_type),linux)
-RELEASE_BASENAME_NOVERSION=$(RELEASE_BASENAME_NOVERSION)-$(NUMBITS)bit
+RELEASE_BASENAME_NOVERSION=kleene-$(os_type)-$(NUMBITS)bit
 endif
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
 
