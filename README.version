@@ -1,6 +1,9 @@
 
 		Kleene Version Notes
 
+2015-09-28
+	v0.9.5.0 built on OS X, Linux 32bit and Linux 64bit
+
 2015-09-17
 	Revision of makefiles for library dependencies.  
 	First successful compilation of Kleene for 64-bit Linux.

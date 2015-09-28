@@ -32,9 +32,16 @@ include $(WINPORT_DIR)/os_type.mk   # set os_type to standard name for OS type
 # 0.9.1.0 as a "beta".  There is still work to do before KRB considers
 # Kleene to be 1.0.0.0.
 
+# For Linux, detect 32 vs 64 bit
+NUMBITS := $(shell getconf LONG_BIT)
+
 VERSION=0.9.5.0
 NAME=Kleene
 RELEASE_BASENAME_NOVERSION=kleene-$(os_type)
+# for Linux (but not mac) add "-32bit" or "-64bit" to the name
+ifeq ($(os_type),linux)
+RELEASE_BASENAME_NOVERSION=$(RELEASE_BASENAME_NOVERSION)-$(NUMBITS)bit
+endif
 RELEASE_BASENAME=$(RELEASE_BASENAME_NOVERSION)-$(VERSION)
 
 KLEENE_LANG_DIR=../../../../../..
@@ -90,8 +97,6 @@ LIBNAME=kleeneopenfst
 
 CC=g++
 
-# For Linux, detect 32 vs 64 bit
-NUMBITS := $(shell getconf LONG_BIT)
 OPT_32 := -std=c++11
 OPT_64 := -std=c++11 -fPIC
 
