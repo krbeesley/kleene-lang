@@ -27,7 +27,7 @@ ICU4C_LIB_DIR=$(ICU4C_SOURCE_DIR)/lib
 # a number of libraries are compiled, including libicudata
 ICU4C_LIB_BASENAME=libicudata
 # this is the naming-convention format for the compiled libraries
-ICU4C_LIB_VERSION=51.1
+ICU4C_LIB_VERSION=54.1
 
 # different operating systems use different extensions
 # for the compiled libraries

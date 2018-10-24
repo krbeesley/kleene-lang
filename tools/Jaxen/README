@@ -11,12 +11,15 @@ to Kleene, see kleene-lang/tools/README
 
 If the easy way is not possible or appropriate you will
 need to download jaxen-1.1.6-bin.tar.gz from
- 	http://jaxen.codehaus.org/releases.html
+	http://www.cafeconleche.org/jaxen/
 into 	
 	kleene-lang/tools/Jaxen/
 
 jaxen-1.1.6-bin.tar.gz is "the 1.1.6 binaries in tar/gz format"
 
+2018-10-24
+	Note that Jaxen 1.1.6 apparently has issues with JDK 9/10/11:
+	https://github.com/jaxen-xpath/jaxen/issues/12
 
 2013-05-05
 	use jaxen-1.1.6-bin.tar.gz

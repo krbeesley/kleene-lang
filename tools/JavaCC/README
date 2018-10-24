@@ -14,7 +14,7 @@ For the easy way to install it, see kleene-lang/tools/README
 If the easy way is not possible or convenient, you
 need to download javacc-5.0.tar.gz
 
-from:   http://java.net/projects/javacc/downloads
+from:   https://javacc.org/download
 
 to:     tools/JavaCC/
 

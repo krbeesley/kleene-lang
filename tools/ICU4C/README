@@ -2,7 +2,7 @@ ICU4C
 
 To be built from source, Kleene needs
 
-icu4c-51_1-src.tgz
+icu4c-54_1-src.tgz
 
 For license information, see kleene-lang/NOTICE.
 
@@ -12,13 +12,16 @@ kleene-lang/tools/README
 ***** lines below are notes, not instructions
 
 If the easy way it not possible or convenient
-you need to download icu4c-51_1-src.tgz
+you need to download icu4c-54_1-src.tgz
 from
 	http://site.icu-project.org/download
 to
 	kleene-lang/tools/ICU4C/
 
 
+
+2018-10-24
+	needs icu4c-54_1-src.tgs
 
 2013-05-05
 	needs icu4c-51_1-src.tgs
