@@ -10,12 +10,15 @@ Kleene, see kleene-lang/tools/README
 ***** lines below are notes, not instructions
 
 If the easy way is not possible or appropriate, you will 
-need to download openfst-1.3.3.tar.gz
+need to download openfst-1.4.1.tar.gz
 from
 	http://www.openfst.org
 to
 	kleene-lang/tools/OpenFst/
 
+
+2018-10-24
+	use openfst-1.4.1.tar.gz
 
 2013-05-05
 	use openfst-1.3.3.tar.gz

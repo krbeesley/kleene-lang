@@ -25,7 +25,7 @@ To build Kleene from source on Linux:
 1.  See README.git to clone a copy of the kleene-lang/ directory from
 Github.
 
-2.  Once you have the downloaded the source code, there are also some
+2a.  Once you have the downloaded the source code, there are also some
 external libraries that need to be downloaded separately.  cd to the
 tools/ directory
 
@@ -39,6 +39,12 @@ directory as the kleene-lang directory.  Then in kleene-lang/tools/
 enter the command
 
 $ make links
+
+2b. Alternatively, you can try to grab the dependencies directly from
+their sources on the internet and rebuild them from scratch:
+
+$ cd kleene-lang/tools
+$ ./download.sh
 
 3.  To build Kleene on Linux you will need the g++ compiler.  Install it if
 necessary.
